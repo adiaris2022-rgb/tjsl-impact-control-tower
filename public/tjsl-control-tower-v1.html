@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NORTAGO — TJSL Impact Control Tower V1</title>
+<style>
+:root{--bg:#0b1017;--panel:#121a24;--line:#263242;--text:#e8eef5;--muted:#91a0b2;--accent:#27c6b8;--warn:#f0b44b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}
+header{padding:22px 28px;border-bottom:1px solid var(--line);background:#0e151f;position:sticky;top:0;z-index:2}
+.brand{font-weight:800;letter-spacing:.4px}.sub{color:var(--muted);font-size:13px;margin-top:5px}
+nav{display:flex;gap:8px;overflow:auto;margin-top:18px}nav button,.action{background:#182331;border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+nav button.active{border-color:var(--accent);color:var(--accent)}
+main{max-width:1250px;margin:auto;padding:24px}.view{display:none}.view.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px}.label{color:var(--muted);font-size:12px}.num{font-size:26px;font-weight:800;margin-top:8px}
+.section{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted)}
+.badge{display:inline-block;padding:4px 8px;border-radius:99px;background:#1d2a38;font-size:11px}.ok{color:#62d6c7}.warn{color:var(--warn)}
+.bar{height:9px;background:#202c3a;border-radius:9px;overflow:hidden;margin-top:9px}.bar>i{display:block;height:100%;background:var(--accent)}
+h1{margin:0 0 5px}h2{margin:0 0 12px;font-size:19px}.muted{color:var(--muted)}
+.kicker{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.8px}
+footer{text-align:center;color:var(--muted);padding:35px}
+</style>
+</head>
+<body>
+<header>
+<div class="brand">NORTAGO · TJSL IMPACT CONTROL TOWER</div>
+<div class="sub">Integrated V1 — Program, Transactions, Outcomes, Evidence, SROI & Executive Reporting</div>
+<nav>
+<button class="active" data-view="exec">Executive</button>
+<button data-view="program">Program</button>
+<button data-view="transactions">Transactions</button>
+<button data-view="outcomes">Outcomes & Proxy</button>
+<button data-view="evidence">Evidence</button>
+<button data-view="sroi">SROI</button>
+<button data-view="report">Report</button>
+</nav>
+</header>
+<main>
+<section id="exec" class="view active">
+<div class="kicker">EXECUTIVE CONTROL TOWER</div><h1>Program Impact Overview</h1><div class="muted">Digitalisasi Mitra Binaan · September 2026</div>
+<div class="grid" style="margin-top:18px">
+<div class="card"><div class="label">Mitra Terdaftar</div><div class="num">100</div></div>
+<div class="card"><div class="label">Mitra Aktif</div><div class="num">87</div></div>
+<div class="card"><div class="label">Transaksi</div><div class="num">1.284</div></div>
+<div class="card"><div class="label">Nilai Transaksi</div><div class="num">Rp 33,4 jt</div></div>
+<div class="card"><div class="label">Verified Evidence</div><div class="num">24</div></div>
+<div class="card"><div class="label">Estimated SROI</div><div class="num">0,38 : 1</div></div>
+</div>
+<div class="section"><h2>Impact Chain</h2>
+<table><tr><th>Layer</th><th>Status</th><th>Evidence</th></tr>
+<tr><td>Investment</td><td><span class="badge">RECORDED</span></td><td>Program investment record</td></tr>
+<tr><td>Activity</td><td><span class="badge">RECORDED</span></td><td>OCT adoption/activity data</td></tr>
+<tr><td>Output</td><td><span class="badge">VERIFIED</span></td><td>Transaction and usage records</td></tr>
+<tr><td>Outcome</td><td><span class="badge">VERIFIED</span></td><td>24 evidence items</td></tr>
+<tr><td>Impact</td><td><span class="badge">ESTIMATED</span></td><td>Proxy + adjustment factors</td></tr>
+<tr><td>SROI</td><td><span class="badge">ESTIMATED</span></td><td>Calculation trace available</td></tr></table>
+</div>
+<div class="section"><h2>Attention</h2><p class="muted">3 outcome records masih menunggu verifikasi. Mereka tidak dihitung sebagai Verified Input pada SROI.</p></div>
+</section>
+<section id="program" class="view"><div class="kicker">PROGRAM</div><h1>Program Dashboard</h1>
+<div class="grid" style="margin-top:18px"><div class="card"><div class="label">Program</div><div class="num">Digitalisasi UMKM</div></div><div class="card"><div class="label">Target Mitra</div><div class="num">100</div></div><div class="card"><div class="label">Active Rate</div><div class="num">87%</div></div></div>
+<div class="section"><h2>Partner Progress</h2><table><tr><th>Mitra</th><th>Status</th><th>Transactions</th><th>Value</th></tr>
+<tr><td>Mitra A</td><td>ACTIVE</td><td>412</td><td>Rp 11,2 jt</td></tr><tr><td>Mitra B</td><td>ACTIVE</td><td>305</td><td>Rp 8,7 jt</td></tr><tr><td>Mitra C</td><td>ACTIVE</td><td>221</td><td>Rp 6,1 jt</td></tr><tr><td>97 mitra lainnya</td><td>Mixed</td><td>346</td><td>Rp 7,4 jt</td></tr></table></div>
+</section>
+<section id="transactions" class="view"><div class="kicker">OCT DATA</div><h1>Transaction Monitoring</h1>
+<div class="grid" style="margin-top:18px"><div class="card"><div class="label">Current Month</div><div class="num">1.284</div></div><div class="card"><div class="label">Transaction Value</div><div class="num">Rp 33,4 jt</div></div><div class="card"><div class="label">Data Source</div><div class="num">OCT</div></div></div>
+<div class="section"><h2>Data Integrity</h2><p class="muted">Transaction records are treated as operational evidence/activity data. They are not automatically classified as social impact.</p>
+<div class="bar"><i style="width:96%"></i></div><p class="muted">96% records mapped to program partners</p></div>
+</section>
+<section id="outcomes" class="view"><div class="kicker">OUTCOME & FINANCIAL PROXY</div><h1>Outcome Manager</h1>
+<div class="section"><table><tr><th>Outcome</th><th>Indicator</th><th>Baseline</th><th>Current</th><th>Proxy</th><th>Status</th></tr>
+<tr><td>Improved transaction recording</td><td>Recorded transactions</td><td>0</td><td>1.284</td><td>Configured</td><td><span class="badge">VERIFIED</span></td></tr>
+<tr><td>Business activity change</td><td>Transaction value</td><td>Rp 0</td><td>Rp 33,4 jt</td><td>Pending source</td><td><span class="badge">REVIEW</span></td></tr>
+<tr><td>Admin time efficiency</td><td>Hours saved</td><td>Baseline survey</td><td>Follow-up</td><td>Pending</td><td><span class="badge">DRAFT</span></td></tr></table></div>
+</section>
+<section id="evidence" class="view"><div class="kicker">EVIDENCE & VERIFICATION</div><h1>Evidence Register</h1>
+<div class="grid" style="margin-top:18px"><div class="card"><div class="label">Verified</div><div class="num">24</div></div><div class="card"><div class="label">Under Review</div><div class="num">3</div></div><div class="card"><div class="label">Rejected</div><div class="num">1</div></div></div>
+<div class="section"><h2>SROI Gate</h2><p><span class="badge">24 VERIFIED INPUTS</span> <span class="badge">3 BLOCKED</span></p><p class="muted">Only evidence with VERIFIED status, verifier identity, verification date, and verification note can enter the Verified SROI input set.</p></div>
+</section>
+<section id="sroi" class="view"><div class="kicker">SROI ENGINE V2</div><h1>Estimated SROI</h1>
+<div class="grid" style="margin-top:18px"><div class="card"><div class="label">Investment</div><div class="num">Rp 10,0 jt</div></div><div class="card"><div class="label">Gross Outcome Value</div><div class="num">Rp 6,012 jt</div></div><div class="card"><div class="label">Impact Value</div><div class="num">Rp 3,848 jt</div></div><div class="card"><div class="label">SROI</div><div class="num">0,38 : 1</div></div></div>
+<div class="section"><h2>Calculation Trace</h2><table><tr><th>Component</th><th>Value</th></tr><tr><td>OCT transaction value</td><td>Rp 33.400.000</td></tr><tr><td>Financial proxy</td><td>18% <span class="muted">(demo assumption)</span></td></tr><tr><td>Deadweight</td><td>20% <span class="muted">(demo assumption)</span></td></tr><tr><td>Attribution</td><td>20% <span class="muted">(demo assumption)</span></td></tr><tr><td>Displacement</td><td>0%</td></tr></table><p class="muted">Demo values are illustrative. Production SROI requires documented program-specific evidence, proxy basis, and review.</p></div>
+</section>
+<section id="report" class="view"><div class="kicker">EXECUTIVE IMPACT REPORT</div><h1>Report Builder</h1>
+<div class="section"><h2>Report Readiness</h2><table><tr><th>Gate</th><th>Status</th></tr><tr><td>Program data</td><td><span class="badge">READY</span></td></tr><tr><td>Transaction data</td><td><span class="badge">READY</span></td></tr><tr><td>Outcome evidence</td><td><span class="badge">PARTIAL</span></td></tr><tr><td>Verified SROI inputs</td><td><span class="badge">READY</span></td></tr><tr><td>Independent assurance</td><td><span class="badge">NOT INCLUDED</span></td></tr></table></div>
+<div class="section"><h2>Report Status</h2><p><span class="badge">DRAFT</span></p><p class="muted">Executive report separates measured facts, estimates, assumptions, and methodology notes.</p></div>
+</section>
+</main>
+<footer>Supported by · NORTAGO</footer>
+<script>
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active'); document.getElementById(b.dataset.view).classList.add('active');
+});
+</script>
+</body></html>
