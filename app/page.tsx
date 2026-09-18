@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error("Supabase environment variables are not configured.");
+  return createClient(url, key);
+}
 
 type Summary = {
   programs: number;
@@ -40,6 +42,7 @@ export default function Home() {
   async function loadDashboard(currentUser: User) {
     setLoading(true);
     setError("");
+    const supabase = getSupabase();
     const { data: bu, error: buError } = await supabase
       .from("business_users")
       .select("business_id, role")
@@ -78,10 +81,14 @@ export default function Home() {
   }
 
   useEffect(() => {
+    const supabase = getSupabase();
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       if (data.session?.user) loadDashboard(data.session.user);
       else setLoading(false);
+    }).catch((err) => {
+      setError(err instanceof Error ? err.message : "Gagal memuat sesi.");
+      setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -93,13 +100,19 @@ export default function Home() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setSigning(true); setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    setSigning(false);
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setError(error.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal masuk.");
+    } finally {
+      setSigning(false);
+    }
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await getSupabase().auth.signOut();
     setRole("");
   }
 
