@@ -17,7 +17,7 @@ async function signIn(formData: FormData) {
   redirect("/control-tower");
 }
 
-export default async function ControlTowerPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function ControlTowerPage({ searchParams }: { searchParams: Promise<{ error?: string; tenant?: string }> }) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,10 +30,21 @@ export default async function ControlTowerPage({ searchParams }: { searchParams:
     return <Dashboard />;
   }
   const params = await searchParams;
+  const tenant = params.tenant ?? "nortago-staging-test";
+  const { data: branding } = await supabase
+    .from("tjsl_public_branding")
+    .select("display_name, logo_url")
+    .eq("slug", tenant)
+    .eq("is_active", true)
+    .maybeSingle();
+
   return (
     <main className="auth-shell">
       <section className="login-card">
-        <div className="brand"><span className="mark">A</span><div><strong>NORTAGO</strong><small>AI-Powered Digital Products & Content</small></div></div>
+        <div className="company-brand">
+          {branding?.logo_url ? <img src={branding.logo_url} alt={branding.display_name} /> : <div className="company-logo-placeholder">LOGO</div>}
+          <div><strong>{branding?.display_name ?? "Perusahaan Anda"}</strong><small>Program TJSL</small></div>
+        </div>
         <div className="eyebrow">TJSL IMPACT CONTROL TOWER</div>
         <h1>Data TJSL.<br/><span>Dampak yang dapat diuji.</span></h1>
         <p className="lead">Satu control tower untuk memantau program, transaksi mitra, outcome, evidence, dan estimasi SROI.</p>
@@ -43,7 +54,7 @@ export default async function ControlTowerPage({ searchParams }: { searchParams:
           {params.error && <div className="error">{params.error}</div>}
           <button>Masuk ke Control Tower →</button>
         </form>
-        <div className="footnote">Supported by <b>NORTAGO</b> · Staging</div>
+        <div className="footnote">Supported by <span className="nortago-footer-mark">A</span> <b>NORTAGO</b></div>
       </section>
     </main>
   );
