@@ -31,6 +31,10 @@ export default function ControlTowerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [role, setRole] = useState("");
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [companyNameDraft, setCompanyNameDraft] = useState("");
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [brandMessage, setBrandMessage] = useState("");
   const [businessName, setBusinessName] = useState("Perusahaan Anda");
   const [businessLogoUrl, setBusinessLogoUrl] = useState<string | null>(null);
   const [summary, setSummary] = useState<Summary>({
@@ -51,6 +55,7 @@ export default function ControlTowerDashboard() {
     if (!bu) { setError("Akun belum terdaftar pada TJSL Impact Control Tower."); setLoading(false); return; }
 
     setRole(bu.role);
+    setBusinessId(bu.business_id);
     const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi] = await Promise.all([
       supabase.from("businesses").select("name, logo_url").eq("id", bu.business_id).maybeSingle(),
       supabase.from("tjsl_programs").select("id", { count: "exact", head: true }),
@@ -65,6 +70,7 @@ export default function ControlTowerDashboard() {
     const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi].find(x => x.error);
     if (firstError?.error) setError(firstError.error.message);
     setBusinessName(biz.data?.name ?? "Perusahaan Anda");
+    setCompanyNameDraft(biz.data?.name ?? "Perusahaan Anda");
     setBusinessLogoUrl(biz.data?.logo_url ?? null);
     const tx = transactions.data ?? [];
     setSummary({
@@ -97,6 +103,32 @@ export default function ControlTowerDashboard() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  async function saveCompanyName() {
+    if (!businessId || !companyNameDraft.trim()) return;
+    setSavingBrand(true); setBrandMessage("");
+    const { error } = await getSupabase().from("businesses").update({ name: companyNameDraft.trim() }).eq("id", businessId);
+    if (error) setBrandMessage(error.message);
+    else { setBusinessName(companyNameDraft.trim()); setBrandMessage("Nama perusahaan tersimpan."); }
+    setSavingBrand(false);
+  }
+
+  async function uploadCompanyLogo(file: File) {
+    if (!businessId) return;
+    if (!file.type.startsWith("image/")) { setBrandMessage("File logo harus berupa gambar."); return; }
+    if (file.size > 2 * 1024 * 1024) { setBrandMessage("Ukuran logo maksimal 2 MB."); return; }
+    setSavingBrand(true); setBrandMessage("");
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${businessId}/${crypto.randomUUID()}.${ext}`;
+    const supabase = getSupabase();
+    const upload = await supabase.storage.from("business-branding").upload(path, file, { upsert: false, contentType: file.type });
+    if (upload.error) { setBrandMessage(upload.error.message); setSavingBrand(false); return; }
+    const { data: urlData } = supabase.storage.from("business-branding").getPublicUrl(path);
+    const { error } = await supabase.from("businesses").update({ logo_url: urlData.publicUrl }).eq("id", businessId);
+    if (error) setBrandMessage(error.message);
+    else { setBusinessLogoUrl(urlData.publicUrl); setBrandMessage("Logo perusahaan tersimpan."); }
+    setSavingBrand(false);
+  }
+
   async function signOut() {
     await getSupabase().auth.signOut();
     setRole("");
@@ -123,7 +155,16 @@ export default function ControlTowerDashboard() {
         <div><div className="eyebrow">EXECUTIVE CONTROL TOWER</div><h1>Program → Data → Evidence → Impact</h1><p>Ringkasan eksekutif berbasis data yang tersedia dalam scope akun Anda.</p></div>
         <div className="status"><i/> SYSTEM ONLINE</div>
       </section>
-      {error && <div className="error page-error">{error}</div>}
+{error && <div className="error page-error">{error}</div>}
+      {role === "OWNER" && !loading && <section className="brand-settings">
+        <div><div className="eyebrow">COMPANY IDENTITY</div><h2>Identitas Perusahaan</h2><p>Logo dan nama ini tampil sebagai identitas utama perusahaan di Control Tower.</p></div>
+        <div className="brand-settings-form">
+          <div className="brand-preview">{businessLogoUrl ? <img src={businessLogoUrl} alt={businessName} /> : <div className="company-logo-placeholder">LOGO</div>}<div><strong>{businessName}</strong><small>Primary brand</small></div></div>
+          <label>Nama Perusahaan<input value={companyNameDraft} onChange={e => setCompanyNameDraft(e.target.value)} /></label>
+          <div className="brand-actions"><button onClick={saveCompanyName} disabled={savingBrand}>Simpan Nama</button><label className="upload-button">Ganti Logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={e => e.target.files?.[0] && uploadCompanyLogo(e.target.files[0])} disabled={savingBrand} /></label></div>
+          {brandMessage && <div className={brandMessage.includes("tersimpan") ? "success" : "error"}>{brandMessage}</div>}
+        </div>
+      </section>}
       {loading ? <div className="loading">Memuat data control tower…</div> :
         <><section className="grid">{cards.map(([title,value,note]) => <article className="metric" key={title}><div className="metric-title">{title}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></article>)}</section>
         <section className="panels">
