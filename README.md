@@ -22,6 +22,10 @@ Transaction data is activity/economic evidence. It is not automatically equivale
 
 See docs/PILOT_RUNBOOK.md for the field trial sequence, minimum data, role boundaries, acceptance checklist, and SROI methodology safeguards.
 
+## Login
+
+The pilot entry point routes to the Supabase Auth login page. User accounts and role assignments are intentionally deferred until pilot participant emails are confirmed.
+
 ## Deployment
 
 Railway tracks the main branch. The current pilot service uses a Railway-generated domain and /health as its healthcheck.
