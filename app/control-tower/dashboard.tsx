@@ -39,7 +39,7 @@ export default function ControlTowerDashboard() {
   const [businessLogoUrl, setBusinessLogoUrl] = useState<string | null>(null);
   const [programRows, setProgramRows] = useState<any[]>([]);
   const [partnerRows, setPartnerRows] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview"|"programs"|"partners"|"outcomes"|"evidence">("overview");
+  const [activeTab, setActiveTab] = useState<"overview"|"programs"|"partners"|"outcomes"|"evidence"|"sroi">("overview");
   const [showProgramForm, setShowProgramForm] = useState(false);
   const [showPartnerForm, setShowPartnerForm] = useState(false);
   const [programForm, setProgramForm] = useState({name:"", reporting_period:""});
@@ -51,6 +51,12 @@ export default function ControlTowerDashboard() {
   const [evidenceRows, setEvidenceRows] = useState<any[]>([]);
   const [showEvidenceForm, setShowEvidenceForm] = useState(false);
   const [evidenceForm, setEvidenceForm] = useState({outcome_id:"",source_type:"DOCUMENT",source_reference:"",evidence_period:""});
+  const [proxyRows, setProxyRows] = useState<any[]>([]);
+  const [sroiRows, setSroiRows] = useState<any[]>([]);
+  const [showProxyForm, setShowProxyForm] = useState(false);
+  const [showSroiForm, setShowSroiForm] = useState(false);
+  const [proxyForm, setProxyForm] = useState({outcome_id:"",proxy_name:"",proxy_value:"",unit:"",methodology_source:"",assumption_note:""});
+  const [sroiForm, setSroiForm] = useState({program_id:"",investment:"",proxy_id:"",gross_value:"",deadweight:"0",attribution:"0",displacement:"0",drop_off:"0"});
 
   const [summary, setSummary] = useState<Summary>({
     programs: 0, partners: 0, transactions: 0, transactionValue: 0,
@@ -71,7 +77,7 @@ export default function ControlTowerDashboard() {
 
     setRole(bu.role);
     setBusinessId(bu.business_id);
-    const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList] = await Promise.all([
+    const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList, proxyList, sroiList] = await Promise.all([
       supabase.from("businesses").select("name, logo_url").eq("id", bu.business_id).maybeSingle(),
       supabase.from("tjsl_programs").select("id", { count: "exact", head: true }),
       supabase.from("tjsl_partners").select("id", { count: "exact", head: true }),
@@ -83,10 +89,12 @@ export default function ControlTowerDashboard() {
       supabase.from("tjsl_programs").select("id,name,reporting_period,status,created_at").order("created_at", { ascending: false }),
       supabase.from("tjsl_partners").select("id,program_id,business_name,owner_name,address,status,created_at").order("created_at", { ascending: false }),
       supabase.from("tjsl_outcomes").select("id,partner_id,name,indicator,baseline,current_value,unit,status").order("created_at", { ascending: false }),
-      supabase.from("tjsl_evidence").select("id,outcome_id,storage_path,source_type,source_reference,evidence_period,status,submitted_by,verifier_id,verified_at,verification_note,created_at").order("created_at", { ascending: false })
+      supabase.from("tjsl_evidence").select("id,outcome_id,storage_path,source_type,source_reference,evidence_period,status,submitted_by,verifier_id,verified_at,verification_note,created_at").order("created_at", { ascending: false }),
+      supabase.from("tjsl_financial_proxies").select("id,outcome_id,proxy_name,proxy_value,unit,methodology_source,assumption_note,approval_status,approved_by,approved_at").order("created_at", { ascending: false }),
+      supabase.from("tjsl_sroi_calculations").select("id,program_id,investment,gross_value,deadweight,attribution,displacement,drop_off,impact_value,sroi,status,created_at").order("created_at", { ascending: false })
     ]);
 
-    const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList].find(x => x.error);
+    const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList, proxyList, sroiList].find(x => x.error);
     if (firstError?.error) setError(firstError.error.message);
     setBusinessName(biz.data?.name ?? "Perusahaan Anda");
     setCompanyNameDraft(biz.data?.name ?? "Perusahaan Anda");
@@ -95,6 +103,8 @@ export default function ControlTowerDashboard() {
     setPartnerRows(partnerList.data ?? []);
     setOutcomeRows(outcomeList.data ?? []);
     setEvidenceRows(evidenceList.data ?? []);
+    setProxyRows(proxyList.data ?? []);
+    setSroiRows(sroiList.data ?? []);
     const tx = transactions.data ?? [];
     setSummary({
       programs: programs.count ?? 0,
@@ -222,6 +232,46 @@ export default function ControlTowerDashboard() {
     if (error) setError(error.message); else await loadDashboard(user);
     setSavingData(false);
   }
+
+  async function createProxy() {
+    if (!proxyForm.outcome_id || !proxyForm.proxy_name.trim() || proxyForm.proxy_value === "" || !proxyForm.methodology_source.trim()) return;
+    setSavingData(true); setError("");
+    const { error } = await getSupabase().from("tjsl_financial_proxies").insert({
+      outcome_id:proxyForm.outcome_id, proxy_name:proxyForm.proxy_name.trim(), proxy_value:Number(proxyForm.proxy_value),
+      unit:proxyForm.unit.trim() || null, methodology_source:proxyForm.methodology_source.trim(),
+      assumption_note:proxyForm.assumption_note.trim() || null, approval_status:"PENDING"
+    });
+    if (error) setError(error.message);
+    else { setProxyForm({outcome_id:"",proxy_name:"",proxy_value:"",unit:"",methodology_source:"",assumption_note:""}); setShowProxyForm(false); await loadDashboard(user); }
+    setSavingData(false);
+  }
+
+  async function approveProxy(id:string) {
+    if (!user || (role !== "OWNER" && role !== "PROGRAM_MANAGER")) return;
+    setSavingData(true); setError("");
+    const { error } = await getSupabase().from("tjsl_financial_proxies").update({approval_status:"APPROVED",approved_by:user.id,approved_at:new Date().toISOString()}).eq("id",id);
+    if (error) setError(error.message); else await loadDashboard(user);
+    setSavingData(false);
+  }
+
+  async function calculateSroi() {
+    if (!user || !sroiForm.program_id || sroiForm.investment === "" || !sroiForm.proxy_id || sroiForm.gross_value === "") return;
+    setSavingData(true); setError("");
+    const proxy = proxyRows.find(p=>p.id===sroiForm.proxy_id);
+    if (!proxy || proxy.approval_status !== "APPROVED") { setError("Financial Proxy harus APPROVED."); setSavingData(false); return; }
+    const linkedOutcome = outcomeRows.find(o=>o.id===proxy.outcome_id);
+    if (!linkedOutcome) { setError("Outcome proxy tidak ditemukan."); setSavingData(false); return; }
+    const verified = evidenceRows.some(e=>e.outcome_id===linkedOutcome.id && e.status==="VERIFIED");
+    if (!verified) { setError("SROI Gate: Outcome belum memiliki evidence VERIFIED."); setSavingData(false); return; }
+    const investment=Number(sroiForm.investment), gross=Number(sroiForm.gross_value);
+    const dw=Number(sroiForm.deadweight)/100, attr=Number(sroiForm.attribution)/100, disp=Number(sroiForm.displacement)/100, drop=Number(sroiForm.drop_off)/100;
+    const impact=gross*(1-dw)*(1-attr)*(1-disp)*(1-drop);
+    const ratio=investment>0 ? impact/investment : null;
+    const trace={formula:"Impact = Gross × (1-DW) × (1-Attribution) × (1-Displacement) × (1-Drop-off); SROI = Impact / Investment",proxy_id:proxy.id,outcome_id:linkedOutcome.id,verified_evidence:evidenceRows.filter(e=>e.outcome_id===linkedOutcome.id&&e.status==="VERIFIED").map(e=>e.id),inputs:{investment,gross_value:gross,deadweight:dw,attribution:attr,displacement:disp,drop_off:drop},calculated_at:new Date().toISOString()};
+    const { error } = await getSupabase().from("tjsl_sroi_calculations").insert({program_id:sroiForm.program_id,investment,gross_value:gross,deadweight:dw,attribution:attr,displacement:disp,drop_off:drop,impact_value:impact,sroi:ratio,status:"ESTIMATED",calculation_trace:trace,created_by:user.id});
+    if (error) setError(error.message); else { setShowSroiForm(false); await loadDashboard(user); }
+    setSavingData(false);
+  }
   async function signOut() {
     await getSupabase().auth.signOut();
     setRole("");
@@ -266,6 +316,7 @@ export default function ControlTowerDashboard() {
             <button className={activeTab==="partners"?"active":""} onClick={()=>setActiveTab("partners")}>Mitra Binaan</button>
             <button className={activeTab==="outcomes"?"active":""} onClick={()=>setActiveTab("outcomes")}>Outcome</button>
             <button className={activeTab==="evidence"?"active":""} onClick={()=>setActiveTab("evidence")}>Evidence</button>
+            <button className={activeTab==="sroi"?"active":""} onClick={()=>setActiveTab("sroi")}>SROI</button>
           </nav>
           {activeTab==="overview" && <><section className="grid">{cards.map(([title,value,note]) => <article className="metric" key={title}><div className="metric-title">{title}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></article>)}</section>
             <section className="panels"><article className="panel"><div className="panel-head"><div><div className="eyebrow">IMPACT CHAIN</div><h2>Jejak data program</h2></div><span className="pill">TRACEABLE</span></div><div className="chain">{["Program","Mitra Binaan","Transaksi","Outcome","Evidence","SROI"].map((x,i)=><div className="chain-item" key={x}><b>0{i+1}</b><span>{x}</span>{i<5&&<em>→</em>}</div>)}</div><p className="method">Transaksi adalah activity evidence. Outcome memerlukan evidence dan verifikasi. SROI hanya dihitung melalui input yang memenuhi gate metodologi.</p></article>
@@ -277,6 +328,15 @@ export default function ControlTowerDashboard() {
           </section>}
           {activeTab==="outcomes" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">OUTCOME & INDICATOR</div><h2>Outcome Program</h2><p>Catat perubahan yang ingin diukur. Transaksi tidak otomatis dianggap sebagai outcome.</p></div><button onClick={()=>setShowOutcomeForm(!showOutcomeForm)}>+ Outcome</button></div>{showOutcomeForm && <div className="inline-form"><label>Mitra<select value={outcomeForm.partner_id} onChange={e=>setOutcomeForm({...outcomeForm,partner_id:e.target.value})}><option value="">Pilih mitra</option>{partnerRows.map(p=><option key={p.id} value={p.id}>{p.business_name}</option>)}</select></label><label>Nama Outcome<input value={outcomeForm.name} onChange={e=>setOutcomeForm({...outcomeForm,name:e.target.value})} placeholder="Contoh: peningkatan omzet" /></label><label>Indikator<input value={outcomeForm.indicator} onChange={e=>setOutcomeForm({...outcomeForm,indicator:e.target.value})} placeholder="Contoh: omzet bulanan" /></label><label>Unit<input value={outcomeForm.unit} onChange={e=>setOutcomeForm({...outcomeForm,unit:e.target.value})} placeholder="Rp / % / transaksi / orang" /></label><label>Baseline<input type="number" value={outcomeForm.baseline} onChange={e=>setOutcomeForm({...outcomeForm,baseline:e.target.value})} /></label><label>Current Value<input type="number" value={outcomeForm.current_value} onChange={e=>setOutcomeForm({...outcomeForm,current_value:e.target.value})} /></label><button onClick={createOutcome} disabled={savingData}>Simpan Outcome</button></div>}<div className="table-wrap"><table><thead><tr><th>Mitra</th><th>Outcome</th><th>Indikator</th><th>Baseline</th><th>Current</th><th>Status</th></tr></thead><tbody>{outcomeRows.map(o=><tr key={o.id}><td>{partnerRows.find(p=>p.id===o.partner_id)?.business_name||"—"}</td><td><strong>{o.name}</strong></td><td>{o.indicator}</td><td>{o.baseline ?? "—"} {o.unit||""}</td><td>{o.current_value ?? "—"} {o.unit||""}</td><td><span className="status-badge">{o.status}</span></td></tr>)}{outcomeRows.length===0&&<tr><td colSpan={6} className="empty">Belum ada outcome.</td></tr>}</tbody></table></div></section>}
           {activeTab==="evidence" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">EVIDENCE & VERIFICATION</div><h2>Evidence Control</h2><p>Evidence wajib terkait outcome. Status terverifikasi menjadi gate untuk tahap impact/SROI.</p></div><button onClick={()=>setShowEvidenceForm(!showEvidenceForm)}>+ Evidence</button></div>{showEvidenceForm && <div className="inline-form"><label>Outcome<select value={evidenceForm.outcome_id} onChange={e=>setEvidenceForm({...evidenceForm,outcome_id:e.target.value})}><option value="">Pilih outcome</option>{outcomeRows.map(o=><option key={o.id} value={o.id}>{o.name} — {partnerRows.find(p=>p.id===o.partner_id)?.business_name||"Mitra"}</option>)}</select></label><label>Jenis Sumber<select value={evidenceForm.source_type} onChange={e=>setEvidenceForm({...evidenceForm,source_type:e.target.value})}><option>DOCUMENT</option><option>PHOTO</option><option>REPORT</option><option>SURVEY</option><option>OTHER</option></select></label><label>Referensi Sumber<input value={evidenceForm.source_reference} onChange={e=>setEvidenceForm({...evidenceForm,source_reference:e.target.value})} placeholder="Nomor dokumen / catatan sumber" /></label><label>Periode Evidence<input type="date" value={evidenceForm.evidence_period} onChange={e=>setEvidenceForm({...evidenceForm,evidence_period:e.target.value})} /></label><label>File Evidence<input type="file" accept="application/pdf,image/*" onChange={e=>e.target.files?.[0] && submitEvidence(e.target.files[0])} disabled={savingData} /></label></div>}<div className="table-wrap"><table><thead><tr><th>Outcome</th><th>Sumber</th><th>Periode</th><th>Status</th><th>Verifikasi</th></tr></thead><tbody>{evidenceRows.map(ev=><tr key={ev.id}><td><strong>{outcomeRows.find(o=>o.id===ev.outcome_id)?.name||"—"}</strong></td><td>{ev.source_type||"—"}<br/><small>{ev.source_reference||""}</small></td><td>{ev.evidence_period||"—"}</td><td><span className="status-badge">{ev.status}</span></td><td>{ev.status==="SUBMITTED" && (role==="OWNER" || role==="PROGRAM_MANAGER") ? <div className="verify-actions"><button onClick={()=>verifyEvidence(ev.id,true)} disabled={savingData}>Verify</button><button onClick={()=>verifyEvidence(ev.id,false)} disabled={savingData}>Reject</button></div> : ev.status==="VERIFIED" ? "✓ Verified" : "—"}</td></tr>)}{evidenceRows.length===0&&<tr><td colSpan={5} className="empty">Belum ada evidence.</td></tr>}</tbody></table></div><p className="method">NO EVIDENCE → NO VERIFIED OUTCOME → NO VERIFIED SROI.</p></section>}
+          {activeTab==="sroi" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">FINANCIAL PROXY & SROI</div><h2>Impact Valuation</h2><p>Proxy harus disetujui dan outcome harus memiliki evidence VERIFIED sebelum SROI dapat dihitung.</p></div></div>
+            <div className="split-grid">
+              <article className="sub-panel"><div className="section-toolbar"><div><h3>Financial Proxy</h3><p>Catat nilai moneter proxy beserta sumber metodologinya.</p></div><button onClick={()=>setShowProxyForm(!showProxyForm)}>+ Proxy</button></div>
+              {showProxyForm && <div className="inline-form"><label>Outcome<select value={proxyForm.outcome_id} onChange={e=>setProxyForm({...proxyForm,outcome_id:e.target.value})}><option value="">Pilih outcome</option>{outcomeRows.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label><label>Nama Proxy<input value={proxyForm.proxy_name} onChange={e=>setProxyForm({...proxyForm,proxy_name:e.target.value})} placeholder="Contoh: nilai tambahan omzet" /></label><label>Proxy Value<input type="number" value={proxyForm.proxy_value} onChange={e=>setProxyForm({...proxyForm,proxy_value:e.target.value})} /></label><label>Unit<input value={proxyForm.unit} onChange={e=>setProxyForm({...proxyForm,unit:e.target.value})} placeholder="Rp / outcome" /></label><label>Sumber Metodologi<input value={proxyForm.methodology_source} onChange={e=>setProxyForm({...proxyForm,methodology_source:e.target.value})} placeholder="Sumber / studi / dokumen" /></label><label>Catatan Asumsi<textarea value={proxyForm.assumption_note} onChange={e=>setProxyForm({...proxyForm,assumption_note:e.target.value})} /></label><button onClick={createProxy} disabled={savingData}>Simpan Proxy</button></div>}
+              <div className="table-wrap"><table><thead><tr><th>Outcome</th><th>Proxy</th><th>Value</th><th>Status</th><th>Approval</th></tr></thead><tbody>{proxyRows.map(p=><tr key={p.id}><td>{outcomeRows.find(o=>o.id===p.outcome_id)?.name||"—"}</td><td><strong>{p.proxy_name}</strong></td><td>{p.proxy_value} {p.unit||""}</td><td><span className="status-badge">{p.approval_status}</span></td><td>{p.approval_status==="PENDING" && (role==="OWNER"||role==="PROGRAM_MANAGER") ? <button onClick={()=>approveProxy(p.id)} disabled={savingData}>Approve</button> : p.approval_status==="APPROVED" ? "✓ Approved" : "—"}</td></tr>)}{proxyRows.length===0&&<tr><td colSpan={5} className="empty">Belum ada financial proxy.</td></tr>}</tbody></table></div></article>
+              <article className="sub-panel"><div className="section-toolbar"><div><h3>SROI Calculation</h3><p>Hasil berstatus ESTIMATED dan menyimpan calculation trace.</p></div><button onClick={()=>setShowSroiForm(!showSroiForm)}>+ Hitung SROI</button></div>
+              {showSroiForm && <div className="inline-form"><label>Program<select value={sroiForm.program_id} onChange={e=>setSroiForm({...sroiForm,program_id:e.target.value})}><option value="">Pilih program</option>{programRows.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Investment<input type="number" value={sroiForm.investment} onChange={e=>setSroiForm({...sroiForm,investment:e.target.value})} /></label><label>Approved Proxy<select value={sroiForm.proxy_id} onChange={e=>setSroiForm({...sroiForm,proxy_id:e.target.value})}><option value="">Pilih proxy</option>{proxyRows.filter(p=>p.approval_status==="APPROVED").map(p=><option key={p.id} value={p.id}>{p.proxy_name}</option>)}</select></label><label>Gross Outcome Value<input type="number" value={sroiForm.gross_value} onChange={e=>setSroiForm({...sroiForm,gross_value:e.target.value})} /></label><label>Deadweight %<input type="number" min="0" max="100" value={sroiForm.deadweight} onChange={e=>setSroiForm({...sroiForm,deadweight:e.target.value})} /></label><label>Attribution %<input type="number" min="0" max="100" value={sroiForm.attribution} onChange={e=>setSroiForm({...sroiForm,attribution:e.target.value})} /></label><label>Displacement %<input type="number" min="0" max="100" value={sroiForm.displacement} onChange={e=>setSroiForm({...sroiForm,displacement:e.target.value})} /></label><label>Drop-off %<input type="number" min="0" max="100" value={sroiForm.drop_off} onChange={e=>setSroiForm({...sroiForm,drop_off:e.target.value})} /></label><button onClick={calculateSroi} disabled={savingData}>Hitung & Simpan</button></div>}
+              <div className="table-wrap"><table><thead><tr><th>Program</th><th>Investment</th><th>Impact Value</th><th>SROI</th><th>Status</th></tr></thead><tbody>{sroiRows.map(x=><tr key={x.id}><td>{programRows.find(p=>p.id===x.program_id)?.name||"—"}</td><td>Rp {Number(x.investment).toLocaleString("id-ID")}</td><td>Rp {Number(x.impact_value||0).toLocaleString("id-ID")}</td><td><strong>{x.sroi==null?"—":Number(x.sroi).toFixed(2)+":1"}</strong></td><td><span className="status-badge">{x.status}</span></td></tr>)}{sroiRows.length===0&&<tr><td colSpan={5} className="empty">Belum ada perhitungan SROI.</td></tr>}</tbody></table></div></article>
+            </div><p className="method">SROI adalah estimasi metodologis. Proxy, deadweight, attribution, displacement, drop-off dan evidence harus dapat ditelusuri.</p></section>}
           {activeTab==="partners" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">PARTNER MANAGEMENT</div><h2>Mitra Binaan</h2><p>Registrasikan mitra binaan dan hubungkan langsung ke program TJSL.</p></div><button onClick={()=>setShowPartnerForm(!showPartnerForm)}>+ Mitra</button></div>
             {showPartnerForm && <div className="inline-form"><label>Program<select value={partnerForm.program_id} onChange={e=>setPartnerForm({...partnerForm,program_id:e.target.value})}><option value="">Pilih program</option>{programRows.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Nama Usaha<input value={partnerForm.business_name} onChange={e=>setPartnerForm({...partnerForm,business_name:e.target.value})} placeholder="Nama usaha mitra" /></label><label>Nama Pemilik<input value={partnerForm.owner_name} onChange={e=>setPartnerForm({...partnerForm,owner_name:e.target.value})} /></label><label>Alamat<textarea value={partnerForm.address} onChange={e=>setPartnerForm({...partnerForm,address:e.target.value})} /></label><button onClick={createPartner} disabled={savingData}>Simpan Mitra</button></div>}
             <div className="table-wrap"><table><thead><tr><th>Usaha</th><th>Program</th><th>Pemilik</th><th>Status</th></tr></thead><tbody>{partnerRows.map(p=><tr key={p.id}><td><strong>{p.business_name}</strong></td><td>{programRows.find(x=>x.id===p.program_id)?.name||"—"}</td><td>{p.owner_name||"—"}</td><td><span className="status-badge">{p.status}</span></td></tr>)}{partnerRows.length===0&&<tr><td colSpan={4} className="empty">Belum ada mitra binaan.</td></tr>}</tbody></table></div>
