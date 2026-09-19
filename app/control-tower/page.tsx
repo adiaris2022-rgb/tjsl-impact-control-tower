@@ -54,7 +54,7 @@ export default async function ControlTowerPage({ searchParams }: { searchParams:
           {params.error && <div className="error">{params.error}</div>}
           <button>Masuk ke Control Tower →</button>
         </form>
-        <div className="footnote">Supported by <span className="nortago-footer-mark">A</span> <b>NORTAGO</b></div>
+        <div className="footnote">Supported by <img className="nortago-footer-logo" src="/nortago-mark.svg" alt="NORTAGO" /> <b>NORTAGO</b></div>
       </section>
     </main>
   );
