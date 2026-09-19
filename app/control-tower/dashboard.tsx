@@ -39,12 +39,12 @@ export default function ControlTowerDashboard() {
   const [businessLogoUrl, setBusinessLogoUrl] = useState<string | null>(null);
   const [programRows, setProgramRows] = useState<any[]>([]);
   const [partnerRows, setPartnerRows] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview"|"programs"|"partners">("overview");
+  const [activeTab, setActiveTab] = useState<"overview"|"programs"|"partners"|"outcomes">("overview");
   const [showProgramForm, setShowProgramForm] = useState(false);
   const [showPartnerForm, setShowPartnerForm] = useState(false);
   const [programForm, setProgramForm] = useState({name:"", reporting_period:""});
   const [partnerForm, setPartnerForm] = useState({program_id:"", business_name:"", owner_name:"", address:""});
-  const [savingData, setSavingData] = useState(false);
+  const [savingData, setSavingData] = useState(false);\n  const [outcomeRows, setOutcomeRows] = useState<any[]>([]);\n  const [showOutcomeForm, setShowOutcomeForm] = useState(false);\n  const [outcomeForm, setOutcomeForm] = useState({partner_id:"",name:"",indicator:"",baseline:"",current_value:"",unit:""});
 
   const [summary, setSummary] = useState<Summary>({
     programs: 0, partners: 0, transactions: 0, transactionValue: 0,
@@ -75,16 +75,16 @@ export default function ControlTowerDashboard() {
       supabase.from("tjsl_financial_proxies").select("id", { count: "exact", head: true }).eq("approval_status", "APPROVED"),
       supabase.from("tjsl_sroi_calculations").select("sroi").order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("tjsl_programs").select("id,name,reporting_period,status,created_at").order("created_at", { ascending: false }),
-      supabase.from("tjsl_partners").select("id,program_id,business_name,owner_name,address,status,created_at").order("created_at", { ascending: false })
+      supabase.from("tjsl_partners").select("id,program_id,business_name,owner_name,address,status,created_at").order("created_at", { ascending: false }),\n      supabase.from("tjsl_outcomes").select("id,partner_id,name,indicator,baseline,current_value,unit,status").order("created_at", { ascending: false })
     ]);
 
-    const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList].find(x => x.error);
+    const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList].find(x => x.error);
     if (firstError?.error) setError(firstError.error.message);
     setBusinessName(biz.data?.name ?? "Perusahaan Anda");
     setCompanyNameDraft(biz.data?.name ?? "Perusahaan Anda");
     setBusinessLogoUrl(biz.data?.logo_url ?? null);
     setProgramRows(programList.data ?? []);
-    setPartnerRows(partnerList.data ?? []);
+    setPartnerRows(partnerList.data ?? []);\n    setOutcomeRows(outcomeList.data ?? []);
     const tx = transactions.data ?? [];
     setSummary({
       programs: programs.count ?? 0,
@@ -171,7 +171,7 @@ export default function ControlTowerDashboard() {
     setSavingData(false);
   }
 
-  async function signOut() {
+\n  async function createOutcome() {\n    if (!outcomeForm.partner_id || !outcomeForm.name.trim() || !outcomeForm.indicator.trim()) return;\n    setSavingData(true); setError("");\n    const payload = { partner_id: outcomeForm.partner_id, name: outcomeForm.name.trim(), indicator: outcomeForm.indicator.trim(), baseline: outcomeForm.baseline === "" ? null : Number(outcomeForm.baseline), current_value: outcomeForm.current_value === "" ? null : Number(outcomeForm.current_value), unit: outcomeForm.unit.trim() || null, status: "DRAFT" };\n    const { error } = await getSupabase().from("tjsl_outcomes").insert(payload);\n    if (error) setError(error.message);\n    else { setOutcomeForm({partner_id:"",name:"",indicator:"",baseline:"",current_value:"",unit:""}); setShowOutcomeForm(false); if (user) await loadDashboard(user); }\n    setSavingData(false);\n  }\n  async function signOut() {
     await getSupabase().auth.signOut();
     setRole("");
   }
@@ -212,7 +212,7 @@ export default function ControlTowerDashboard() {
           <nav className="tower-tabs">
             <button className={activeTab==="overview"?"active":""} onClick={()=>setActiveTab("overview")}>Overview</button>
             <button className={activeTab==="programs"?"active":""} onClick={()=>setActiveTab("programs")}>Program</button>
-            <button className={activeTab==="partners"?"active":""} onClick={()=>setActiveTab("partners")}>Mitra Binaan</button>
+            <button className={activeTab==="partners"?"active":""} onClick={()=>setActiveTab("partners")}>Mitra Binaan</button>\n            <button className={activeTab==="outcomes"?"active":""} onClick={()=>setActiveTab("outcomes")}>Outcome</button>
           </nav>
           {activeTab==="overview" && <><section className="grid">{cards.map(([title,value,note]) => <article className="metric" key={title}><div className="metric-title">{title}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></article>)}</section>
             <section className="panels"><article className="panel"><div className="panel-head"><div><div className="eyebrow">IMPACT CHAIN</div><h2>Jejak data program</h2></div><span className="pill">TRACEABLE</span></div><div className="chain">{["Program","Mitra Binaan","Transaksi","Outcome","Evidence","SROI"].map((x,i)=><div className="chain-item" key={x}><b>0{i+1}</b><span>{x}</span>{i<5&&<em>→</em>}</div>)}</div><p className="method">Transaksi adalah activity evidence. Outcome memerlukan evidence dan verifikasi. SROI hanya dihitung melalui input yang memenuhi gate metodologi.</p></article>
@@ -222,7 +222,7 @@ export default function ControlTowerDashboard() {
             {showProgramForm && <div className="inline-form"><label>Nama Program<input value={programForm.name} onChange={e=>setProgramForm({...programForm,name:e.target.value})} placeholder="Contoh: Digitalisasi Mitra Binaan" /></label><label>Periode Pelaporan<input type="date" value={programForm.reporting_period} onChange={e=>setProgramForm({...programForm,reporting_period:e.target.value})} /></label><button onClick={createProgram} disabled={savingData}>Simpan Program</button></div>}
             <div className="table-wrap"><table><thead><tr><th>Program</th><th>Periode</th><th>Status</th><th>Dibuat</th></tr></thead><tbody>{programRows.map(p=><tr key={p.id}><td><strong>{p.name}</strong></td><td>{p.reporting_period||"—"}</td><td><span className="status-badge">{p.status}</span></td><td>{new Date(p.created_at).toLocaleDateString("id-ID")}</td></tr>)}{programRows.length===0&&<tr><td colSpan={4} className="empty">Belum ada program. Buat program pertama.</td></tr>}</tbody></table></div>
           </section>}
-          {activeTab==="partners" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">PARTNER MANAGEMENT</div><h2>Mitra Binaan</h2><p>Registrasikan mitra binaan dan hubungkan langsung ke program TJSL.</p></div><button onClick={()=>setShowPartnerForm(!showPartnerForm)}>+ Mitra</button></div>
+          {activeTab==="outcomes" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">OUTCOME & INDICATOR</div><h2>Outcome Program</h2><p>Catat perubahan yang ingin diukur. Transaksi tidak otomatis dianggap sebagai outcome.</p></div><button onClick={()=>setShowOutcomeForm(!showOutcomeForm)}>+ Outcome</button></div>{showOutcomeForm && <div className="inline-form"><label>Mitra<select value={outcomeForm.partner_id} onChange={e=>setOutcomeForm({...outcomeForm,partner_id:e.target.value})}><option value="">Pilih mitra</option>{partnerRows.map(p=><option key={p.id} value={p.id}>{p.business_name}</option>)}</select></label><label>Nama Outcome<input value={outcomeForm.name} onChange={e=>setOutcomeForm({...outcomeForm,name:e.target.value})} placeholder="Contoh: peningkatan omzet" /></label><label>Indikator<input value={outcomeForm.indicator} onChange={e=>setOutcomeForm({...outcomeForm,indicator:e.target.value})} placeholder="Contoh: omzet bulanan" /></label><label>Unit<input value={outcomeForm.unit} onChange={e=>setOutcomeForm({...outcomeForm,unit:e.target.value})} placeholder="Rp / % / transaksi / orang" /></label><label>Baseline<input type="number" value={outcomeForm.baseline} onChange={e=>setOutcomeForm({...outcomeForm,baseline:e.target.value})} /></label><label>Current Value<input type="number" value={outcomeForm.current_value} onChange={e=>setOutcomeForm({...outcomeForm,current_value:e.target.value})} /></label><button onClick={createOutcome} disabled={savingData}>Simpan Outcome</button></div>}<div className="table-wrap"><table><thead><tr><th>Mitra</th><th>Outcome</th><th>Indikator</th><th>Baseline</th><th>Current</th><th>Status</th></tr></thead><tbody>{outcomeRows.map(o=><tr key={o.id}><td>{partnerRows.find(p=>p.id===o.partner_id)?.business_name||"—"}</td><td><strong>{o.name}</strong></td><td>{o.indicator}</td><td>{o.baseline ?? "—"} {o.unit||""}</td><td>{o.current_value ?? "—"} {o.unit||""}</td><td><span className="status-badge">{o.status}</span></td></tr>)}{outcomeRows.length===0&&<tr><td colSpan={6} className="empty">Belum ada outcome.</td></tr>}</tbody></table></div></section>}\n          {activeTab==="partners" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">PARTNER MANAGEMENT</div><h2>Mitra Binaan</h2><p>Registrasikan mitra binaan dan hubungkan langsung ke program TJSL.</p></div><button onClick={()=>setShowPartnerForm(!showPartnerForm)}>+ Mitra</button></div>
             {showPartnerForm && <div className="inline-form"><label>Program<select value={partnerForm.program_id} onChange={e=>setPartnerForm({...partnerForm,program_id:e.target.value})}><option value="">Pilih program</option>{programRows.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Nama Usaha<input value={partnerForm.business_name} onChange={e=>setPartnerForm({...partnerForm,business_name:e.target.value})} placeholder="Nama usaha mitra" /></label><label>Nama Pemilik<input value={partnerForm.owner_name} onChange={e=>setPartnerForm({...partnerForm,owner_name:e.target.value})} /></label><label>Alamat<textarea value={partnerForm.address} onChange={e=>setPartnerForm({...partnerForm,address:e.target.value})} /></label><button onClick={createPartner} disabled={savingData}>Simpan Mitra</button></div>}
             <div className="table-wrap"><table><thead><tr><th>Usaha</th><th>Program</th><th>Pemilik</th><th>Status</th></tr></thead><tbody>{partnerRows.map(p=><tr key={p.id}><td><strong>{p.business_name}</strong></td><td>{programRows.find(x=>x.id===p.program_id)?.name||"—"}</td><td>{p.owner_name||"—"}</td><td><span className="status-badge">{p.status}</span></td></tr>)}{partnerRows.length===0&&<tr><td colSpan={4} className="empty">Belum ada mitra binaan.</td></tr>}</tbody></table></div>
           </section>}
