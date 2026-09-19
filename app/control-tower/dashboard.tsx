@@ -108,7 +108,8 @@ export default function ControlTowerDashboard() {
     setOutcomeRows(outcomeList.data ?? []);
     setEvidenceRows(evidenceList.data ?? []);
     setProxyRows(proxyList.data ?? []);
-    setSroiRows(sroiList.data ?? []);\n    setReportRows(reportList.data ?? []);
+    setSroiRows(sroiList.data ?? []);
+    setReportRows(reportList.data ?? []);
     const tx = transactions.data ?? [];
     setSummary({
       programs: programs.count ?? 0,
@@ -342,7 +343,8 @@ export default function ControlTowerDashboard() {
             <button className={activeTab==="partners"?"active":""} onClick={()=>setActiveTab("partners")}>Mitra Binaan</button>
             <button className={activeTab==="outcomes"?"active":""} onClick={()=>setActiveTab("outcomes")}>Outcome</button>
             <button className={activeTab==="evidence"?"active":""} onClick={()=>setActiveTab("evidence")}>Evidence</button>
-            <button className={activeTab==="sroi"?"active":""} onClick={()=>setActiveTab("sroi")}>SROI</button>\n            <button className={activeTab==="reports"?"active":""} onClick={()=>setActiveTab("reports")}>Report</button>
+            <button className={activeTab==="sroi"?"active":""} onClick={()=>setActiveTab("sroi")}>SROI</button>
+            <button className={activeTab==="reports"?"active":""} onClick={()=>setActiveTab("reports")}>Report</button>
           </nav>
           {activeTab==="overview" && <><section className="grid">{cards.map(([title,value,note]) => <article className="metric" key={title}><div className="metric-title">{title}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></article>)}</section>
             <section className="panels"><article className="panel"><div className="panel-head"><div><div className="eyebrow">IMPACT CHAIN</div><h2>Jejak data program</h2></div><span className="pill">TRACEABLE</span></div><div className="chain">{["Program","Mitra Binaan","Transaksi","Outcome","Evidence","SROI"].map((x,i)=><div className="chain-item" key={x}><b>0{i+1}</b><span>{x}</span>{i<5&&<em>→</em>}</div>)}</div><p className="method">Transaksi adalah activity evidence. Outcome memerlukan evidence dan verifikasi. SROI hanya dihitung melalui input yang memenuhi gate metodologi.</p></article>
