@@ -31,7 +31,8 @@ export default function ControlTowerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [role, setRole] = useState("");
-  const [businessName, setBusinessName] = useState("TJSL Impact Control Tower");
+  const [businessName, setBusinessName] = useState("Perusahaan Anda");
+  const [businessLogoUrl, setBusinessLogoUrl] = useState<string | null>(null);
   const [summary, setSummary] = useState<Summary>({
     programs: 0, partners: 0, transactions: 0, transactionValue: 0,
     outcomes: 0, verifiedEvidence: 0, approvedProxies: 0, sroi: null
@@ -63,7 +64,8 @@ export default function ControlTowerDashboard() {
 
     const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi].find(x => x.error);
     if (firstError?.error) setError(firstError.error.message);
-    setBusinessName(biz.data?.name ?? "TJSL Impact Control Tower");
+    setBusinessName(biz.data?.name ?? "Perusahaan Anda");
+    setBusinessLogoUrl(biz.data?.logo_url ?? null);
     const tx = transactions.data ?? [];
     setSummary({
       programs: programs.count ?? 0,
@@ -114,12 +116,12 @@ export default function ControlTowerDashboard() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div className="brand"><span className="mark">A</span><div><strong>TJSL IMPACT CONTROL TOWER</strong><small>{businessName}</small></div></div>
+        <div className="company-brand top-company-brand">{businessLogoUrl ? <img src={businessLogoUrl} alt={businessName} /> : <div className="company-logo-placeholder">LOGO</div>}<div><strong>{businessName}</strong><small>TJSL Impact Control Tower</small></div></div>
         <div className="userbox"><span>{role}</span><button className="ghost" onClick={signOut}>Keluar</button></div>
       </header>
       <section className="hero">
         <div><div className="eyebrow">EXECUTIVE CONTROL TOWER</div><h1>Program → Data → Evidence → Impact</h1><p>Ringkasan eksekutif berbasis data yang tersedia dalam scope akun Anda.</p></div>
-        <div className="status"><i/> SYSTEM ONLINE <small>STAGING</small></div>
+        <div className="status"><i/> SYSTEM ONLINE</div>
       </section>
       {error && <div className="error page-error">{error}</div>}
       {loading ? <div className="loading">Memuat data control tower…</div> :
@@ -133,7 +135,7 @@ export default function ControlTowerDashboard() {
             <ul className="steps"><li><span>01</span>Program & Mitra</li><li><span>02</span>Outcome & Indicator</li><li><span>03</span>Evidence & Verification</li><li><span>04</span>Financial Proxy</li><li><span>05</span>SROI & Executive Report</li></ul>
           </article>
         </section></>}
-      <footer>Supported by <b>NORTAGO</b> · TJSL Impact Control Tower · Free infrastructure mode</footer>
+      <footer>Supported by <span className="nortago-footer-mark">A</span> <b>NORTAGO</b> · TJSL Impact Control Tower</footer>
     </main>
   );
 }
