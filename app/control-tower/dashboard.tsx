@@ -135,7 +135,7 @@ export default function ControlTowerDashboard() {
             <ul className="steps"><li><span>01</span>Program & Mitra</li><li><span>02</span>Outcome & Indicator</li><li><span>03</span>Evidence & Verification</li><li><span>04</span>Financial Proxy</li><li><span>05</span>SROI & Executive Report</li></ul>
           </article>
         </section></>}
-      <footer>Supported by <span className="nortago-footer-mark">A</span> <b>NORTAGO</b> · TJSL Impact Control Tower</footer>
+      <footer>Supported by <img className="nortago-footer-logo" src="/nortago-mark.svg" alt="NORTAGO" /> <b>NORTAGO</b> · TJSL Impact Control Tower</footer>
     </main>
   );
 }
