@@ -68,7 +68,7 @@ export default function ControlTowerDashboard() {
 
     setRole(bu.role);
     setBusinessId(bu.business_id);
-    const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList] = await Promise.all([
+    const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList] = await Promise.all([
       supabase.from("businesses").select("name, logo_url").eq("id", bu.business_id).maybeSingle(),
       supabase.from("tjsl_programs").select("id", { count: "exact", head: true }),
       supabase.from("tjsl_partners").select("id", { count: "exact", head: true }),
