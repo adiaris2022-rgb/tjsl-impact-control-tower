@@ -39,7 +39,7 @@ export default function ControlTowerDashboard() {
   const [businessLogoUrl, setBusinessLogoUrl] = useState<string | null>(null);
   const [programRows, setProgramRows] = useState<any[]>([]);
   const [partnerRows, setPartnerRows] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview"|"programs"|"partners"|"outcomes"|"evidence"|"sroi">("overview");
+  const [activeTab, setActiveTab] = useState<"overview"|"programs"|"partners"|"outcomes"|"evidence"|"sroi"|"reports">("overview");
   const [showProgramForm, setShowProgramForm] = useState(false);
   const [showPartnerForm, setShowPartnerForm] = useState(false);
   const [programForm, setProgramForm] = useState({name:"", reporting_period:""});
@@ -57,6 +57,9 @@ export default function ControlTowerDashboard() {
   const [showSroiForm, setShowSroiForm] = useState(false);
   const [proxyForm, setProxyForm] = useState({outcome_id:"",proxy_name:"",proxy_value:"",unit:"",methodology_source:"",assumption_note:""});
   const [sroiForm, setSroiForm] = useState({program_id:"",investment:"",proxy_id:"",gross_value:"",deadweight:"0",attribution:"0",displacement:"0",drop_off:"0"});
+  const [reportRows, setReportRows] = useState<any[]>([]);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportForm, setReportForm] = useState({program_id:"",period:"",sroi_calculation_id:"",methodology_note:""});
 
   const [summary, setSummary] = useState<Summary>({
     programs: 0, partners: 0, transactions: 0, transactionValue: 0,
@@ -77,7 +80,7 @@ export default function ControlTowerDashboard() {
 
     setRole(bu.role);
     setBusinessId(bu.business_id);
-    const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList, proxyList, sroiList] = await Promise.all([
+    const [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList, proxyList, sroiList, reportList] = await Promise.all([
       supabase.from("businesses").select("name, logo_url").eq("id", bu.business_id).maybeSingle(),
       supabase.from("tjsl_programs").select("id", { count: "exact", head: true }),
       supabase.from("tjsl_partners").select("id", { count: "exact", head: true }),
@@ -91,10 +94,11 @@ export default function ControlTowerDashboard() {
       supabase.from("tjsl_outcomes").select("id,partner_id,name,indicator,baseline,current_value,unit,status").order("created_at", { ascending: false }),
       supabase.from("tjsl_evidence").select("id,outcome_id,storage_path,source_type,source_reference,evidence_period,status,submitted_by,verifier_id,verified_at,verification_note,created_at").order("created_at", { ascending: false }),
       supabase.from("tjsl_financial_proxies").select("id,outcome_id,proxy_name,proxy_value,unit,methodology_source,assumption_note,approval_status,approved_by,approved_at").order("created_at", { ascending: false }),
-      supabase.from("tjsl_sroi_calculations").select("id,program_id,investment,gross_value,deadweight,attribution,displacement,drop_off,impact_value,sroi,status,created_at").order("created_at", { ascending: false })
+      supabase.from("tjsl_sroi_calculations").select("id,program_id,investment,gross_value,deadweight,attribution,displacement,drop_off,impact_value,sroi,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("tjsl_reports").select("id,program_id,period,status,sroi_calculation_id,methodology_note,approved_by,approved_at,created_at").order("created_at", { ascending: false })
     ]);
 
-    const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList, proxyList, sroiList].find(x => x.error);
+    const firstError = [biz, programs, partners, transactions, outcomes, evidence, proxies, sroi, programList, partnerList, outcomeList, evidenceList, proxyList, sroiList, reportList].find(x => x.error);
     if (firstError?.error) setError(firstError.error.message);
     setBusinessName(biz.data?.name ?? "Perusahaan Anda");
     setCompanyNameDraft(biz.data?.name ?? "Perusahaan Anda");
@@ -104,7 +108,7 @@ export default function ControlTowerDashboard() {
     setOutcomeRows(outcomeList.data ?? []);
     setEvidenceRows(evidenceList.data ?? []);
     setProxyRows(proxyList.data ?? []);
-    setSroiRows(sroiList.data ?? []);
+    setSroiRows(sroiList.data ?? []);\n    setReportRows(reportList.data ?? []);
     const tx = transactions.data ?? [];
     setSummary({
       programs: programs.count ?? 0,
@@ -272,6 +276,28 @@ export default function ControlTowerDashboard() {
     if (error) setError(error.message); else { setShowSroiForm(false); await loadDashboard(user); }
     setSavingData(false);
   }
+
+  async function createReport() {
+    if (!user || !reportForm.program_id || !reportForm.period) return;
+    setSavingData(true); setError("");
+    const calc = reportForm.sroi_calculation_id ? sroiRows.find(x=>x.id===reportForm.sroi_calculation_id) : null;
+    const methodology = reportForm.methodology_note.trim() || "Laporan dampak berbasis data program, transaksi, outcome, evidence terverifikasi, financial proxy, dan perhitungan SROI berstatus ESTIMATED. Angka dan asumsi harus ditinjau sesuai metodologi program.";
+    const { error } = await getSupabase().from("tjsl_reports").insert({
+      program_id:reportForm.program_id, period:reportForm.period, status:"DRAFT",
+      sroi_calculation_id:calc?.id || null, methodology_note:methodology, created_by:user.id
+    });
+    if (error) setError(error.message);
+    else { setReportForm({program_id:"",period:"",sroi_calculation_id:"",methodology_note:""}); setShowReportForm(false); await loadDashboard(user); }
+    setSavingData(false);
+  }
+
+  async function approveReport(id:string) {
+    if (!user || role !== "OWNER") return;
+    setSavingData(true); setError("");
+    const { error } = await getSupabase().from("tjsl_reports").update({status:"APPROVED",approved_by:user.id,approved_at:new Date().toISOString()}).eq("id",id);
+    if (error) setError(error.message); else await loadDashboard(user);
+    setSavingData(false);
+  }
   async function signOut() {
     await getSupabase().auth.signOut();
     setRole("");
@@ -316,7 +342,7 @@ export default function ControlTowerDashboard() {
             <button className={activeTab==="partners"?"active":""} onClick={()=>setActiveTab("partners")}>Mitra Binaan</button>
             <button className={activeTab==="outcomes"?"active":""} onClick={()=>setActiveTab("outcomes")}>Outcome</button>
             <button className={activeTab==="evidence"?"active":""} onClick={()=>setActiveTab("evidence")}>Evidence</button>
-            <button className={activeTab==="sroi"?"active":""} onClick={()=>setActiveTab("sroi")}>SROI</button>
+            <button className={activeTab==="sroi"?"active":""} onClick={()=>setActiveTab("sroi")}>SROI</button>\n            <button className={activeTab==="reports"?"active":""} onClick={()=>setActiveTab("reports")}>Report</button>
           </nav>
           {activeTab==="overview" && <><section className="grid">{cards.map(([title,value,note]) => <article className="metric" key={title}><div className="metric-title">{title}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></article>)}</section>
             <section className="panels"><article className="panel"><div className="panel-head"><div><div className="eyebrow">IMPACT CHAIN</div><h2>Jejak data program</h2></div><span className="pill">TRACEABLE</span></div><div className="chain">{["Program","Mitra Binaan","Transaksi","Outcome","Evidence","SROI"].map((x,i)=><div className="chain-item" key={x}><b>0{i+1}</b><span>{x}</span>{i<5&&<em>→</em>}</div>)}</div><p className="method">Transaksi adalah activity evidence. Outcome memerlukan evidence dan verifikasi. SROI hanya dihitung melalui input yang memenuhi gate metodologi.</p></article>
@@ -337,6 +363,11 @@ export default function ControlTowerDashboard() {
               {showSroiForm && <div className="inline-form"><label>Program<select value={sroiForm.program_id} onChange={e=>setSroiForm({...sroiForm,program_id:e.target.value})}><option value="">Pilih program</option>{programRows.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Investment<input type="number" value={sroiForm.investment} onChange={e=>setSroiForm({...sroiForm,investment:e.target.value})} /></label><label>Approved Proxy<select value={sroiForm.proxy_id} onChange={e=>setSroiForm({...sroiForm,proxy_id:e.target.value})}><option value="">Pilih proxy</option>{proxyRows.filter(p=>p.approval_status==="APPROVED").map(p=><option key={p.id} value={p.id}>{p.proxy_name}</option>)}</select></label><label>Gross Outcome Value<input type="number" value={sroiForm.gross_value} onChange={e=>setSroiForm({...sroiForm,gross_value:e.target.value})} /></label><label>Deadweight %<input type="number" min="0" max="100" value={sroiForm.deadweight} onChange={e=>setSroiForm({...sroiForm,deadweight:e.target.value})} /></label><label>Attribution %<input type="number" min="0" max="100" value={sroiForm.attribution} onChange={e=>setSroiForm({...sroiForm,attribution:e.target.value})} /></label><label>Displacement %<input type="number" min="0" max="100" value={sroiForm.displacement} onChange={e=>setSroiForm({...sroiForm,displacement:e.target.value})} /></label><label>Drop-off %<input type="number" min="0" max="100" value={sroiForm.drop_off} onChange={e=>setSroiForm({...sroiForm,drop_off:e.target.value})} /></label><button onClick={calculateSroi} disabled={savingData}>Hitung & Simpan</button></div>}
               <div className="table-wrap"><table><thead><tr><th>Program</th><th>Investment</th><th>Impact Value</th><th>SROI</th><th>Status</th></tr></thead><tbody>{sroiRows.map(x=><tr key={x.id}><td>{programRows.find(p=>p.id===x.program_id)?.name||"—"}</td><td>Rp {Number(x.investment).toLocaleString("id-ID")}</td><td>Rp {Number(x.impact_value||0).toLocaleString("id-ID")}</td><td><strong>{x.sroi==null?"—":Number(x.sroi).toFixed(2)+":1"}</strong></td><td><span className="status-badge">{x.status}</span></td></tr>)}{sroiRows.length===0&&<tr><td colSpan={5} className="empty">Belum ada perhitungan SROI.</td></tr>}</tbody></table></div></article>
             </div><p className="method">SROI adalah estimasi metodologis. Proxy, deadweight, attribution, displacement, drop-off dan evidence harus dapat ditelusuri.</p></section>}
+          {activeTab==="reports" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">EXECUTIVE IMPACT REPORT</div><h2>Laporan Dampak Program</h2><p>Ringkasan eksekutif yang menghubungkan program, mitra, transaksi, outcome, evidence, proxy, dan estimated SROI.</p></div><button onClick={()=>setShowReportForm(!showReportForm)}>+ Report</button></div>
+            {showReportForm && <div className="inline-form"><label>Program<select value={reportForm.program_id} onChange={e=>setReportForm({...reportForm,program_id:e.target.value})}><option value="">Pilih program</option>{programRows.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Periode<input type="date" value={reportForm.period} onChange={e=>setReportForm({...reportForm,period:e.target.value})} /></label><label>SROI Calculation<select value={reportForm.sroi_calculation_id} onChange={e=>setReportForm({...reportForm,sroi_calculation_id:e.target.value})}><option value="">Tanpa SROI</option>{sroiRows.filter(x=>x.status==="ESTIMATED").map(x=><option key={x.id} value={x.id}>{Number(x.sroi||0).toFixed(2)}:1 — {new Date(x.created_at).toLocaleDateString("id-ID")}</option>)}</select></label><label>Catatan Metodologi<textarea value={reportForm.methodology_note} onChange={e=>setReportForm({...reportForm,methodology_note:e.target.value})} placeholder="Catatan asumsi, batasan, dan sumber metodologi." /></label><button onClick={createReport} disabled={savingData}>Buat Draft Report</button></div>}
+            <div className="report-grid"><div className="table-wrap"><table><thead><tr><th>Program</th><th>Periode</th><th>SROI</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{reportRows.map(r=>{const calc=sroiRows.find(x=>x.id===r.sroi_calculation_id); return <tr key={r.id}><td><strong>{programRows.find(p=>p.id===r.program_id)?.name||"—"}</strong></td><td>{r.period}</td><td>{calc?.sroi==null?"—":Number(calc.sroi).toFixed(2)+":1"}</td><td><span className="status-badge">{r.status}</span></td><td>{r.status==="DRAFT"&&role==="OWNER"?<button onClick={()=>approveReport(r.id)} disabled={savingData}>Approve</button>:"—"}</td></tr>})}{reportRows.length===0&&<tr><td colSpan={5} className="empty">Belum ada executive report.</td></tr>}</tbody></table></div></div>
+            <div className="report-note"><strong>Struktur laporan:</strong> Program → Mitra Binaan → Aktivitas/Transaksi → Outcome & Indicator → Evidence Verified → Financial Proxy → Estimated SROI → Assumption & Limitation.</div>
+          </section>}
           {activeTab==="partners" && <section className="data-panel"><div className="section-toolbar"><div><div className="eyebrow">PARTNER MANAGEMENT</div><h2>Mitra Binaan</h2><p>Registrasikan mitra binaan dan hubungkan langsung ke program TJSL.</p></div><button onClick={()=>setShowPartnerForm(!showPartnerForm)}>+ Mitra</button></div>
             {showPartnerForm && <div className="inline-form"><label>Program<select value={partnerForm.program_id} onChange={e=>setPartnerForm({...partnerForm,program_id:e.target.value})}><option value="">Pilih program</option>{programRows.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Nama Usaha<input value={partnerForm.business_name} onChange={e=>setPartnerForm({...partnerForm,business_name:e.target.value})} placeholder="Nama usaha mitra" /></label><label>Nama Pemilik<input value={partnerForm.owner_name} onChange={e=>setPartnerForm({...partnerForm,owner_name:e.target.value})} /></label><label>Alamat<textarea value={partnerForm.address} onChange={e=>setPartnerForm({...partnerForm,address:e.target.value})} /></label><button onClick={createPartner} disabled={savingData}>Simpan Mitra</button></div>}
             <div className="table-wrap"><table><thead><tr><th>Usaha</th><th>Program</th><th>Pemilik</th><th>Status</th></tr></thead><tbody>{partnerRows.map(p=><tr key={p.id}><td><strong>{p.business_name}</strong></td><td>{programRows.find(x=>x.id===p.program_id)?.name||"—"}</td><td>{p.owner_name||"—"}</td><td><span className="status-badge">{p.status}</span></td></tr>)}{partnerRows.length===0&&<tr><td colSpan={4} className="empty">Belum ada mitra binaan.</td></tr>}</tbody></table></div>
