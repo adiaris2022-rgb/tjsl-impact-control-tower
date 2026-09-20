@@ -28,7 +28,7 @@ The pilot entry point routes to the Supabase Auth login page. User accounts and 
 
 ## Deployment
 
-Railway tracks the main branch. The current pilot service uses a Railway-generated domain and /health as its healthcheck.
+Railway tracks the `main` branch with automatic deployment enabled. Commits pushed to `main` are intended to trigger the pilot service automatically. The current pilot service uses a Railway-generated domain and `/health` as its healthcheck.
 
 ## Security note
 
@@ -36,4 +36,4 @@ Supabase currently reports one Auth warning: leaked-password protection is disab
 
 ## Attribution
 
-Supported by NORTAGO.
+Powered by NORTAGO.
