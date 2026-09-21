@@ -14,21 +14,33 @@ export default function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!url || !key) throw new Error("Konfigurasi Supabase belum tersedia di aplikasi.");
-      const supabase = createBrowserClient(url, key);
+      const configResponse = await fetch("/api/supabase-config", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!configResponse.ok) {
+        throw new Error("Konfigurasi Supabase belum tersedia di server aplikasi.");
+      }
+
+      const config = await configResponse.json();
+      if (!config.url || !config.key) {
+        throw new Error("Konfigurasi Supabase belum tersedia di aplikasi.");
+      }
+
+      const supabase = createBrowserClient(config.url, config.key);
       const result = await Promise.race([
         supabase.auth.signInWithPassword({ email: email.trim(), password }),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Koneksi ke layanan login terlalu lama. Silakan coba lagi.")), 15000)
         )
       ]);
+
       if (result.error) {
         setError("Email atau password tidak valid.");
         setBusy(false);
         return;
       }
+
       window.location.assign("/control-tower");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login gagal. Silakan coba lagi.");
