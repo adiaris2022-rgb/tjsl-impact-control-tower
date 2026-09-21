@@ -60,7 +60,7 @@ export default function LoginPage() {
         <input required type="password" value={password} onChange={e=>setPassword(e.target.value)} style={{width:"100%",marginTop:"8px",padding:"13px",borderRadius:"10px",border:"1px solid #33434b",background:"#081116",color:"#fff",boxSizing:"border-box"}} />
         {error && <div style={{marginTop:"14px",padding:"12px",borderRadius:"10px",background:"#35171b",color:"#ffb4bd",fontSize:"13px"}}>{error}</div>}
         <button disabled={busy} type="submit" style={{width:"100%",marginTop:"20px",padding:"14px",border:0,borderRadius:"11px",background:"#f5f7f8",color:"#081116",fontWeight:700}}>{busy ? "Memproses…" : "Masuk"}</button>
-        <a href="/" style={{display:"block",marginTop:"18px",textAlign:"center",color:"#a9c8d3",fontSize:"13px"}}>Kembali</a>
+        <a href="/reset-password" style={{display:"block",marginTop:"18px",textAlign:"center",color:"#a9c8d3",fontSize:"13px"}}>Lupa password?</a><a href="/" style={{display:"block",marginTop:"12px",textAlign:"center",color:"#a9c8d3",fontSize:"13px"}}>Kembali</a>
       </form>
     </main>
   );
