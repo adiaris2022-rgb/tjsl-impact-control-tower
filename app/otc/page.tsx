@@ -1,6 +1,6 @@
 "use client";
 import {useState} from "react";
-const products=[["Kopi Susu",22000],["Americano",18000],["Croissant",28000]];
+const products: Array<[string, number]> = [["Kopi Susu",22000],["Americano",18000],["Croissant",28000]];
 export default function OTC(){const [mode,setMode]=useState("TAKE AWAY"); const [cart,setCart]=useState<Record<number,number>>({});
 const add=(i:number)=>setCart(c=>({...c,[i]:(c[i]||0)+1})); const count=Object.values(cart).reduce((a,b)=>a+b,0); const total=products.reduce((s,p,i)=>s+p[1]*(cart[i]||0),0);
 return <main style={{minHeight:"100vh",background:"#f7f8fa",padding:20,fontFamily:"Inter,system-ui,sans-serif"}}><div style={{maxWidth:760,margin:"0 auto"}}>
