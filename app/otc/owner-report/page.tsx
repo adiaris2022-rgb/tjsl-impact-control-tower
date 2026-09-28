@@ -1,0 +1,1 @@
+export default function OwnerReport(){return <main style={{padding:24,fontFamily:"system-ui"}}><h1>Owner Hourly Report</h1><p>Ringkasan otomatis per jam: jumlah transaksi dan nominal per outlet serta total seluruh outlet.</p><div style={{padding:16,border:"1px solid #ddd",borderRadius:12}}>18:00 • Outlet Pusat: 24 transaksi • Rp1.860.000</div></main>}
