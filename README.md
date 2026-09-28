@@ -8,11 +8,17 @@ Operational control tower for TJSL program monitoring, Mitra Binaan activity dat
 
 Current deployment is configured for staging/pilot use. The system is not being represented as fully production-ready until authentication, role-based UAT, storage/privacy controls, backup/restore, monitoring, and operational governance are tested.
 
+## OTC status
+
+**NORTAGO OTC commerce core is now included on the same main branch.**
+
+Customer flow includes menu/product display, cart, checkout, Take Away, Pre-Order, Dine-In reservation, digital receipt, and the Owner Control Tower foundation. Delivery is part of the intended commerce flow and remains third-party fulfillment in V1.
+
 ## Core control chain
 
 TJSL Program -> Mitra Binaan -> Transactions -> Outcomes -> Evidence -> Verification -> Financial Proxy -> SROI Gate -> Estimated SROI -> Executive Impact Report
 
-### Evidence gate
+## Evidence gate
 
 NO EVIDENCE -> NO VERIFIED OUTCOME -> NO VERIFIED SROI.
 
@@ -28,7 +34,7 @@ The pilot entry point routes to the Supabase Auth login page. User accounts and 
 
 ## Deployment
 
-Railway tracks the `main` branch with automatic deployment enabled. Commits pushed to `main` are intended to trigger the pilot service automatically. The current pilot service uses a Railway-generated domain and `/health` as its healthcheck.
+Railway tracks the main branch with automatic deployment enabled. Commits pushed to main are intended to trigger the pilot service automatically. The current pilot service uses a Railway-generated domain and /health as its healthcheck.
 
 ## Security note
 
