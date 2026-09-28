@@ -1,9 +1,8 @@
 "use client";
-import {useSearchParams} from "next/navigation";
-import {useState} from "react";
-
+import {useEffect, useState} from "react";
 export default function Checkout(){
- const params=useSearchParams(); const mode=params.get("mode")||"TAKE AWAY";
+ const [mode,setMode]=useState("TAKE AWAY");
+ useEffect(()=>{const m=new URLSearchParams(window.location.search).get("mode"); if(m) setMode(m);},[]);
  const [method,setMethod]=useState("QRIS"),[done,setDone]=useState(false);
  const [date,setDate]=useState(""),[time,setTime]=useState(""),[address,setAddress]=useState("");
  const delivery=mode==="DELIVERY", po=mode==="PRE-ORDER";
