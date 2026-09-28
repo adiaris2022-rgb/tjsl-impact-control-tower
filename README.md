@@ -43,3 +43,8 @@ Supabase currently reports one Auth warning: leaked-password protection is disab
 ## Attribution
 
 Powered by NORTAGO.
+
+
+## Deployment checkpoint
+
+OTC pilot deployment checkpoint: 2026-09-28 — deployed on the existing TJSL Railway service to preserve the free-plan footprint.
