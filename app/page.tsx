@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import OTCPage from "../otc/app/page";
 
 export default function Home() {
-  redirect("/login");
+  return <OTCPage />;
 }
