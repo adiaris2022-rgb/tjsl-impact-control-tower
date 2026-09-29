@@ -1,1 +1,5 @@
-export default function OTCPage(){return <main style={{padding:24,fontFamily:"Arial,sans-serif"}}><h1>NORTAGO OTC</h1><p>Menu → Cart → Checkout → Payment → Fulfillment</p><p>Take Away • Pre-Order • Delivery</p></main>;} 
+import { redirect } from "next/navigation";
+
+export default function OTCPage() {
+  redirect("/otc/customer-order");
+}
