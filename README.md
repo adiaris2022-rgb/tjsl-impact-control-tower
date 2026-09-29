@@ -48,3 +48,8 @@ Powered by NORTAGO.
 ## Deployment checkpoint
 
 OTC pilot deployment checkpoint: 2026-09-28 — deployed on the existing TJSL Railway service to preserve the free-plan footprint.
+
+
+## OTC pilot route
+
+The OTC customer commerce prototype is available at `/otc` on the same TJSL Railway service. It is an isolated customer-facing route and does not replace the TJSL root control tower.
