@@ -1,5 +1,7 @@
 "use client";
 
+import "./otc.css";
+
 import { useMemo, useState } from "react";
 
 type Mode = "TAKE AWAY" | "PRE-ORDER" | "DELIVERY";
