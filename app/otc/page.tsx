@@ -1,41 +1,67 @@
 "use client";
 import { useMemo, useState } from "react";
-import Link from "next/link";
 
-const products=[
- {id:"kopi-susu",name:"Kopi Susu",price:22000,category:"Coffee"},
- {id:"americano",name:"Americano",price:18000,category:"Coffee"},
- {id:"croissant",name:"Croissant",price:28000,category:"Food"},
- {id:"matcha",name:"Matcha Latte",price:24000,category:"Non Coffee"},
+type Mode = "TAKE AWAY" | "PRE-ORDER" | "DELIVERY";
+const products = [
+  { id: 1, name: "Kopi Susu", price: 22000, category: "Coffee" },
+  { id: 2, name: "Americano", price: 18000, category: "Coffee" },
+  { id: 3, name: "Croissant", price: 28000, category: "Food" },
 ];
 
-export default function OTCPage(){
- const [mode,setMode]=useState<"TAKE_AWAY"|"PRE_ORDER"|"DELIVERY">("TAKE_AWAY");
- const [cart,setCart]=useState<Record<string,number>>({});
- const total=useMemo(()=>products.reduce((s,p)=>s+(cart[p.id]||0)*p.price,0),[cart]);
- const add=(id:string)=>setCart(c=>({...c,[id]:(c[id]||0)+1}));
- const dec=(id:string)=>setCart(c=>{const n=(c[id]||0)-1; const x={...c}; if(n<=0) delete x[id]; else x[id]=n; return x;});
- return <main className="app-shell">
-  <header className="topbar"><div className="company-brand"><div className="mark">A</div><div><strong>NORTAGO OTC</strong><small>Owner Control Tower</small></div></div><Link href="/login" className="ghost">Owner Login</Link></header>
-  <section className="hero"><div><div className="eyebrow">CUSTOMER ORDER</div><h1>Menu & Checkout</h1><p>Pilih produk, cara menerima pesanan, lalu lanjut ke checkout.</p></div><div className="status"><i/>ONLINE <small>OCT</small></div></section>
-  <section className="data-panel">
-   <div className="section-toolbar"><div><h2>Bagaimana Anda ingin menerima pesanan?</h2><p>Semua channel masuk ke Order Engine yang sama.</p></div></div>
-   <div className="tower-tabs">
-    {([["TAKE_AWAY","TAKE AWAY"],["PRE_ORDER","PRE-ORDER / PO"],["DELIVERY","DELIVERY"]] as const).map(([v,l])=><button key={v} className={mode===v?"active":""} onClick={()=>setMode(v)}>{l}</button>)}
-   </div>
-   <div className="split-grid">
-    <div className="sub-panel"><h3>Menu Produk</h3><p className="method">Outlet: Kedai Kopi Empat Sekawan • Harga dapat berbeda per outlet.</p>
-     <div className="table-wrap"><table><thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th/></tr></thead><tbody>
-      {products.map(p=><tr key={p.id}><td><strong>{p.name}</strong></td><td>{p.category}</td><td>Rp {p.price.toLocaleString("id-ID")}</td><td><button onClick={()=>add(p.id)}>Tambah</button></td></tr>)}
-     </tbody></table></div>
+export default function OTC() {
+  const [mode, setMode] = useState<Mode>("TAKE AWAY");
+  const [cart, setCart] = useState<Record<number, number>>({});
+  const [paid, setPaid] = useState(false);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [address, setAddress] = useState("");
+  const [payment, setPayment] = useState("QRIS");
+  const count = Object.values(cart).reduce((a, b) => a + b, 0);
+  const total = useMemo(() => products.reduce((s, p) => s + p.price * (cart[p.id] || 0), 0), [cart]);
+  const money = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  const add = (id: number) => setCart(c => ({ ...c, [id]: (c[id] || 0) + 1 }));
+
+  return <main style={{ minHeight:"100vh", background:"#f7f8fa", padding:20, fontFamily:"Inter,system-ui,sans-serif" }}>
+    <div style={{ maxWidth:760, margin:"0 auto" }}>
+      <header style={{ background:"#111827", color:"#fff", padding:22, borderRadius:18 }}>
+        <small style={{ letterSpacing:2, opacity:.7 }}>NORTAGO OTC</small><h1 style={{ margin:"8px 0" }}>Kedai Kopi</h1><div style={{ opacity:.75 }}>Outlet Pusat • Buka hari ini</div>
+      </header>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, margin:"16px 0" }}>
+        {(["TAKE AWAY","PRE-ORDER","DELIVERY"] as Mode[]).map(x => <button key={x} onClick={() => {setMode(x);setPaid(false)}} style={{ padding:11,borderRadius:10,border:"1px solid #d0d5dd",background:mode===x?"#111827":"#fff",color:mode===x?"#fff":"#111827",fontWeight:700 }}>{x}</button>)}
+      </div>
+
+      <section style={{ background:"#fff", border:"1px solid #e4e7ec", borderRadius:14, padding:16, marginBottom:14 }}>
+        <strong>{mode === "TAKE AWAY" ? "Pickup di outlet" : mode === "PRE-ORDER" ? "Jadwal pickup" : "Delivery oleh pihak ketiga"}</strong>
+        {mode === "PRE-ORDER" && <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12 }}>
+          <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{padding:11,border:"1px solid #d0d5dd",borderRadius:9}}/>
+          <input type="time" value={time} onChange={e=>setTime(e.target.value)} style={{padding:11,border:"1px solid #d0d5dd",borderRadius:9}}/>
+        </div>}
+        {mode === "DELIVERY" && <textarea value={address} onChange={e=>setAddress(e.target.value)} placeholder="Alamat pengantaran" rows={3} style={{width:"100%",boxSizing:"border-box",marginTop:12,padding:11,border:"1px solid #d0d5dd",borderRadius:9}}/>}
+      </section>
+
+      <h2 style={{fontSize:20}}>Menu / Produk</h2>
+      {products.map(p => <article key={p.id} style={{background:"#fff",padding:16,margin:"10px 0",border:"1px solid #e4e7ec",borderRadius:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontSize:12,color:"#667085"}}>{p.category}</div><strong>{p.name}</strong><div style={{marginTop:4}}>{money(p.price)}</div></div>
+        <button onClick={()=>add(p.id)} style={{padding:"10px 14px",borderRadius:9,border:"1px solid #d0d5dd",background:"#fff"}}>Tambah</button>
+      </article>)}
+
+      <section style={{marginTop:18,padding:16,background:"#111827",color:"#fff",borderRadius:16}}>
+        <div style={{display:"flex",justifyContent:"space-between"}}><span>{count} item</span><strong>{money(total)}</strong></div>
+        {count > 0 && !paid && <div style={{marginTop:14}}>
+          <input placeholder="Nama pelanggan" style={{width:"100%",boxSizing:"border-box",padding:11,borderRadius:9,border:0,marginBottom:8}}/>
+          <input placeholder="WhatsApp" style={{width:"100%",boxSizing:"border-box",padding:11,borderRadius:9,border:0,marginBottom:8}}/>
+          <div style={{display:"flex",gap:8}}>{["QRIS","CASH","OTHER"].map(x=><button key={x} onClick={()=>setPayment(x)} style={{flex:1,padding:10,borderRadius:9,border:"1px solid #475467",background:payment===x?"#fff":"#1f2937",color:payment===x?"#111827":"#fff"}}>{x}</button>)}</div>
+          <button onClick={()=>setPaid(true)} style={{width:"100%",marginTop:10,padding:13,border:0,borderRadius:10,background:"#fff",color:"#111827",fontWeight:800}}>Bayar & Buat Pesanan</button>
+        </div>}
+        {paid && <div style={{marginTop:12,padding:14,borderRadius:10,background:"#ecfdf3",color:"#027a48"}}>
+          <strong>Pesanan berhasil dibuat.</strong><br/>OTC-00124 • PAID • {mode}
+          {mode==="PRE-ORDER" && date && time ? <> • Pickup {date} {time}</> : null}
+          {mode==="DELIVERY" ? <> • Menunggu handover ke delivery</> : null}
+          <br/>Pickup Pass: <b>7K9P</b>
+        </div>}
+      </section>
+      <footer style={{marginTop:45,textAlign:"center",fontSize:12,color:"#98a2b3"}}>Supported by NORTAGO</footer>
     </div>
-    <div className="sub-panel"><h3>Keranjang</h3><p className="method">{mode==="TAKE_AWAY"?"Ambil segera di outlet.":mode==="PRE_ORDER"?"Tentukan tanggal dan waktu pengambilan.":"Pesanan diserahkan ke kurir pihak ketiga setelah siap."}</p>
-     {products.filter(p=>cart[p.id]).map(p=><div key={p.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #193134"}}><span>{p.name} × {cart[p.id]}</span><span>Rp {(p.price*(cart[p.id]||0)).toLocaleString("id-ID")} <button className="ghost" onClick={()=>dec(p.id)}>−</button></span></div>)}
-     <div style={{display:"flex",justifyContent:"space-between",marginTop:18,fontWeight:900}}><span>Total</span><span>Rp {total.toLocaleString("id-ID")}</span></div>
-     {total>0&&<Link href={"/otc/checkout?mode="+mode} className="status" style={{display:"inline-block",marginTop:18,textDecoration:"none"}}>LANJUT CHECKOUT →</Link>}
-    </div>
-   </div>
-  </section>
-  <footer>Supported by NORTAGO • Digital ordering & operational control layer</footer>
- </main>
+  </main>;
 }
