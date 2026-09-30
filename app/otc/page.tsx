@@ -79,7 +79,7 @@ export default function OTCPage() {
         <header style={{ padding: "8px 0 24px" }}>
           <div style={{ fontSize: 12, letterSpacing: 2, color: "#56d6c0", fontWeight: 800 }}>NORTAGO OTC</div>
           <h1 style={{ margin: "8px 0 4px", fontSize: 34 }}>Menu & Order</h1>
-          <p style={{ color: "#8da19f", margin: 0 }}>Kedai Kopi • Pilih outlet, produk, dan cara menerima pesanan.</p>
+          <p style={{ color: "#8da19f", margin: 0 }}>Kedai Kopi • Menu, harga, cart, checkout, dan fulfillment dalam satu alur.</p>
         </header>
 
         <section style={{ background: "#09191d", border: "1px solid #17363a", borderRadius: 20, padding: 16, marginBottom: 22 }}>
@@ -174,8 +174,8 @@ export default function OTCPage() {
               <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "#0d2a25", border: "1px solid #24564d" }}>
                 <strong>Pesanan berhasil dibuat.</strong>
                 <div style={{ color: "#9cc5bf", marginTop: 5 }}>Mode: {mode} • Outlet: {outlets.find((o) => o.id === outlet)?.name}</div>
-                <div style={{ color: "#9cc5bf" }}>Pembayaran: {payment} • Total: {rupiah(total)}</div>
-                {mode === "DELIVERY" && <div style={{ color: "#9cc5bf" }}>Delivery menggunakan kurir pihak ketiga.</div>}
+                <div style={{ color: "#9cc5bf" }}>Pembayaran: {payment} • Total: {rupiah(total)}</div>\n                <div style={{ color: "#9cc5bf" }}>Source: CUSTOMER_SELF_ORDER • Status: NEW</div>
+                {mode === "DELIVERY" && <div style={{ color: "#9cc5bf" }}>Delivery menggunakan kurir pihak ketiga; biaya/dispatch mengikuti konfigurasi operasional.</div>}
               </div>
             )}
           </section>
