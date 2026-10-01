@@ -28,15 +28,22 @@ export default function ControlTower() {
       if (data.session?.user) load(data.session.user);
       else setLoading(false);
     }).catch(e => { setError(e instanceof Error ? e.message : "Gagal memuat sesi."); setLoading(false); });
-    const {data: listener} = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) load(session.user);
-    });
-    return () => listener.subscription.unsubscribe();
+    let listener: { subscription: { unsubscribe: () => void } } | null = null;
+    try {
+      const result = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) void load(session.user);
+      });
+      listener = result.data;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal menginisialisasi autentikasi.");
+    }
+    return () => listener?.subscription.unsubscribe();
   }, []);
 
   async function load(currentUser: User) {
-    const s = getSupabase();
+    let s;
+    try { s = getSupabase(); } catch (e) { setError(e instanceof Error ? e.message : "Konfigurasi Supabase tidak tersedia."); setLoading(false); return; }
     const {data: bu, error: e} = await s.from("business_users").select("business_id,role").eq("user_id", currentUser.id).maybeSingle();
     if (e || !bu) { setError(e?.message ?? "Akun belum terdaftar pada TJSL Impact Control Tower."); setLoading(false); return; }
     setRole(bu.role);
