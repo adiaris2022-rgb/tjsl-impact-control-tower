@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
-type Product=[string,string,number,string,string];
+type Product=[string,string,string,number,string];
 const products:Product[]=[
   ["a24723cd-6913-4208-9132-a4a3710e362c","Americano","Espresso dan air",18000,"Minuman"],
   ["28fe2f72-78b2-4a73-b2d4-d55efed11da3","Croissant","Butter croissant",28000,"Food"],
@@ -15,17 +15,8 @@ export default function OTC(){
  const [outletName,setOutletName]=useState("Cabang Bandung");
  const total=useMemo(()=>products.reduce((s,p)=>s+(cart[p[0]]||0)*p[3],0),[cart]);
  const add=(id:string)=>setCart(c=>({...c,[id]:(c[id]||0)+1}));
- useEffect(()=>{try{
-   const saved=JSON.parse(localStorage.getItem("nortago_otc_cart")||"{}");
-   if(saved&&typeof saved==="object")setCart(saved)
- }catch{}},[]);
- useEffect(()=>{try{
-   localStorage.setItem("nortago_otc_cart",JSON.stringify(cart));
-   localStorage.setItem("nortago_otc_items",JSON.stringify(products.filter(p=>cart[p[0]]).map(p=>({id:p[0],name:p[1],price:p[3],qty:cart[p[0]]}))));
-   localStorage.setItem("nortago_otc_mode",mode);
-   localStorage.setItem("nortago_otc_outlet_id",outletId);
-   localStorage.setItem("nortago_otc_outlet_name",outletName);
- }catch{}},[cart,mode,outletId,outletName]);
+ useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem("nortago_otc_cart")||"{}");if(saved&&typeof saved==="object")setCart(saved)}catch{}},[]);
+ useEffect(()=>{try{localStorage.setItem("nortago_otc_cart",JSON.stringify(cart));localStorage.setItem("nortago_otc_items",JSON.stringify(products.filter(p=>cart[p[0]]).map(p=>({id:p[0],name:p[1],price:p[3],qty:cart[p[0]]}))));localStorage.setItem("nortago_otc_mode",mode);localStorage.setItem("nortago_otc_outlet_id",outletId);localStorage.setItem("nortago_otc_outlet_name",outletName)}catch{}},[cart,mode,outletId,outletName]);
  return <main className="otc">
   <header><div><b>NORTAGO OTC</b><small>Owner Control Tower · Customer Commerce</small></div><a href="/">TJSL</a></header>
   <section className="hero"><span>ORDER ONLINE</span><h1>Pesan. Bayar. Ambil, PO, atau Kirim.</h1><p>Menu, harga, checkout, dan fulfillment dalam satu alur.</p></section>
