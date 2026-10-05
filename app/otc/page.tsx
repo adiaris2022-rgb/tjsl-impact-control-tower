@@ -64,6 +64,6 @@ export default function OTC(){
         <div style={{marginTop:16}}>{items.length>0&&<button onClick={()=>continueCheckout(mode)}>{mode==="PO"?"Atur Jadwal PO →":mode==="DELIVERY"?"Atur Delivery →":"Lanjut Checkout →"}</button>}</div>
       </div>
     </section>
-    <footer>Supported by <b>NORTAGO</b> · Customer Self Order → Order Engine → Payment → Fulfillment → Handover → Owner Control Tower</footer>
+    <footer>Supported by <b>NORTAGO</b> · Customer Self Order → Order Engine → Payment → Fulfillment → Handover → Owner Control Tower · Free infrastructure mode</footer>
   </main>;
 }
