@@ -34,7 +34,8 @@ export default function Checkout(){
     <label>Nama<input value={name} onChange={e=>setName(e.target.value)} placeholder="Nama customer"/></label>
     <label>WhatsApp<input value={wa} onChange={e=>setWa(e.target.value)} placeholder="08xxxxxxxxxx"/></label>
     {mode==="PRE-ORDER"&&<><label>Tanggal pickup<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Jam pickup<input type="time" value={time} onChange={e=>setTime(e.target.value)}/></label></>}
-    {mode==="DELIVERY"&&<><label style={{gridColumn:"1/-1"}}>Alamat delivery<textarea value={address} onChange={e=>setAddress(e.target.value)} placeholder="Alamat lengkap"/></label><label style={{gridColumn:"1/-1"}}>Catatan delivery<textarea placeholder="Patokan / catatan untuk kurir"/></label></label></>}
+    {mode==="DELIVERY"&&<><label style={{gridColumn:"1/-1"}}>Alamat delivery<textarea value={address} onChange={e=>setAddress(e.target.value)} placeholder="Alamat lengkap"/></label><label style={{gridColumn:"1/-1"}}>Catatan delivery<textarea placeholder="Patokan / catatan untuk kurir"/></label></>}
+    
     <label>Metode pembayaran<select defaultValue="QRIS"><option>QRIS</option><option>CASH</option><option>OTHER</option></select></label>
    </div>
    <div className="panel"><div className="eyebrow">ORDER SUMMARY</div>{items.length===0?<p className="method">Cart kosong. Kembali ke menu.</p>:items.map(x=><div key={x.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #193134"}}><span>{x.name} × {x.qty}</span><b>Rp {(x.price*x.qty).toLocaleString("id-ID")}</b></div>)}<div style={{display:"flex",justifyContent:"space-between",paddingTop:14,fontWeight:900}}><span>Total</span><span>Rp {total.toLocaleString("id-ID")}</span></div><button disabled={!valid} style={{marginTop:16}} onClick={()=>setDone(true)}>Bayar & Buat Order →</button></div>
