@@ -22,7 +22,13 @@ export default function OTC(){
 
   const add=(id:string)=>setCart(c=>({...c,[id]:(c[id]||0)+1}));
   const remove=(id:string)=>setCart(c=>{const n={...c}; if((n[id]||0)<=1) delete n[id]; else n[id]-=1; return n;});
-  const checkout=mode==="PO"?"/otc/po":mode==="DELIVERY"?"/otc/delivery":"/otc/checkout?mode=takeaway";
+
+  function continueCheckout(nextMode: Mode) {
+    localStorage.setItem("nortago_otc_items", JSON.stringify(items.map(p=>({id:p.id,name:p.name,price:p.price,qty:cart[p.id]||0}))));
+    localStorage.setItem("nortago_otc_mode", nextMode==="PO" ? "PRE-ORDER" : nextMode==="DELIVERY" ? "DELIVERY" : "TAKE AWAY");
+    const checkout=nextMode==="PO"?"/otc/po":nextMode==="DELIVERY"?"/otc/delivery":"/otc/checkout?mode=takeaway";
+    window.location.href=checkout;
+  }
 
   return <main className="app-shell">
     <header className="topbar">
@@ -31,7 +37,11 @@ export default function OTC(){
     </header>
     <section className="hero"><div><div className="eyebrow">CUSTOMER MINI APP</div><h1>Menu → Cart → Checkout</h1><p>Pilih outlet, produk, harga, lalu cara menerima pesanan.</p></div></section>
     <section className="data-panel">
-      <div className="tower-tabs">{([["TAKE_AWAY","TAKE AWAY"],["PO","PRE-ORDER / PO"],["DELIVERY","DELIVERY"]] as const).map(([id,label])=><button key={id} className={mode===id?"active":""} onClick={()=>setMode(id)}>{label}</button>)}</div>
+      <div className="tower-tabs">
+        {([["TAKE_AWAY","TAKE AWAY"],["PO","PRE-ORDER / PO"],["DELIVERY","DELIVERY"]] as const).map(([id,label])=>
+          <button key={id} className={mode===id?"active":""} onClick={()=>setMode(id as Mode)}>{label}</button>
+        )}
+      </div>
       <div className="grid">
         {products.map(p=><article className="metric" key={p.id}>
           <div className="metric-title">{p.category}</div>
@@ -51,7 +61,7 @@ export default function OTC(){
           {items.map(p=><div key={p.id} style={{display:"flex",justifyContent:"space-between"}}><span>{p.name} × {cart[p.id]}</span><b>{money(p.price*(cart[p.id]||0))}</b></div>)}
           <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #20383a",paddingTop:10,fontWeight:900}}><span>Total</span><span>{money(total)}</span></div>
         </div>}
-        <div style={{marginTop:16}}>{items.length>0&&<Link href={checkout}><button>{mode==="PO"?"Atur Jadwal PO →":mode==="DELIVERY"?"Atur Delivery →":"Lanjut Checkout →"}</button></Link>}</div>
+        <div style={{marginTop:16}}>{items.length>0&&<button onClick={()=>continueCheckout(mode)}>{mode==="PO"?"Atur Jadwal PO →":mode==="DELIVERY"?"Atur Delivery →":"Lanjut Checkout →"}</button>}</div>
       </div>
     </section>
     <footer>Supported by <b>NORTAGO</b> · Customer Self Order → Order Engine → Payment → Fulfillment → Handover → Owner Control Tower</footer>
