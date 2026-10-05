@@ -82,7 +82,7 @@ export default function OTCEntry() {
           <button onClick={() => { setCart({}); setCheckout(false); setSuccess(false); }} style={{ padding: "12px 18px", border: 0, borderRadius: 10, background: "#38bdf8", fontWeight: 800 }}>Kembali ke Menu</button>
         </section>}
 
-        <div style={{ textAlign: "center", fontSize: 11, opacity: .4, marginTop: 24 }}>Supported by NORTAGO · OTC V1 Demo</div>
+        <div style={{ textAlign: "center", fontSize: 11, opacity: .4, marginTop: 24 }}>Supported by NORTAGO · OTC V1 Demo · TJSL-hosted</div>
       </div>
     </main>
   );
