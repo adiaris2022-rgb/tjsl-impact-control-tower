@@ -61,6 +61,6 @@ export default function CustomerOrder(){
        <button className="primary-action" onClick={checkout} disabled={!count||loading}>LANJUT CHECKOUT →</button>
      </div>
    </section>
-   <footer>Supported by NORTAGO</footer>
+   <footer>Supported by NORTAGO · Take Away · Pre-Order · Delivery</footer>
  </main>;
 }
