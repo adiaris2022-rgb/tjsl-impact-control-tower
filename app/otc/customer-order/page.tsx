@@ -4,17 +4,22 @@ import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
 import {createClient} from "@supabase/supabase-js";
 
+type Mode="TAKE AWAY"|"PRE-ORDER"|"DELIVERY"|"DINE-IN";
 type Product={id:string;name:string;category:string;description:string;price:number};
 const supabase=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 export default function CustomerOrder(){
  const router=useRouter();
- const [mode,setMode]=useState<"TAKE AWAY"|"PRE-ORDER"|"DELIVERY">("TAKE AWAY");
+ const [mode,setMode]=useState<Mode>("TAKE AWAY");
  const [products,setProducts]=useState<Product[]>([]);
  const [cart,setCart]=useState<Record<string,number>>({});
  const [outletId,setOutletId]=useState("");
  const [outletName,setOutletName]=useState("Outlet");
  const [loading,setLoading]=useState(true);
+ const [partySize,setPartySize]=useState("2");
+ const [reservationDate,setReservationDate]=useState("");
+ const [reservationTime,setReservationTime]=useState("");
+ const [tableNote,setTableNote]=useState("");
 
  useEffect(()=>{(async()=>{
    const s=supabase();
@@ -38,16 +43,27 @@ export default function CustomerOrder(){
    localStorage.setItem("nortago_otc_mode",mode);
    localStorage.setItem("nortago_otc_outlet_id",outletId);
    localStorage.setItem("nortago_otc_outlet_name",outletName);
+   if(mode==="DINE-IN"){
+     localStorage.setItem("nortago_otc_dinein",JSON.stringify({partySize:Number(partySize)||1,date:reservationDate,time:reservationTime,tableNote}));
+   }
    router.push("/otc/checkout");
  };
+
+ const description=mode==="TAKE AWAY"?"Pesan sekarang, ambil di outlet.":mode==="PRE-ORDER"?"Pesan sekarang, tentukan tanggal dan jam pickup.":mode==="DELIVERY"?"Pesan sekarang, siapkan untuk diserahkan kepada kurir pihak ketiga.":"Reservasi waktu makan, pilih menu, dan check-in di outlet.";
 
  return <main className="app-shell">
    <header className="hero"><div><div className="eyebrow">NORTAGO OTC</div><h1>Kedai Kopi</h1><p>{outletName} • Menu & Harga</p></div></header>
    <section className="data-panel">
      <div className="sub-panel">
-       <h3>Bagaimana Anda ingin menerima pesanan?</h3>
-       <div className="mode-grid">{["TAKE AWAY","PRE-ORDER","DELIVERY"].map(x=><button key={x} onClick={()=>setMode(x as typeof mode)} className={mode===x?"active-mode":""}>{x}</button>)}</div>
-       <p className="method">{mode==="TAKE AWAY"?"Pesan sekarang, ambil di outlet.":mode==="PRE-ORDER"?"Pesan sekarang, tentukan tanggal dan jam pickup.":"Pesan sekarang, siapkan untuk diserahkan kepada kurir pihak ketiga."}</p>
+       <h3>Bagaimana Anda ingin menerima / menggunakan pesanan?</h3>
+       <div className="mode-grid">{(["TAKE AWAY","PRE-ORDER","DELIVERY","DINE-IN"] as Mode[]).map(x=><button key={x} onClick={()=>setMode(x)} className={mode===x?"active-mode":""}>{x}</button>)}</div>
+       <p className="method">{description}</p>
+       {mode==="DINE-IN"&&<div className="reservation-grid">
+         <label>Jumlah tamu<input type="number" min="1" value={partySize} onChange={e=>setPartySize(e.target.value)}/></label>
+         <label>Tanggal<input type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></label>
+         <label>Waktu<input type="time" value={reservationTime} onChange={e=>setReservationTime(e.target.value)}/></label>
+         <label>Catatan meja (opsional)<input value={tableNote} onChange={e=>setTableNote(e.target.value)} placeholder="Mis. area non-smoking"/></label>
+       </div>}
      </div>
      <div className="sub-panel">
        <div className="section-head"><h3>Menu</h3><span className="status">{count} item</span></div>
@@ -61,6 +77,6 @@ export default function CustomerOrder(){
        <button className="primary-action" onClick={checkout} disabled={!count||loading}>LANJUT CHECKOUT →</button>
      </div>
    </section>
-   <footer>Supported by NORTAGO · Take Away · Pre-Order · Delivery</footer>
+   <footer>Supported by NORTAGO · Take Away · Pre-Order · Delivery · Dine-In</footer>
  </main>;
 }
