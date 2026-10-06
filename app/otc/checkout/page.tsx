@@ -1,7 +1,7 @@
 "use client";
-import {useSearchParams} from "next/navigation";import Link from "next/link";import {useEffect,useMemo,useState} from "react";
+import {useSearchParams} from "next/navigation";import Link from "next/link";import {Suspense,useEffect,useMemo,useState} from "react";
 type Item={key:string;product:{name:string;price:number};qty:number;variant:string;addons:{name:string;price:number}[]};
-export default function Checkout(){
+function CheckoutContent(){
  const q=useSearchParams();const mode=q.get("mode")||"TAKE_AWAY";const[cart,setCart]=useState<Item[]>([]);const[outlet,setOutlet]=useState("Jakarta");const[done,setDone]=useState(false);
  const[name,setName]=useState("");const[wa,setWa]=useState("");const[payment,setPayment]=useState("QRIS");const[date,setDate]=useState("");const[time,setTime]=useState("");const[address,setAddress]=useState("");const[note,setNote]=useState("");
  useEffect(()=>{try{setCart(JSON.parse(sessionStorage.getItem("otc_cart")||"[]"));setOutlet(sessionStorage.getItem("otc_outlet")||"Jakarta")}catch{}},[]);
@@ -15,3 +15,4 @@ export default function Checkout(){
  <h3>Ringkasan item</h3>{cart.map(i=><div className="cart-line" key={i.key}><span>{i.product.name} × {i.qty}<small style={{display:"block",color:"#617b76"}}>{i.variant}</small></span><b>Rp {((i.product.price+i.addons.reduce((a,x)=>a+x.price,0))*i.qty).toLocaleString("id-ID")}</b></div>)}</div>
  <div className="form-card"><h2>Pembayaran</h2><label>Metode<select value={payment} onChange={e=>setPayment(e.target.value)}><option>QRIS</option><option>Cash</option><option>Other</option></select></label><div className="summary"><span>Total order</span><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="otc-primary full" disabled={!cart.length}>Bayar & Buat Pesanan →</button><small className="muted">Gateway pembayaran dapat diintegrasikan kemudian. Demo ini mencatat metode pembayaran yang dipilih.</small></div></form><footer>Supported by NORTAGO · Digital transaction record</footer></main>
 }
+export default function Checkout(){return <Suspense fallback={<main className="otc-page"><div className="loading">Memuat checkout…</div></main>}><CheckoutContent/></Suspense>}
