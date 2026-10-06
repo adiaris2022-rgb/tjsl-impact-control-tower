@@ -1,82 +1,29 @@
 "use client";
-
-import {useEffect,useState} from "react";
-import {useRouter} from "next/navigation";
-import {createClient} from "@supabase/supabase-js";
-
-type Mode="TAKE AWAY"|"PRE-ORDER"|"DELIVERY"|"DINE-IN";
-type Product={id:string;name:string;category:string;description:string;price:number};
-const supabase=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-
+import Link from "next/link";
+import {useMemo,useState} from "react";
+type Mode="TAKE_AWAY"|"PRE_ORDER"|"DELIVERY";
+type Product={id:string;name:string;price:number;cat:string;desc:string;variants?:string[];addons?:{name:string;price:number}[]};
+const outlets=["Jakarta","Bintaro","Bandung"];
+const products:Product[]=[
+{id:"coffee",name:"Kopi Susu",price:22000,cat:"Coffee",desc:"Kopi susu house blend.",variants:["Regular","Large"],addons:[{name:"Extra Shot",price:7000},{name:"Less Ice",price:0}]},
+{id:"americano",name:"Americano",price:18000,cat:"Coffee",desc:"Espresso dan air mineral.",variants:["Hot","Iced"],addons:[{name:"Extra Shot",price:7000}]},
+{id:"croissant",name:"Croissant",price:28000,cat:"Food",desc:"Butter croissant.",variants:["Original","Chocolate"],addons:[{name:"Butter",price:4000}]},
+{id:"toast",name:"Toast Kaya",price:24000,cat:"Food",desc:"Toast dengan kaya dan butter.",variants:["Regular","Extra Butter"],addons:[]}
+];
+type CartItem={key:string;product:Product;qty:number;variant:string;addons:{name:string;price:number}[]};
 export default function CustomerOrder(){
- const router=useRouter();
- const [mode,setMode]=useState<Mode>("TAKE AWAY");
- const [products,setProducts]=useState<Product[]>([]);
- const [cart,setCart]=useState<Record<string,number>>({});
- const [outletId,setOutletId]=useState("");
- const [outletName,setOutletName]=useState("Outlet");
- const [loading,setLoading]=useState(true);
- const [partySize,setPartySize]=useState("2");
- const [reservationDate,setReservationDate]=useState("");
- const [reservationTime,setReservationTime]=useState("");
- const [tableNote,setTableNote]=useState("");
-
- useEffect(()=>{(async()=>{
-   const s=supabase();
-   const {data:outlet}=await s.from("otc_outlets").select("id,name").eq("is_active",true).order("created_at").limit(1).maybeSingle();
-   if(!outlet){setLoading(false);return;}
-   setOutletId(outlet.id);setOutletName(outlet.name);
-   const {data}=await s.from("otc_outlet_products").select("product_id,price,is_available,otc_products(id,name,category,description,base_price)").eq("outlet_id",outlet.id).eq("is_available",true);
-   const rows=(data??[]).map((r:any)=>({id:r.otc_products.id,name:r.otc_products.name,category:r.otc_products.category??"",description:r.otc_products.description??"",price:Number(r.price??r.otc_products.base_price??0)}));
-   setProducts(rows);setLoading(false);
- })().catch(()=>setLoading(false));},[]);
-
- const add=(id:string)=>setCart(c=>({...c,[id]:(c[id]||0)+1}));
- const remove=(id:string)=>setCart(c=>{const n={...c};if((n[id]||0)<=1)delete n[id];else n[id]-=1;return n;});
- const count=Object.values(cart).reduce((a,b)=>a+b,0);
- const total=products.reduce((s,p)=>s+p.price*(cart[p.id]||0),0);
-
- const checkout=()=>{
-   if(!count||!outletId)return;
-   const items=products.filter(p=>(cart[p.id]||0)>0).map(p=>({id:p.id,name:p.name,price:p.price,qty:cart[p.id]}));
-   localStorage.setItem("nortago_otc_items",JSON.stringify(items));
-   localStorage.setItem("nortago_otc_mode",mode);
-   localStorage.setItem("nortago_otc_outlet_id",outletId);
-   localStorage.setItem("nortago_otc_outlet_name",outletName);
-   if(mode==="DINE-IN"){
-     localStorage.setItem("nortago_otc_dinein",JSON.stringify({partySize:Number(partySize)||1,date:reservationDate,time:reservationTime,tableNote}));
-   }
-   router.push("/otc/checkout");
- };
-
- const description=mode==="TAKE AWAY"?"Pesan sekarang, ambil di outlet.":mode==="PRE-ORDER"?"Pesan sekarang, tentukan tanggal dan jam pickup.":mode==="DELIVERY"?"Pesan sekarang, siapkan untuk diserahkan kepada kurir pihak ketiga.":"Reservasi waktu makan, pilih menu, dan check-in di outlet.";
-
- return <main className="app-shell">
-   <header className="hero"><div><div className="eyebrow">NORTAGO OTC</div><h1>Kedai Kopi</h1><p>{outletName} • Menu & Harga</p></div></header>
-   <section className="data-panel">
-     <div className="sub-panel">
-       <h3>Bagaimana Anda ingin menerima / menggunakan pesanan?</h3>
-       <div className="mode-grid">{(["TAKE AWAY","PRE-ORDER","DELIVERY","DINE-IN"] as Mode[]).map(x=><button key={x} onClick={()=>setMode(x)} className={mode===x?"active-mode":""}>{x}</button>)}</div>
-       <p className="method">{description}</p>
-       {mode==="DINE-IN"&&<div className="reservation-grid">
-         <label>Jumlah tamu<input type="number" min="1" value={partySize} onChange={e=>setPartySize(e.target.value)}/></label>
-         <label>Tanggal<input type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></label>
-         <label>Waktu<input type="time" value={reservationTime} onChange={e=>setReservationTime(e.target.value)}/></label>
-         <label>Catatan meja (opsional)<input value={tableNote} onChange={e=>setTableNote(e.target.value)} placeholder="Mis. area non-smoking"/></label>
-       </div>}
-     </div>
-     <div className="sub-panel">
-       <div className="section-head"><h3>Menu</h3><span className="status">{count} item</span></div>
-       {loading?<p className="method">Memuat menu…</p>:products.length===0?<p className="method">Belum ada produk aktif.</p>:products.map(p=><div key={p.id} className="product-row">
-         <div><div className="product-title">{p.name}</div><div className="method">{p.category} • {p.description}</div><strong>Rp {p.price.toLocaleString("id-ID")}</strong></div>
-         <div className="qty"><button onClick={()=>remove(p.id)} aria-label={"Kurangi "+p.name}>−</button><b>{cart[p.id]||0}</b><button onClick={()=>add(p.id)} aria-label={"Tambah "+p.name}>+</button></div>
-       </div>)}
-     </div>
-     <div className="sub-panel">
-       <div className="section-head"><strong>Total</strong><strong>Rp {total.toLocaleString("id-ID")}</strong></div>
-       <button className="primary-action" onClick={checkout} disabled={!count||loading}>LANJUT CHECKOUT →</button>
-     </div>
-   </section>
-   <footer>Supported by NORTAGO · Take Away · Pre-Order · Delivery · Dine-In</footer>
- </main>;
+ const[mode,setMode]=useState<Mode>("TAKE_AWAY");const[outlet,setOutlet]=useState(outlets[0]);const[cart,setCart]=useState<CartItem[]>([]);
+ const[selectedVariant,setSelectedVariant]=useState<Record<string,string>>({});const[selectedAddon,setSelectedAddon]=useState<Record<string,string[]>>({});
+ const add=(p:Product)=>{const variant=selectedVariant[p.id]||p.variants?.[0]||"Default";const addons=(selectedAddon[p.id]||[]).map(n=>p.addons?.find(a=>a.name===n)).filter(Boolean) as {name:string;price:number}[];const key=p.id+"|"+variant+"|"+addons.map(a=>a.name).join(",");setCart(c=>{const hit=c.find(i=>i.key===key);if(hit)return c.map(i=>i.key===key?{...i,qty:i.qty+1}:i);return [...c,{key,product:p,qty:1,variant,addons}]})};
+ const change=(key:string,d:number)=>setCart(c=>c.map(i=>i.key===key?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0));
+ const itemPrice=(i:CartItem)=>i.product.price+i.addons.reduce((n,a)=>n+a.price,0);const total=useMemo(()=>cart.reduce((n,i)=>n+itemPrice(i)*i.qty,0),[cart]);
+ const toggleAddon=(p:Product,name:string)=>setSelectedAddon(s=>({...s,[p.id]:(s[p.id]||[]).includes(name)?(s[p.id]||[]).filter(x=>x!==name):[...(s[p.id]||[]),name]}));
+ const goCheckout=()=>{sessionStorage.setItem("otc_cart",JSON.stringify(cart));sessionStorage.setItem("otc_outlet",outlet)};
+ return <main className="otc-page"><header className="otc-head"><div><b>NORTAGO OTC</b><small>Customer Mini App · {outlet}</small></div><Link href="/otc">Home</Link></header>
+ <section className="customer-title"><span>ORDER ONLINE</span><h1>Menu & Checkout</h1><p>Pilih outlet, produk, varian, add-on, lalu tentukan cara menerima pesanan. Tidak perlu install aplikasi.</p><label style={{display:"inline-grid",gap:6,marginTop:15,color:"#9db2ae",fontSize:12}}>Outlet<select value={outlet} onChange={e=>setOutlet(e.target.value)} style={{background:"#081417",border:"1px solid #294447",color:"#e9f1ef",borderRadius:9,padding:"10px 12px"}}>{outlets.map(o=><option key={o}>{o}</option>)}</select></label></section>
+ <div className="mode-grid otc-mode">{[["TAKE_AWAY","Take Away","Ambil segera"],["PRE_ORDER","Pre-Order","Jadwal hari/tanggal"],["DELIVERY","Delivery","Kurir pihak ketiga"]].map(([m,t,s])=><button className={mode===m?"active-mode":""} onClick={()=>setMode(m as Mode)} key={m}><b>{t}</b><small>{s}</small></button>)}</div>
+ <section className="otc-shop"><div className="menu-panel"><div className="section-head"><div><span className="eyebrow">MENU</span><h2>Produk & Harga</h2></div><span className="pill">Outlet aktif</span></div>
+ {products.map(p=><article className="product-card" key={p.id}><div className="product-photo">PHOTO</div><div className="product-info"><small>{p.cat}</small><h3>{p.name}</h3><p>{p.desc}</p><b>Mulai Rp {p.price.toLocaleString("id-ID")}</b>{p.variants&&<select value={selectedVariant[p.id]||p.variants[0]} onChange={e=>setSelectedVariant(s=>({...s,[p.id]:e.target.value}))} style={{display:"block",marginTop:8,background:"#081417",border:"1px solid #294447",color:"#dceae7",borderRadius:7,padding:"6px"}}>{p.variants.map(v=><option key={v}>{v}</option>)}</select>}{p.addons&&p.addons.length>0&&<div style={{marginTop:8,display:"flex",gap:8,flexWrap:"wrap"}}>{p.addons.map(a=><label key={a.name} style={{fontSize:10,color:"#819a95"}}><input type="checkbox" checked={(selectedAddon[p.id]||[]).includes(a.name)} onChange={()=>toggleAddon(p,a.name)}/> {a.name}{a.price?" +Rp "+a.price.toLocaleString("id-ID"):""}</label>)}</div>}</div><button className="otc-secondary" onClick={()=>add(p)}>+ Tambah</button></article>)}</div>
+ <aside className="cart-panel"><span className="eyebrow">CART</span><h2>Pesanan Anda</h2>{cart.length===0?<p className="muted">Belum ada produk.</p>:cart.map(i=><div className="cart-line" key={i.key}><div><span>{i.product.name} × {i.qty}</span><small style={{display:"block",color:"#617b76"}}>{i.variant}{i.addons.length?" · "+i.addons.map(a=>a.name).join(", "):""}</small></div><div style={{textAlign:"right"}}><b>Rp {(itemPrice(i)*i.qty).toLocaleString("id-ID")}</b><div className="qty"><button onClick={()=>change(i.key,-1)}>-</button><span>{i.qty}</span><button onClick={()=>change(i.key,1)}>+</button></div></div></div>)}<div className="total-line"><span>Subtotal</span><strong>Rp {total.toLocaleString("id-ID")}</strong></div><Link onClick={goCheckout} className={"otc-primary full "+(!cart.length?"disabled":"")} href={cart.length?"/otc/checkout?mode="+mode:"#"}>Lanjut Checkout →</Link>
+ {mode==="PRE_ORDER"&&<div className="info-box">PO: pilih jadwal di checkout. H-1 ada konfirmasi jadwal. Tidak ada cancel otomatis.</div>}{mode==="DELIVERY"&&<div className="info-box">Delivery memakai kurir pihak ketiga. OCT tidak mengelola armada, GPS, dispatch, atau tarif kurir. Biaya delivery hanya ditambahkan jika dikonfigurasi.</div>}{mode==="TAKE_AWAY"&&<div className="info-box">Pickup Pass single-use dibuat setelah order berhasil dan diverifikasi saat pengambilan.</div>}</aside></section><footer>Supported by NORTAGO · Menu → Cart → Checkout → Fulfillment</footer></main>
 }

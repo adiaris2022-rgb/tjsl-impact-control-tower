@@ -1,46 +1,17 @@
 "use client";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-
-type Mode = "TAKE AWAY" | "PRE-ORDER" | "DELIVERY";
-type Item = {id:string;name:string;price:number;qty:number};
-
+import {useSearchParams} from "next/navigation";import Link from "next/link";import {useEffect,useMemo,useState} from "react";
+type Item={key:string;product:{name:string;price:number};qty:number;variant:string;addons:{name:string;price:number}[]};
 export default function Checkout(){
- const [mode,setMode]=useState<Mode>("TAKE AWAY");
- const [items,setItems]=useState<Item[]>([]);
- const [done,setDone]=useState(false);
- const [name,setName]=useState("");
- const [wa,setWa]=useState("");
- const [address,setAddress]=useState("");
- const [date,setDate]=useState("");
- const [time,setTime]=useState("");
- useEffect(()=>{
-   try{
-    const raw=localStorage.getItem("nortago_otc_items");
-    const savedMode=localStorage.getItem("nortago_otc_mode");
-    if(raw)setItems(JSON.parse(raw));
-    if(savedMode==="DELIVERY"||savedMode==="PRE-ORDER"||savedMode==="TAKE AWAY")setMode(savedMode);
-   }catch{}
- },[]);
- const total=useMemo(()=>items.reduce((s,x)=>s+x.price*x.qty,0),[items]);
- const valid=!!name&&!!wa&&items.length>0&&(mode!=="DELIVERY"||!!address)&&(mode!=="PRE-ORDER"||!!date&&!!time);
- if(done)return <main className="auth-shell"><section className="login-card"><div className="eyebrow">ORDER SUCCESS</div><h1>Pesanan diterima.</h1><p className="lead">Order <b>OTC-00124</b> tercatat di NORTAGO OCT.</p><div className="metric"><div className="metric-title">TOTAL</div><div className="metric-value">Rp {total.toLocaleString("id-ID")}</div><div className="metric-note">Payment: QRIS · Status: PAID</div></div><div className="metric" style={{marginTop:12}}><div className="metric-title">{mode==="DELIVERY"?"HANDOVER CODE":"PICKUP PASS"}</div><div className="metric-value">7K9P</div><div className="metric-note">{mode==="DELIVERY"?"Single-use verification code untuk handover ke pihak delivery.":"Single-use pickup code."}</div></div><Link className="status" href="/otc">← Kembali ke Menu</Link></section></main>;
- return <main className="app-shell">
-  <header className="topbar"><div className="brand"><span className="mark">A</span><div><strong>NORTAGO OTC</strong><small>Checkout</small></div></div><Link className="status" href="/otc">← Menu</Link></header>
-  <section className="hero"><div><div className="eyebrow">CHECKOUT</div><h1>Konfirmasi Pesanan</h1><p>Produk, fulfillment, customer, dan pembayaran.</p></div></section>
-  <section className="data-panel">
-   <div className="tower-tabs">{(["TAKE AWAY","PRE-ORDER","DELIVERY"] as Mode[]).map(x=><button key={x} className={mode===x?"active":""} onClick={()=>{setMode(x);localStorage.setItem("nortago_otc_mode",x)}}>{x}</button>)}</div>
-   <div className="inline-form">
-    <label>Nama<input value={name} onChange={e=>setName(e.target.value)} placeholder="Nama customer"/></label>
-    <label>WhatsApp<input value={wa} onChange={e=>setWa(e.target.value)} placeholder="08xxxxxxxxxx"/></label>
-    {mode==="PRE-ORDER"&&<><label>Tanggal pickup<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Jam pickup<input type="time" value={time} onChange={e=>setTime(e.target.value)}/></label></>}
-    {mode==="DELIVERY"&&<><label style={{gridColumn:"1/-1"}}>Alamat delivery<textarea value={address} onChange={e=>setAddress(e.target.value)} placeholder="Alamat lengkap"/></label><label style={{gridColumn:"1/-1"}}>Catatan delivery<textarea placeholder="Patokan / catatan untuk kurir"/></label></>}
-    
-    <label>Metode pembayaran<select defaultValue="QRIS"><option>QRIS</option><option>CASH</option><option>OTHER</option></select></label>
-   </div>
-   <div className="panel"><div className="eyebrow">ORDER SUMMARY</div>{items.length===0?<p className="method">Cart kosong. Kembali ke menu.</p>:items.map(x=><div key={x.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #193134"}}><span>{x.name} × {x.qty}</span><b>Rp {(x.price*x.qty).toLocaleString("id-ID")}</b></div>)}<div style={{display:"flex",justifyContent:"space-between",paddingTop:14,fontWeight:900}}><span>Total</span><span>Rp {total.toLocaleString("id-ID")}</span></div><button disabled={!valid} style={{marginTop:16}} onClick={()=>setDone(true)}>Bayar & Buat Order →</button></div>
-   <div className="report-note"><strong>{mode}</strong> — {mode==="DELIVERY"?"OCT mencatat order sampai handover ke pihak delivery. Tidak ada fleet/GPS/dispatch internal V1.":mode==="PRE-ORDER"?"PO menyimpan tanggal dan jam pickup untuk production schedule.":"Order diproses sampai pickup pass diverifikasi."}</div>
-  </section>
-  <footer>Supported by <b>NORTAGO</b> · Digital Order Receipt · Owner Control Tower</footer>
- </main>;
+ const q=useSearchParams();const mode=q.get("mode")||"TAKE_AWAY";const[cart,setCart]=useState<Item[]>([]);const[outlet,setOutlet]=useState("Jakarta");const[done,setDone]=useState(false);
+ const[name,setName]=useState("");const[wa,setWa]=useState("");const[payment,setPayment]=useState("QRIS");const[date,setDate]=useState("");const[time,setTime]=useState("");const[address,setAddress]=useState("");const[note,setNote]=useState("");
+ useEffect(()=>{try{setCart(JSON.parse(sessionStorage.getItem("otc_cart")||"[]"));setOutlet(sessionStorage.getItem("otc_outlet")||"Jakarta")}catch{}},[]);
+ const total=useMemo(()=>cart.reduce((n,i)=>n+(i.product.price+i.addons.reduce((a,x)=>a+x.price,0))*i.qty,0),[cart]);const label=mode==="TAKE_AWAY"?"TAKE AWAY":mode==="PRE_ORDER"?"PRE-ORDER":"DELIVERY";
+ if(done)return <main className="otc-page"><section className="success-card"><span className="eyebrow">ORDER CREATED</span><h1>Pesanan berhasil.</h1><p>Order <b>OTC-00124</b> tercatat di <b>{outlet}</b>. Status awal: PAID.</p><div className="receipt-mini"><span>Fulfillment</span><b>{label}</b><span>Total</span><b>Rp {total.toLocaleString("id-ID")}</b><span>Pickup / Handover Pass</span><b>7K9P</b></div><p className="muted">{mode==="PRE_ORDER"?"Jadwal: "+date+" · "+time:mode==="DELIVERY"?"Order akan diproses dan diserahkan ke kurir pihak ketiga setelah READY.":"Pickup setelah READY di outlet."}</p><Link className="otc-primary" href="/otc/digital-receipt">Lihat Digital Receipt →</Link></section></main>;
+ return <main className="otc-page"><header className="otc-head"><div><b>NORTAGO OTC</b><small>Checkout · {outlet}</small></div><Link href="/otc/customer-order">← Menu</Link></header><section className="customer-title"><span>CHECKOUT</span><h1>{label}</h1><p>Checkout menyesuaikan fulfillment yang dipilih.</p></section>
+ <form className="checkout-grid" onSubmit={e=>{e.preventDefault();setDone(true)}}><div className="form-card"><h2>Customer & Fulfillment</h2><label>Nama<input value={name} onChange={e=>setName(e.target.value)} required/></label><label>WhatsApp<input value={wa} onChange={e=>setWa(e.target.value)} placeholder="08xxxxxxxxxx" required/></label>
+ {mode==="PRE_ORDER"&&<div className="two"><label>Tanggal pickup<input type="date" value={date} onChange={e=>setDate(e.target.value)} required/></label><label>Jam pickup<input type="time" value={time} onChange={e=>setTime(e.target.value)} required/></label></div>}
+ {mode==="DELIVERY"&&<><label>Alamat delivery<textarea value={address} onChange={e=>setAddress(e.target.value)} required/></label><label>Catatan delivery<textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Patokan / instruksi untuk kurir"/></label><div className="info-box">Kurir adalah pihak ketiga. OCT mencatat order dan handover, bukan dispatch armada.</div></>}
+ {mode==="TAKE_AWAY"&&<div className="info-box">Pickup Pass akan menjadi kode verifikasi single-use.</div>}
+ <h3>Ringkasan item</h3>{cart.map(i=><div className="cart-line" key={i.key}><span>{i.product.name} × {i.qty}<small style={{display:"block",color:"#617b76"}}>{i.variant}</small></span><b>Rp {((i.product.price+i.addons.reduce((a,x)=>a+x.price,0))*i.qty).toLocaleString("id-ID")}</b></div>)}</div>
+ <div className="form-card"><h2>Pembayaran</h2><label>Metode<select value={payment} onChange={e=>setPayment(e.target.value)}><option>QRIS</option><option>Cash</option><option>Other</option></select></label><div className="summary"><span>Total order</span><strong>Rp {total.toLocaleString("id-ID")}</strong></div><button className="otc-primary full" disabled={!cart.length}>Bayar & Buat Pesanan →</button><small className="muted">Gateway pembayaran dapat diintegrasikan kemudian. Demo ini mencatat metode pembayaran yang dipilih.</small></div></form><footer>Supported by NORTAGO · Digital transaction record</footer></main>
 }
