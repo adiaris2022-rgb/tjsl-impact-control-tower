@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+function getSupabase(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)}
 const money=(n:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 
 export default function ProcurementCafe(){
@@ -15,30 +15,30 @@ export default function ProcurementCafe(){
  const [newSupplier,setNewSupplier]=useState({name:"",phone:"",lead_time_days:"1"});
  const [reqItem,setReqItem]=useState(""),[reqQty,setReqQty]=useState(""),[reqDate,setReqDate]=useState(""),[reqNote,setReqNote]=useState("");
 
- useEffect(()=>{supabase.auth.getSession().then(({data})=>{setUser(data.session?.user??null);if(data.session?.user)load(data.session.user);else setLoading(false)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,s)=>{setUser(s?.user??null);if(s?.user)load(s.user)});return()=>subscription.unsubscribe()},[]);
+ useEffect(()=>{getSupabase().auth.getSession().then(({data})=>{setUser(data.session?.user??null);if(data.session?.user)load(data.session.user);else setLoading(false)});const {data:{subscription}}=getSupabase().auth.onAuthStateChange((_e,s)=>{setUser(s?.user??null);if(s?.user)load(s.user)});return()=>subscription.unsubscribe()},[]);
 
  async function load(u:User){
   setLoading(true);setError("");
-  const {data:bu,error:e}=await supabase.from("business_users").select("business_id").eq("user_id",u.id).limit(1).maybeSingle();
+  const {data:bu,error:e}=await getSupabase().from("business_users").select("business_id").eq("user_id",u.id).limit(1).maybeSingle();
   if(e||!bu){setError(e?.message??"Akun belum terhubung ke bisnis.");setLoading(false);return}
   setBusinessId(bu.business_id);
   const [b,o,it,s,r,p,st]=await Promise.all([
-   supabase.from("businesses").select("name").eq("id",bu.business_id).maybeSingle(),
-   supabase.from("otc_outlets").select("id,name").eq("business_id",bu.business_id).eq("is_active",true).limit(1).maybeSingle(),
-   supabase.from("proc_items").select("id,name,category,unit,reorder_point,last_cost").eq("business_id",bu.business_id).eq("is_active",true).order("name"),
-   supabase.from("proc_suppliers").select("id,name,phone,lead_time_days").eq("business_id",bu.business_id).eq("is_active",true).order("name"),
-   supabase.from("proc_requests").select("id,status,needed_date,notes,created_at,outlet_id").eq("business_id",bu.business_id).order("created_at",{ascending:false}).limit(20),
-   supabase.from("proc_purchase_orders").select("id,po_number,status,total,order_date,expected_date").eq("business_id",bu.business_id).order("created_at",{ascending:false}).limit(20),
-   supabase.from("proc_stock").select("id,item_id,outlet_id,qty").eq("business_id",bu.business_id)
+   getSupabase().from("businesses").select("name").eq("id",bu.business_id).maybeSingle(),
+   getSupabase().from("otc_outlets").select("id,name").eq("business_id",bu.business_id).eq("is_active",true).limit(1).maybeSingle(),
+   getSupabase().from("proc_items").select("id,name,category,unit,reorder_point,last_cost").eq("business_id",bu.business_id).eq("is_active",true).order("name"),
+   getSupabase().from("proc_suppliers").select("id,name,phone,lead_time_days").eq("business_id",bu.business_id).eq("is_active",true).order("name"),
+   getSupabase().from("proc_requests").select("id,status,needed_date,notes,created_at,outlet_id").eq("business_id",bu.business_id).order("created_at",{ascending:false}).limit(20),
+   getSupabase().from("proc_purchase_orders").select("id,po_number,status,total,order_date,expected_date").eq("business_id",bu.business_id).order("created_at",{ascending:false}).limit(20),
+   getSupabase().from("proc_stock").select("id,item_id,outlet_id,qty").eq("business_id",bu.business_id)
   ]);
   setBusinessName(b.data?.name??"Cafe");setOutletId(o.data?.id??"");setOutletName(o.data?.name??"Outlet");
   setItems(it.data??[]);setSuppliers(s.data??[]);setRequests(r.data??[]);setPos(p.data??[]);setStocks(st.data??[]);setLoading(false);
  }
- async function signIn(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");const {error:e1}=await supabase.auth.signInWithPassword({email,password});if(e1)setError(e1.message);setBusy(false)}
- async function signOut(){await supabase.auth.signOut();setUser(null)}
- async function addItem(){if(!newItem.name)return;setBusy(true);const {error:e}=await supabase.from("proc_items").insert({business_id:businessId,name:newItem.name,category:newItem.category,unit:newItem.unit,reorder_point:Number(newItem.reorder_point),last_cost:Number(newItem.last_cost)});if(e)setError(e.message);else{setShowItem(false);setNewItem({name:"",category:"Bahan Baku",unit:"kg",reorder_point:"0",last_cost:"0"});await load(user!)}setBusy(false)}
- async function addSupplier(){if(!newSupplier.name)return;setBusy(true);const {error:e}=await supabase.from("proc_suppliers").insert({business_id:businessId,name:newSupplier.name,phone:newSupplier.phone||null,lead_time_days:Number(newSupplier.lead_time_days)});if(e)setError(e.message);else{setShowSupplier(false);setNewSupplier({name:"",phone:"",lead_time_days:"1"});await load(user!)}setBusy(false)}
- async function addRequest(){if(!reqItem||!reqQty||!outletId)return;setBusy(true);const {data:r,error:e}=await supabase.from("proc_requests").insert({business_id:businessId,outlet_id:outletId,requested_by:user!.id,status:"SUBMITTED",needed_date:reqDate||null,notes:reqNote||null}).select("id").single();if(e)setError(e.message);else if(r){const {error:e2}=await supabase.from("proc_request_items").insert({request_id:r.id,item_id:reqItem,qty:Number(reqQty)});if(e2)setError(e2.message);else{setShowRequest(false);setReqItem("");setReqQty("");setReqDate("");setReqNote("");await load(user!)}}setBusy(false)}
+ async function signIn(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");const {error:e1}=await getSupabase().auth.signInWithPassword({email,password});if(e1)setError(e1.message);setBusy(false)}
+ async function signOut(){await getSupabase().auth.signOut();setUser(null)}
+ async function addItem(){if(!newItem.name)return;setBusy(true);const {error:e}=await getSupabase().from("proc_items").insert({business_id:businessId,name:newItem.name,category:newItem.category,unit:newItem.unit,reorder_point:Number(newItem.reorder_point),last_cost:Number(newItem.last_cost)});if(e)setError(e.message);else{setShowItem(false);setNewItem({name:"",category:"Bahan Baku",unit:"kg",reorder_point:"0",last_cost:"0"});await load(user!)}setBusy(false)}
+ async function addSupplier(){if(!newSupplier.name)return;setBusy(true);const {error:e}=await getSupabase().from("proc_suppliers").insert({business_id:businessId,name:newSupplier.name,phone:newSupplier.phone||null,lead_time_days:Number(newSupplier.lead_time_days)});if(e)setError(e.message);else{setShowSupplier(false);setNewSupplier({name:"",phone:"",lead_time_days:"1"});await load(user!)}setBusy(false)}
+ async function addRequest(){if(!reqItem||!reqQty||!outletId)return;setBusy(true);const {data:r,error:e}=await getSupabase().from("proc_requests").insert({business_id:businessId,outlet_id:outletId,requested_by:user!.id,status:"SUBMITTED",needed_date:reqDate||null,notes:reqNote||null}).select("id").single();if(e)setError(e.message);else if(r){const {error:e2}=await getSupabase().from("proc_request_items").insert({request_id:r.id,item_id:reqItem,qty:Number(reqQty)});if(e2)setError(e2.message);else{setShowRequest(false);setReqItem("");setReqQty("");setReqDate("");setReqNote("");await load(user!)}}setBusy(false)}
 
  const lowStock=stocks.filter(s=>{const i=items.find(x=>x.id===s.item_id);return i&&Number(s.qty)<=Number(i.reorder_point)}).length;
  const pending=requests.filter(x=>x.status==="SUBMITTED"||x.status==="APPROVED").length;
