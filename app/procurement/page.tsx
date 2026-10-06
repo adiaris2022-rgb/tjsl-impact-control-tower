@@ -7,6 +7,7 @@ function getSupabase(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!
 const money=(n:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 
 export default function ProcurementCafe(){
+ const supabase=getSupabase();
  const [user,setUser]=useState<User|null>(null),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[error,setError]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
  const [businessId,setBusinessId]=useState(""),[businessName,setBusinessName]=useState(""),[outletId,setOutletId]=useState(""),[outletName,setOutletName]=useState("");
  const [tab,setTab]=useState("dashboard"),[items,setItems]=useState<any[]>([]),[suppliers,setSuppliers]=useState<any[]>([]),[requests,setRequests]=useState<any[]>([]),[pos,setPos]=useState<any[]>([]),[stocks,setStocks]=useState<any[]>([]);
