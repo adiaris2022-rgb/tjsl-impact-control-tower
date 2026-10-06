@@ -34,6 +34,8 @@ export default function OTCPage() {
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [payment, setPayment] = useState("QRIS");
   const [submitted, setSubmitted] = useState(false);
+  const [orderNo, setOrderNo] = useState("");
+  const [pickupCode, setPickupCode] = useState("");
 
   const items = useMemo(
     () => products.filter((p) => (cart[p.id] || 0) > 0),
@@ -70,6 +72,8 @@ export default function OTCPage() {
     if (!name.trim() || !whatsapp.trim()) return;
     if (mode === "PRE-ORDER" && !schedule) return;
     if (mode === "DELIVERY" && !address.trim()) return;
+    setOrderNo(`OTC-${String(Math.floor(10000 + Math.random() * 90000))}`);
+    setPickupCode(Math.random().toString(36).slice(2, 6).toUpperCase());
     setSubmitted(true);
   };
 
@@ -174,8 +178,16 @@ export default function OTCPage() {
               <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "#0d2a25", border: "1px solid #24564d" }}>
                 <strong>Pesanan berhasil dibuat.</strong>
                 <div style={{ color: "#9cc5bf", marginTop: 5 }}>Mode: {mode} • Outlet: {outlets.find((o) => o.id === outlet)?.name}</div>
+                <div style={{ color: "#9cc5bf" }}>No. Pesanan: {orderNo}</div>
                 <div style={{ color: "#9cc5bf" }}>Pembayaran: {payment} • Total: {rupiah(total)}</div>
-                {mode === "DELIVERY" && <div style={{ color: "#9cc5bf" }}>Delivery menggunakan kurir pihak ketiga.</div>}
+                {mode === "DELIVERY" ? (
+                  <>
+                    <div style={{ color: "#9cc5bf" }}>Delivery menggunakan kurir pihak ketiga.</div>
+                    <div style={{ marginTop: 8, padding: 10, borderRadius: 9, background: "#102428" }}><strong>Kode Serah Terima: {pickupCode}</strong><div style={{ fontSize: 12, color: "#78908e", marginTop: 3 }}>Ditunjukkan saat pesanan diserahkan kepada kurir.</div></div>
+                  </>
+                ) : (
+                  <div style={{ marginTop: 8, padding: 10, borderRadius: 9, background: "#102428" }}><strong>Pickup Pass: {pickupCode}</strong><div style={{ fontSize: 12, color: "#78908e", marginTop: 3 }}>Kode sekali pakai untuk pengambilan pesanan.</div></div>
+                )}
               </div>
             )}
           </section>
