@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -236,7 +236,7 @@ function Status({ status }: { status: string }) {
   );
 }
 
-function ActionButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled: boolean }) {
+function ActionButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{ padding: "10px 14px", border: 0, borderRadius: 9, background: "#18201b", color: "#fff", cursor: disabled ? "wait" : "pointer" }}>
       {children}
