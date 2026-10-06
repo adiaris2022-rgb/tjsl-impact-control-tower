@@ -50,7 +50,7 @@ export default function RecipePage() {
     const [b, p, i, r] = await Promise.all([
       supabase.from("businesses").select("name").eq("id", bu.business_id).maybeSingle(),
       supabase.from("otc_products").select("id,name,category").eq("business_id", bu.business_id).eq("is_active", true).order("name"),
-      supabase.from("proc_items").select("id,name,category,unit,qty").eq("business_id", bu.business_id).eq("is_active", true).order("name"),
+      supabase.from("proc_items").select("id,name,category,unit").eq("business_id", bu.business_id).eq("is_active", true).order("name"),
       supabase
         .from("proc_product_recipes")
         .select("id,product_id,item_id,qty_per_sale,unit,is_active,otc_products(name),proc_items(name,unit)")
