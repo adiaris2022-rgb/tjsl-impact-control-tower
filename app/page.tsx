@@ -83,15 +83,19 @@ export default function LandingPage(){
 
     <style jsx>{`
       @media (max-width: 820px){
-        :global(html), :global(body){overflow-x:hidden!important}
-        nav{padding:16px!important}
+        :global(html), :global(body){width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+        :global(*){box-sizing:border-box}
+        nav{padding:16px!important;width:100%!important;max-width:100%!important}
+
         .hero-section{grid-template-columns:1fr!important;gap:28px!important;padding:38px 16px 54px!important}
         .hero-section h1{font-size:46px!important;line-height:1.02!important;letter-spacing:-1.8px!important}
         .hero-section .hero-card{width:100%;box-sizing:border-box;padding:16px!important;border-radius:20px!important}
         .hero-section .hero-card > div:nth-child(3){grid-template-columns:1fr 1fr!important}
         .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
         .plans-grid{grid-template-columns:1fr!important;max-width:430px;margin-left:auto;margin-right:auto}
-        section{box-sizing:border-box;width:100%}
+        section{box-sizing:border-box;width:100%!important;max-width:100%!important}
+        .hero-section > div,.module-grid > div,.plans-grid > article{min-width:0!important;max-width:100%!important}
+        button{max-width:100%!important}
       }
       @media (max-width: 480px){
         .hero-section h1{font-size:42px!important}
