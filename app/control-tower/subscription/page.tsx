@@ -46,7 +46,7 @@ export default function SubscriptionPage() {
   const expired = s.status === "EXPIRED" || (s.expires_at && new Date(s.expires_at).getTime() <= Date.now());
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f8fafc", padding: 28, color: "#0f172a" }}>
+    <main className="subscription-page" style={{ minHeight: "100vh", background: "#f8fafc", padding: 28, color: "#0f172a" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, letterSpacing: ".12em" }}>NORTAGO ECOSYSTEM · CT BOS NORTAGO</div>
         <h1>Subscription & Activation</h1>
@@ -57,7 +57,7 @@ export default function SubscriptionPage() {
           <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
             <h2>Subscription Saat Ini</h2>
             {!subscription ? <p>Belum ada subscription. Hubungi NORTAGO untuk activation dan onboarding.</p> :
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>
+              <div className="subscription-metrics" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>
                 <Metric title="Plan" value={s.plan_name || s.plan_code} />
                 <Metric title="Status" value={s.status || "-"} />
                 <Metric title="Billing" value={s.billing_cycle === "ANNUAL" ? "Tahunan" : "Bulanan"} />
@@ -78,7 +78,7 @@ export default function SubscriptionPage() {
 
           <section style={{ marginTop: 18 }}>
             <h2>Paket NORTAGO</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
+            <div className="plan-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
               {plans.map((p) => <div key={p.code} style={{ background: "#fff", border: p.code === "BUSINESS" ? "2px solid #0f172a" : "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b" }}>{p.code}</div>
                 <h3 style={{ margin: "6px 0" }}>{p.name}</h3>
@@ -111,9 +111,22 @@ export default function SubscriptionPage() {
             </div>
           </section>
 
-          <button onClick={load} style={{ marginTop: 18, padding: "10px 16px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff" }}>Refresh Status</button>
+          <button className="refresh-button" onClick={load} style={{ marginTop: 18, padding: "10px 16px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff" }}>Refresh Status</button>
         </>}
       </div>
+      <style jsx>{`
+        .subscription-page{box-sizing:border-box}.subscription-page *{box-sizing:border-box}
+        @media(max-width:700px){
+          .subscription-page{padding:12px!important}
+          .subscription-page>div{width:100%;max-width:100%!important}
+          .subscription-page h1{font-size:28px;line-height:1.05}
+          .subscription-page section{min-width:0;overflow:hidden}
+          .subscription-metrics{grid-template-columns:1fr 1fr!important;gap:8px!important}
+          .plan-grid{grid-template-columns:1fr!important;gap:10px!important}
+          .plan-grid>div{padding:16px!important}
+          .subscription-page .refresh-button{width:100%;min-height:44px}
+        }
+      `}</style>
     </main>
   );
 }
