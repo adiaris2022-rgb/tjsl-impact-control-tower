@@ -17,6 +17,7 @@ export default function ControlTower() {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
@@ -95,6 +96,7 @@ export default function ControlTower() {
     setRegistering(true); setError(""); setSignupSent(false);
     try {
       if (password.length < 8) throw new Error("Password minimal 8 karakter.");
+      if (password !== confirmPassword) throw new Error("Konfirmasi password tidak sama.");
       const s = await getSupabase();
       const { data, error: e1 } = await s.auth.signUp({
         email,
@@ -178,18 +180,18 @@ export default function ControlTower() {
         <div style={{display:"flex",justifyContent:"center",gap:14,alignItems:"center",marginTop:2}}>
           <button type="button" onClick={()=>{setForgot(true);setSignup(false);setError("");setResetSent(false)}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Lupa password?</button>
           <span style={{color:"rgba(255,255,255,.18)"}}>·</span>
-          <button type="button" onClick={()=>{setSignup(true);setForgot(false);setError("");setSignupSent(false);setPassword("");}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Daftar akun</button>
+          <button type="button" onClick={()=>{setSignup(true);setForgot(false);setError("");setSignupSent(false);setPassword("");setConfirmPassword("");}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Daftar akun</button>
         </div>
       </form> : signup ? <form onSubmit={signUp}>
         <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Daftar akun</div>
         <div style={{fontSize:12,lineHeight:1.55,color:"#8fa9a5",marginBottom:8}}>Buat akun CT BOS menggunakan email Anda. Setelah pendaftaran, cek email untuk verifikasi akun.</div>
         <label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
         <label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" autoComplete="new-password" minLength={8} required /></label>
-        <label>Konfirmasi Password<input type="password" autoComplete="new-password" required onChange={e=>{if(e.target.value!==password){setError("Konfirmasi password tidak sama.");}else if(error==="Konfirmasi password tidak sama.")setError("");}} /></label>
+        <label>Konfirmasi Password<input value={confirmPassword} type="password" autoComplete="new-password" required onChange={e=>{setConfirmPassword(e.target.value);if(e.target.value!==password){setError("Konfirmasi password tidak sama.");}else if(error==="Konfirmasi password tidak sama.")setError("");}} /></label>
         {signupSent&&<div style={{fontSize:12,lineHeight:1.5,color:"#67d9c3",padding:"10px 12px",border:"1px solid #28584f",borderRadius:10}}>Akun berhasil didaftarkan. Cek inbox email Anda dan klik link verifikasi.</div>}
         {error&&<div className="error">{error}</div>}
         <button disabled={registering}>{registering?"Mendaftarkan...":"Daftar ke CT BOS →"}</button>
-        <button type="button" onClick={()=>{setSignup(false);setError("");setSignupSent(false);setPassword("");}} style={{background:"transparent",border:"0",color:"#8fa9a5",fontSize:12,padding:"4px",boxShadow:"none"}}>← Kembali ke login</button>
+        <button type="button" onClick={()=>{setSignup(false);setError("");setSignupSent(false);setPassword("");setConfirmPassword("");}} style={{background:"transparent",border:"0",color:"#8fa9a5",fontSize:12,padding:"4px",boxShadow:"none"}}>← Kembali ke login</button>
       </form> : <form onSubmit={sendReset}>
         <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Reset password</div>
         <div style={{fontSize:12,lineHeight:1.55,color:"#8fa9a5",marginBottom:8}}>Masukkan email akun CT BOS. Kami akan mengirimkan link untuk membuat password baru.</div>
