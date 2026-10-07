@@ -19,7 +19,12 @@ function Card({ title, value, note }: { title: string; value: string; note?: str
       {note && <small style={{ color: "#64748b" }}>{note}</small>}
     </div>
   );
+<style jsx>{`
+.finance-page{box-sizing:border-box}.finance-page input,.finance-page button{max-width:100%;box-sizing:border-box}
+@media(max-width:700px){.finance-page{padding:12px!important}.finance-page>div{width:100%;max-width:100%!important}.finance-page h1{font-size:28px;line-height:1.05}.finance-page section{min-width:0}.finance-kpis{grid-template-columns:1fr 1fr!important;gap:10px!important}.finance-secondary-kpis{grid-template-columns:1fr!important;gap:10px!important}.finance-page .finance-close-form{grid-template-columns:1fr!important;gap:10px!important}.finance-page .finance-close-form input{min-height:44px}.finance-page button{min-height:44px;width:100%}.finance-page ul{padding-left:20px}}
+`}</style>
 }
+
 
 export default function FinancePage() {
   const [d, setD] = useState<any>({});
@@ -112,7 +117,7 @@ export default function FinancePage() {
   const finalProfit = netAfterTax - csrAmount;
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f8fafc", padding: 28, color: "#0f172a" }}>
+    <main className="finance-page" style={{ minHeight: "100vh", background: "#f8fafc", padding: 28, color: "#0f172a" }}>
       <div style={{ maxWidth: 1250, margin: "0 auto" }}>
         <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, letterSpacing: ".12em" }}>NORTAGO FULL BOS</div>
         <h1>Finance &amp; Profit Control</h1>
@@ -121,7 +126,7 @@ export default function FinancePage() {
         {err && <div style={{ background: "#fff1f2", border: "1px solid #fecdd3", padding: 14, borderRadius: 12, marginBottom: 14 }}>{err}</div>}
         {message && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 12, marginBottom: 14 }}>{message}</div>}
 
-        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14 }}>
+        <section className="finance-kpis" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14 }}>
           <Card title="Revenue" value={money(revenue)} />
           <Card title="COGS" value={money(cogs)} />
           <Card title="Gross Profit" value={money(gross)} />
@@ -135,7 +140,7 @@ export default function FinancePage() {
         <section style={{ marginTop: 18, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
           <h2>Period Close</h2>
           <p style={{ color: "#64748b" }}>Finalize satu periode untuk menghitung Tax, CSR 2,5%, distributable profit, dan ROI. Tax rate harus diisi sesuai skema pajak yang benar untuk entitas/periode tersebut.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12 }}>
+          <div className="finance-close-form" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12 }}>
             <label>Mulai<input type="date" value={start} onChange={e => setStart(e.target.value)} style={{ display: "block", width: "100%", marginTop: 6, padding: 10 }} /></label>
             <label>Selesai<input type="date" value={end} onChange={e => setEnd(e.target.value)} style={{ display: "block", width: "100%", marginTop: 6, padding: 10 }} /></label>
             <label>Tax Rate (%)<input type="number" min="0" max="100" step="0.01" value={taxRate} onChange={e => setTaxRate(e.target.value)} style={{ display: "block", width: "100%", marginTop: 6, padding: 10 }} /></label>
@@ -146,7 +151,7 @@ export default function FinancePage() {
           </button>
         </section>
 
-        <section style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16 }}>
+        <section className="finance-secondary-kpis" style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16 }}>
           <Card title="Capital" value={money(c.total_investment)} note={"Allocated " + money(c.allocated_investment) + " · Unallocated " + money(c.unallocated_investment)} />
           <Card title="Tax" value={money(tax.tax_amount)} note={tax.status || "Belum dihitung"} />
           <Card title="CSR Fund" value={money(csr.csr_remaining)} note={"Spent " + money(csr.csr_spent)} />
