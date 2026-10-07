@@ -27,3 +27,27 @@
   .login-card h1{font-size:36px}
   .login-card .lead{font-size:13px}
 }
+/* CT BOS LOGIN V2 */
+.login-card{width:min(510px,100%);padding:34px 34px 25px;border-radius:22px;background:linear-gradient(155deg,rgba(10,28,31,.97),rgba(5,17,20,.97));box-shadow:0 28px 75px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.035)}
+.login-card .brand{gap:13px}
+.login-card .brand>span:first-child{width:54px!important;height:48px!important}
+.login-card .brand strong{font-size:21px!important;letter-spacing:.02em!important}
+.login-card .brand small{font-size:10px;margin-top:2px}
+.login-card .eyebrow{margin-top:34px;font-size:9px;letter-spacing:.14em;line-height:1.5}
+.login-card h1{font-size:clamp(35px,7vw,43px);line-height:1.04;letter-spacing:-.045em;margin:11px 0 14px;max-width:450px}
+.login-card .lead{font-size:13px;line-height:1.65;max-width:455px}
+.login-card form{margin-top:22px;gap:13px}
+.login-card input{height:54px;min-height:54px}
+.login-card button{height:54px;min-height:54px}
+.login-card .footnote{font-size:9px;margin-top:17px;opacity:.9}
+@media(max-width:560px){
+ .auth-shell{padding:12px}
+ .login-card{padding:27px 21px 21px;border-radius:20px}
+ .login-card .brand>span:first-child{width:50px!important;height:45px!important}
+ .login-card .brand strong{font-size:20px!important}
+ .login-card .eyebrow{margin-top:31px}
+ .login-card h1{font-size:34px;line-height:1.05;margin-bottom:13px}
+ .login-card .lead{font-size:12.5px;line-height:1.62}
+ .login-card form{margin-top:20px}
+ .login-card input,.login-card button{height:52px;min-height:52px}
+}
