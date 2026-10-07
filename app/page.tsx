@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient, type User } from "@supabase/supabase-js";
 
 async function getSupabase() {
@@ -22,6 +23,7 @@ export default function ControlTower() {
   const [role, setRole] = useState("");
   const [businessName, setBusinessName] = useState("TJSL Impact Control Tower");
   const [stats, setStats] = useState({ programs:0, partners:0, transactions:0, value:0 });
+  const router = useRouter();
 
   useEffect(() => {
     let listener: { subscription: { unsubscribe: () => void } } | null = null;
@@ -34,12 +36,12 @@ export default function ControlTower() {
         const {data} = await supabase.auth.getSession();
         if (cancelled) return;
         setUser(data.session?.user ?? null);
-        if (data.session?.user) void load(data.session.user);
+        if (data.session?.user) { router.replace("/control-tower/bos"); return; }
         else setLoading(false);
 
         const result = supabase.auth.onAuthStateChange((_event, session) => {
           setUser(session?.user ?? null);
-          if (session?.user) void load(session.user);
+          if (session?.user) router.replace("/control-tower/bos");
         });
         listener = result.data;
       } catch (e) {
@@ -78,6 +80,7 @@ export default function ControlTower() {
     e.preventDefault(); setSigning(true); setError("");
     const {error:e1}=await (await getSupabase()).auth.signInWithPassword({email,password});
     if(e1) setError(e1.message);
+    else router.replace("/control-tower/bos");
     setSigning(false);
   }
   async function signOut(){ await (await getSupabase()).auth.signOut(); setRole(""); }
