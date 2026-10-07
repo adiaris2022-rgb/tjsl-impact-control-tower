@@ -29,7 +29,7 @@ export default function LandingPage(){
       <button onClick={()=>router.push("/login")} style={{border:"1px solid rgba(255,255,255,.16)",background:"rgba(255,255,255,.04)",color:"#fff",borderRadius:10,padding:"10px 17px",fontWeight:700}}>Masuk</button>
     </nav>
 
-    <section style={{maxWidth:1180,margin:"0 auto",padding:"72px 22px 86px",display:"grid",gridTemplateColumns:"1.15fr .85fr",gap:42,alignItems:"center"}}>
+    <section className="hero-section" style={{maxWidth:1180,margin:"0 auto",padding:"72px 22px 86px",display:"grid",gridTemplateColumns:"1.15fr .85fr",gap:42,alignItems:"center"}}>
       <div>
         <div style={{display:"inline-flex",border:"1px solid rgba(103,217,195,.24)",background:"rgba(103,217,195,.07)",color:"#67d9c3",borderRadius:999,padding:"7px 12px",fontSize:11,fontWeight:800,letterSpacing:1}}>CT BOS NORTAGO · MENARA KENDALI BISNIS</div>
         <h1 style={{fontSize:"clamp(42px,6vw,72px)",lineHeight:1.02,letterSpacing:-2.5,margin:"22px 0 18px"}}>Bisnis berjalan.<br/><span style={{color:"#67d9c3"}}>Owner tetap memegang kendali.</span></h1>
@@ -42,7 +42,7 @@ export default function LandingPage(){
           <span>✓ System of Record</span><span>✓ System of Control</span><span>✓ System of Intelligence</span><span>✓ System of Visibility</span>
         </div>
       </div>
-      <div style={{border:"1px solid rgba(103,217,195,.15)",borderRadius:24,padding:20,background:"linear-gradient(145deg,rgba(15,46,42,.88),rgba(7,20,19,.92))",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
+      <div className="hero-card" style={{border:"1px solid rgba(103,217,195,.15)",borderRadius:24,padding:20,background:"linear-gradient(145deg,rgba(15,46,42,.88),rgba(7,20,19,.92))",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
         <div style={{fontSize:10,color:"#67d9c3",fontWeight:900,letterSpacing:1.5}}>OWNER CONTROL TOWER</div>
         <div style={{fontSize:28,fontWeight:900,marginTop:8}}>Apa yang terjadi di bisnis Anda?</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:18}}>
@@ -54,14 +54,14 @@ export default function LandingPage(){
 
     <section style={{maxWidth:1180,margin:"0 auto",padding:"20px 22px 80px"}}>
       <div style={{textAlign:"center",maxWidth:700,margin:"0 auto 34px"}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>SATU EKOSISTEM</div><h2 style={{fontSize:38,margin:"10px 0"}}>Bukan sekadar dashboard.</h2><p style={{color:"#8fa9a5",lineHeight:1.7}}>CT BOS menghubungkan aktivitas bisnis dengan bukti, approval, laporan, dan kontrol Owner.</p></div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10}}>
+      <div className="module-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10}}>
         {["SALES","PROCUREMENT","FINANCE","HR & OPS","CT BOS"].map((x,i)=><div key={x} style={{border:"1px solid rgba(255,255,255,.09)",borderRadius:14,padding:"22px 14px",textAlign:"center",background:i===4?"rgba(103,217,195,.08)":"rgba(255,255,255,.02)"}}><div style={{fontWeight:900,fontSize:12}}>{x}</div><div style={{fontSize:10,color:"#78918d",marginTop:7}}>{["Order & transaksi","Stock & PO","Profit & tax","People & operations","Control & intelligence"][i]}</div></div>)}
       </div>
     </section>
 
     <section id="harga" style={{maxWidth:1180,margin:"0 auto",padding:"20px 22px 90px"}}>
       <div style={{textAlign:"center",marginBottom:34}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>PILIH SESUAI SKALA BISNIS</div><h2 style={{fontSize:38,margin:"10px 0"}}>Mulai dari sistem yang benar.</h2><p style={{color:"#8fa9a5"}}>Harga awal untuk paket berlangganan CT BOS NORTAGO.</p></div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
+      <div className="plans-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
         {plans.map(p=><article key={p.name} style={{border:p.featured?"1px solid rgba(103,217,195,.55)":"1px solid rgba(255,255,255,.09)",borderRadius:20,padding:24,background:p.featured?"linear-gradient(160deg,rgba(20,69,61,.7),rgba(8,23,21,.95))":"rgba(255,255,255,.025)",position:"relative"}}>
           {p.featured&&<div style={{position:"absolute",right:18,top:18,fontSize:9,fontWeight:900,letterSpacing:1,color:"#06100f",background:"#67d9c3",padding:"6px 9px",borderRadius:999}}>REKOMENDASI</div>}
           <div style={{fontSize:11,fontWeight:900,letterSpacing:1.4,color:"#67d9c3"}}>{p.name}</div><div style={{fontSize:34,fontWeight:900,marginTop:13}}>{p.price}<span style={{fontSize:12,color:"#78918d",fontWeight:500}}>{p.period}</span></div>
@@ -83,8 +83,21 @@ export default function LandingPage(){
 
     <style jsx>{`
       @media (max-width: 820px){
-        section{box-sizing:border-box}
-        nav{padding-left:16px!important;padding-right:16px!important}
+        :global(html), :global(body){overflow-x:hidden!important}
+        nav{padding:16px!important}
+        .hero-section{grid-template-columns:1fr!important;gap:28px!important;padding:38px 16px 54px!important}
+        .hero-section h1{font-size:46px!important;line-height:1.02!important;letter-spacing:-1.8px!important}
+        .hero-section .hero-card{width:100%;box-sizing:border-box;padding:16px!important;border-radius:20px!important}
+        .hero-section .hero-card > div:nth-child(3){grid-template-columns:1fr 1fr!important}
+        .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+        .plans-grid{grid-template-columns:1fr!important;max-width:430px;margin-left:auto;margin-right:auto}
+        section{box-sizing:border-box;width:100%}
+      }
+      @media (max-width: 480px){
+        .hero-section h1{font-size:42px!important}
+        .hero-section p{font-size:16px!important;line-height:1.6!important}
+        .module-grid{gap:8px!important}
+        .module-grid > div{min-width:0!important;padding:16px 10px!important}
       }
     `}</style>
   </main>
