@@ -89,14 +89,17 @@ export default function ControlTower() {
         <span style={{display:"inline-flex",width:54,height:48,alignItems:"center",justifyContent:"center",flex:"0 0 auto"}}>
           <svg viewBox="0 0 120 110" width="52" height="48" aria-label="NORTAGO logo" role="img">
             <defs>
-              <linearGradient id="nortagoLogoGradient" x1="18" y1="92" x2="101" y2="18" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#16e4c5"/>
-                <stop offset="0.5" stopColor="#10cfe0"/>
-                <stop offset="1" stopColor="#1768ed"/>
+              <linearGradient id="nortagoLeft" x1="25" y1="96" x2="68" y2="18" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#12e8c6"/>
+                <stop offset="1" stopColor="#11c9df"/>
+              </linearGradient>
+              <linearGradient id="nortagoRight" x1="62" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#19b9ec"/>
+                <stop offset="1" stopColor="#145fea"/>
               </linearGradient>
             </defs>
-            <rect x="25" y="10" width="29" height="94" rx="14.5" transform="rotate(34 25 10)" fill="url(#nortagoLogoGradient)"/>
-            <rect x="66" y="10" width="29" height="94" rx="14.5" transform="rotate(-34 66 10)" fill="url(#nortagoLogoGradient)"/>
+            <path d="M25 91 L66 21" fill="none" stroke="url(#nortagoLeft)" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M65 21 L105 91" fill="none" stroke="url(#nortagoRight)" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </span>
         <div>
