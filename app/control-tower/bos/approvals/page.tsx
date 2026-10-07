@@ -118,7 +118,7 @@ export default function BOSApprovals() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f8fafc", padding: 28, color: "#0f172a" }}>
+    <main className="approval-page" style={{ minHeight: "100vh", background: "#f8fafc", padding: 28, color: "#0f172a" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, letterSpacing: ".12em" }}>
           NORTAGO ECOSYSTEM · CT BOS NORTAGO
@@ -150,7 +150,7 @@ export default function BOSApprovals() {
         <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20, marginBottom: 18 }}>
           <h2>Approval Matrix</h2>
           {rules.length === 0 ? <p>Belum ada approval rule. RATER akan tetap WARNING sampai rule aktif dikonfigurasi.</p> : (
-            <div style={{ overflowX: "auto" }}>
+            <div className="approval-matrix-desktop" style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr><th align="left">Module</th><th align="left">Action</th><th align="left">Role</th><th align="right">Range</th><th>Evidence</th><th>Status</th><th /></tr></thead>
                 <tbody>{rules.map((r) => (
@@ -187,3 +187,23 @@ export default function BOSApprovals() {
     </main>
   );
 }
+
+const approvalMobileCss = \`\
+.approval-matrix-mobile{display:none}
+@media(max-width:700px){
+ .approval-page{padding:12px!important}
+ .approval-page>div{width:100%;max-width:100%!important}
+ .approval-page section{padding:16px!important;border-radius:14px!important;overflow:hidden}
+ .approval-page h1{font-size:28px;line-height:1.05}
+ .approval-page form{grid-template-columns:1fr!important}
+ .approval-page form>label,.approval-page form>div{min-width:0!important}
+ .approval-page form button{min-height:44px}
+ .approval-matrix-desktop{display:none}
+ .approval-matrix-mobile{display:grid;gap:10px}
+ .approval-rule-card{border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#fff;display:grid;gap:12px}
+ .rule-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.rule-top b{overflow-wrap:anywhere}.rule-top span{font-size:11px;font-weight:800;color:#166534}
+ .rule-meta{display:grid;grid-template-columns:1fr;gap:8px}.rule-meta>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #f1f5f9}.rule-meta small{color:#64748b}.rule-meta strong{text-align:right;overflow-wrap:anywhere}
+ .approval-rule-card button{min-height:44px;width:100%;border-radius:10px}
+}
+\`;
+
