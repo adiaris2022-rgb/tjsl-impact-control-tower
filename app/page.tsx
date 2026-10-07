@@ -110,8 +110,8 @@ export default function ControlTower() {
         </div>
       </div>
 
-      <div className="eyebrow">CT BOS · CONTROL TOWER BUSINESS OWNER SYSTEM</div>
-      <h1><span>Tower Kendali Bisnis.</span><br/>Ambil keputusan lebih cepat.</h1>
+      <div className="eyebrow">CT BOS · MENARA KENDALI BISNIS</div>
+      <h1><span>Menara Kendali Bisnis.</span><br/>Ambil keputusan lebih cepat.</h1>
       <p className="lead">Satu control tower untuk melihat penjualan, operasional, procurement, finance, people, risiko, dan kinerja bisnis dalam satu sistem.</p>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,margin:"22px 0 26px"}}>
