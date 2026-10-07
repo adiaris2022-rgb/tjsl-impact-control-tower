@@ -170,6 +170,12 @@ export default function BOSControlTower() {
         >
           Refresh
         </button>
+        <a
+          href="/control-tower/subscription"
+          style={{ display: "inline-block", marginLeft: 8, padding: "9px 14px", borderRadius: 10, background: "#0f172a", color: "#fff", textDecoration: "none", fontWeight: 700 }}
+        >
+          Subscription & Activation
+        </a>
 
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14, marginTop: 18 }}>
           <Card title="Revenue Hari Ini" value={money(todayRevenue)} />
