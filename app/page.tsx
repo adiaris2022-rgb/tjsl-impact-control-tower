@@ -83,7 +83,36 @@ export default function ControlTower() {
   async function signOut(){ await (await getSupabase()).auth.signOut(); setRole(""); }
   const money=(v:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(v);
 
-  if(!user) return <main className="auth-shell"><section className="login-card"><div className="brand"><span className="mark">A</span><div><strong>NORTAGO</strong><small>AI-Powered Digital Products & Content</small></div></div><div className="eyebrow">TJSL IMPACT CONTROL TOWER</div><h1>Data TJSL.<br/><span>Dampak yang dapat diuji.</span></h1><p className="lead">Satu control tower untuk program, transaksi mitra, outcome, evidence, dan estimasi SROI.</p><form onSubmit={signIn}><label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" required /></label><label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" required /></label>{error&&<div className="error">{error}</div>}<button disabled={signing}>{signing?"Masuk...":"Masuk ke Control Tower →"}</button></form><div className="footnote">Supported by <b>NORTAGO</b> · Staging</div></section></main>;
+  if(!user) return <main className="auth-shell">
+    <section className="login-card">
+      <div className="brand">
+        <span className="mark">N</span>
+        <div>
+          <strong>NORTAGO</strong>
+          <small>Business Operating System</small>
+        </div>
+      </div>
+
+      <div className="eyebrow">CT BOS · CONTROL TOWER BUSINESS OWNER SYSTEM</div>
+      <h1>Control bisnis.<br/><span>Ambil keputusan lebih cepat.</span></h1>
+      <p className="lead">Satu control tower untuk melihat penjualan, operasional, procurement, finance, people, risiko, dan kinerja bisnis dalam satu sistem.</p>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,margin:"22px 0 26px"}}>
+        {["SALES","OPERATIONS","FINANCE"].map((item)=><div key={item} style={{border:"1px solid rgba(255,255,255,.10)",borderRadius:10,padding:"9px 7px",textAlign:"center",fontSize:10,letterSpacing:1.2,color:"rgba(255,255,255,.65)"}}>{item}</div>)}
+      </div>
+
+      <form onSubmit={signIn}>
+        <label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
+        <label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" autoComplete="current-password" required /></label>
+        {error&&<div className="error">{error}</div>}
+        <button disabled={signing}>{signing?"Memverifikasi...":"Masuk ke CT BOS →"}</button>
+      </form>
+
+      <div className="footnote">
+        <b>CT BOS NORTAGO</b> · System of Record · Control · Intelligence · Visibility
+      </div>
+    </section>
+  </main>;
 
   return <main className="app-shell"><header className="topbar"><div className="brand"><span className="mark">A</span><div><strong>TJSL IMPACT CONTROL TOWER</strong><small>{businessName}</small></div></div><div className="userbox"><span>{role}</span><button className="ghost" onClick={signOut}>Keluar</button></div></header><section className="hero"><div><div className="eyebrow">EXECUTIVE CONTROL TOWER</div><h1>Program → Data → Evidence → Impact</h1><p>Ringkasan eksekutif berbasis data dalam scope akun Anda.</p></div><div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}><a className="status" href="/operator-settings"><i/> OPERATOR SETTINGS →</a><a className="status" href="/otc"><i/> BUKA NORTAGO OTC →</a></div></section>{loading?<div className="loading">Memuat data…</div>:<section className="grid">{[["Program",stats.programs,"Program aktif"],["Mitra Binaan",stats.partners,"Dalam scope akun"],["Transaksi",stats.transactions,"Status valid"],["Nilai Transaksi",money(stats.value),"Real transaction evidence"]].map(([a,b,c])=><article className="metric" key={String(a)}><div className="metric-title">{a}</div><div className="metric-value">{b}</div><div className="metric-note">{c}</div></article>)}</section>}<footer>Supported by <b>NORTAGO</b> · TJSL Impact Control Tower · Free infrastructure mode · NORTAGO OTC enabled</footer></main>;
 }
