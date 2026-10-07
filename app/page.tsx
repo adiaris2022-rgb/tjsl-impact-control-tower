@@ -87,17 +87,16 @@ export default function ControlTower() {
     <section className="login-card">
       <div className="brand">
         <span style={{display:"inline-flex",width:54,height:48,alignItems:"center",justifyContent:"center",flex:"0 0 auto"}}>
-          <svg viewBox="0 0 100 90" width="50" height="45" aria-label="NORTAGO logo" role="img">
+          <svg viewBox="0 0 120 110" width="52" height="48" aria-label="NORTAGO logo" role="img">
             <defs>
-              <linearGradient id="nortagoLogoGradient" x1="8" y1="72" x2="92" y2="18" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#19e4c7"/>
-                <stop offset="0.52" stopColor="#11cce2"/>
-                <stop offset="1" stopColor="#1769ee"/>
+              <linearGradient id="nortagoLogoGradient" x1="18" y1="92" x2="101" y2="18" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#16e4c5"/>
+                <stop offset="0.5" stopColor="#10cfe0"/>
+                <stop offset="1" stopColor="#1768ed"/>
               </linearGradient>
             </defs>
-            <path d="M20 77 C14 77 10 72 12 66 L48 14 C52 8 60 6 66 10 C72 14 73 22 69 28 L34 78 C31 82 25 82 20 77 Z" fill="url(#nortagoLogoGradient)"/>
-            <path d="M66 10 C72 6 80 9 84 15 L96 35 C99 41 97 48 91 52 C85 55 78 53 75 47 L62 27 C58 21 60 14 66 10 Z" fill="url(#nortagoLogoGradient)"/>
-            <path d="M58 26 L75 47 C78 53 85 55 91 52 C85 56 78 56 73 51 L55 31 Z" fill="#0b75ea" opacity=".45"/>
+            <rect x="25" y="10" width="29" height="94" rx="14.5" transform="rotate(34 25 10)" fill="url(#nortagoLogoGradient)"/>
+            <rect x="66" y="10" width="29" height="94" rx="14.5" transform="rotate(-34 66 10)" fill="url(#nortagoLogoGradient)"/>
           </svg>
         </span>
         <div>
@@ -107,7 +106,7 @@ export default function ControlTower() {
       </div>
 
       <div className="eyebrow">CT BOS · CONTROL TOWER BUSINESS OWNER SYSTEM</div>
-      <h1>Control bisnis.<br/><span>Ambil keputusan lebih cepat.</span></h1>
+      <h1><span>Tower Kendali Bisnis.</span><br/>Ambil keputusan lebih cepat.</h1>
       <p className="lead">Satu control tower untuk melihat penjualan, operasional, procurement, finance, people, risiko, dan kinerja bisnis dalam satu sistem.</p>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,margin:"22px 0 26px"}}>
