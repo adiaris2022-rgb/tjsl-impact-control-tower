@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
 
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Supabase environment variables are not configured.");
-  return createClient(url, key);
+async function getSupabase() {
+  const response = await fetch("/api/supabase-config", { cache: "no-store" });
+  const config = await response.json().catch(() => ({}));
+  if (!response.ok || !config.url || !config.key) {
+    throw new Error(config.error ?? "Supabase runtime configuration is not available.");
+  }
+  return createClient(config.url, config.key);
 }
 
 export default function ControlTower() {
@@ -22,35 +24,41 @@ export default function ControlTower() {
   const [stats, setStats] = useState({ programs:0, partners:0, transactions:0, value:0 });
 
   useEffect(() => {
-    let supabase;
-    try {
-      supabase = getSupabase();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Konfigurasi Supabase tidak tersedia.");
-      setLoading(false);
-      return;
-    }
-    supabase.auth.getSession().then(({data}) => {
-      setUser(data.session?.user ?? null);
-      if (data.session?.user) load(data.session.user);
-      else setLoading(false);
-    }).catch(e => { setError(e instanceof Error ? e.message : "Gagal memuat sesi."); setLoading(false); });
     let listener: { subscription: { unsubscribe: () => void } } | null = null;
-    try {
-      const result = supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) void load(session.user);
-      });
-      listener = result.data;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menginisialisasi autentikasi.");
-    }
-    return () => listener?.subscription.unsubscribe();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const supabase = await getSupabase();
+        if (cancelled) return;
+        const {data} = await supabase.auth.getSession();
+        if (cancelled) return;
+        setUser(data.session?.user ?? null);
+        if (data.session?.user) void load(data.session.user);
+        else setLoading(false);
+
+        const result = supabase.auth.onAuthStateChange((_event, session) => {
+          setUser(session?.user ?? null);
+          if (session?.user) void load(session.user);
+        });
+        listener = result.data;
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Gagal menginisialisasi autentikasi.");
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
   async function load(currentUser: User) {
     let s;
-    try { s = getSupabase(); } catch (e) { setError(e instanceof Error ? e.message : "Konfigurasi Supabase tidak tersedia."); setLoading(false); return; }
+    try { s = await getSupabase(); } catch (e) { setError(e instanceof Error ? e.message : "Konfigurasi Supabase tidak tersedia."); setLoading(false); return; }
     const {data: bu, error: e} = await s.from("business_users").select("business_id,role").eq("user_id", currentUser.id).maybeSingle();
     if (e || !bu) { setError(e?.message ?? "Akun belum terdaftar pada TJSL Impact Control Tower."); setLoading(false); return; }
     setRole(bu.role);
@@ -68,11 +76,11 @@ export default function ControlTower() {
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault(); setSigning(true); setError("");
-    const {error:e1}=await getSupabase().auth.signInWithPassword({email,password});
+    const {error:e1}=await (await getSupabase()).auth.signInWithPassword({email,password});
     if(e1) setError(e1.message);
     setSigning(false);
   }
-  async function signOut(){ await getSupabase().auth.signOut(); setRole(""); }
+  async function signOut(){ await (await getSupabase()).auth.signOut(); setRole(""); }
   const money=(v:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(v);
 
   if(!user) return <main className="auth-shell"><section className="login-card"><div className="brand"><span className="mark">A</span><div><strong>NORTAGO</strong><small>AI-Powered Digital Products & Content</small></div></div><div className="eyebrow">TJSL IMPACT CONTROL TOWER</div><h1>Data TJSL.<br/><span>Dampak yang dapat diuji.</span></h1><p className="lead">Satu control tower untuk program, transaksi mitra, outcome, evidence, dan estimasi SROI.</p><form onSubmit={signIn}><label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" required /></label><label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" required /></label>{error&&<div className="error">{error}</div>}<button disabled={signing}>{signing?"Masuk...":"Masuk ke Control Tower →"}</button></form><div className="footnote">Supported by <b>NORTAGO</b> · Staging</div></section></main>;
