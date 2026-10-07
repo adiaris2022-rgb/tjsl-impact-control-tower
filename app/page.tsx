@@ -22,7 +22,14 @@ export default function ControlTower() {
   const [stats, setStats] = useState({ programs:0, partners:0, transactions:0, value:0 });
 
   useEffect(() => {
-    const supabase = getSupabase();
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Konfigurasi Supabase tidak tersedia.");
+      setLoading(false);
+      return;
+    }
     supabase.auth.getSession().then(({data}) => {
       setUser(data.session?.user ?? null);
       if (data.session?.user) load(data.session.user);
