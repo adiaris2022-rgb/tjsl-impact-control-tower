@@ -87,19 +87,21 @@ export default function ControlTower() {
     <section className="login-card">
       <div className="brand">
         <span style={{display:"inline-flex",width:54,height:48,alignItems:"center",justifyContent:"center",flex:"0 0 auto"}}>
-          <svg viewBox="0 0 120 110" width="52" height="48" aria-label="NORTAGO logo" role="img">
+          <svg viewBox="0 0 120 110" width="52" height="48" aria-label="NORTAGO logo" role="img" data-logo-lock="nortago-original-reference">
             <defs>
-              <linearGradient id="nortagoLeft" x1="25" y1="96" x2="68" y2="18" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#12e8c6"/>
-                <stop offset="1" stopColor="#11c9df"/>
+              <linearGradient id="nortagoLockedLeft" x1="18" y1="96" x2="66" y2="18" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#18e4c6"/>
+                <stop offset="0.55" stopColor="#10cfe0"/>
+                <stop offset="1" stopColor="#18aee8"/>
               </linearGradient>
-              <linearGradient id="nortagoRight" x1="62" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#19b9ec"/>
-                <stop offset="1" stopColor="#145fea"/>
+              <linearGradient id="nortagoLockedRight" x1="60" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#16b8ed"/>
+                <stop offset="0.55" stopColor="#1689ed"/>
+                <stop offset="1" stopColor="#145be9"/>
               </linearGradient>
             </defs>
-            <path d="M25 91 L66 21" fill="none" stroke="url(#nortagoLeft)" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M65 21 L105 91" fill="none" stroke="url(#nortagoRight)" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 91 L64 22" fill="none" stroke="url(#nortagoLockedLeft)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M62 22 L103 91" fill="none" stroke="url(#nortagoLockedRight)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </span>
         <div>
