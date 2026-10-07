@@ -53,7 +53,7 @@ export default function BOSControlTower() {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
 
-    const [biz, orders, prod, cap, csr, finance, intelligence, alerts] = await Promise.all([
+    const [biz, orders, prod, cap, csr, finance, intelligence, alerts, rater] = await Promise.all([
       supabase.from("businesses").select("name").eq("id", id).maybeSingle(),
       supabase
         .from("otc_orders")
@@ -95,6 +95,11 @@ export default function BOSControlTower() {
         .eq("status", "OPEN")
         .order("detected_at", { ascending: false })
         .limit(10),
+      supabase
+        .from("nortago_rater_status")
+        .select("*")
+        .eq("business_id", id)
+        .maybeSingle(),
     ]);
 
     if (orders.error) throw orders.error;
@@ -110,6 +115,7 @@ export default function BOSControlTower() {
       finance: finance.data,
       intelligence: intelligence.data,
       alerts: alerts.data || [],
+      rater: rater.data,
     });
   }
 
@@ -122,6 +128,7 @@ export default function BOSControlTower() {
   const f = d.finance || {};
   const intelligence = d.intelligence || {};
   const alerts = d.alerts || [];
+  const rater = d.rater || {};
 
   const todayRevenue = orders
     .filter((o: any) => ["SUCCESS", "PO_SUCCESS"].includes(o.status))
@@ -177,6 +184,20 @@ export default function BOSControlTower() {
           <Card title="Blocked Production" value={String(prod.filter((p: any) => p.status === "BLOCKED").length)} />
           <Card title="Total Investment" value={money(d.cap?.total_investment)} />
           <Card title="CSR Remaining" value={money(d.csr?.csr_remaining)} />
+        </section>
+
+        <section style={{ marginTop: 18, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
+          <h2>RATER Control Status</h2>
+          <p style={{ color: "#64748b" }}>
+            RATER = Record · Approval · Traceability · Evidence · Reconciliation.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+            <Card title="RATER Status" value={rater.rater_status || "CHECKING"} />
+            <Card title="Approval Rules" value={rater.approval_control ? "READY" : "NOT CONFIGURED"} />
+            <Card title="Missing Evidence" value={String(rater.missing_evidence || 0)} />
+            <Card title="Reconciliation Exceptions" value={String(rater.reconciliation_exceptions || 0)} />
+            <Card title="Audit Events" value={String(rater.audit_events || 0)} />
+          </div>
         </section>
 
         <section style={{ marginTop: 18, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
