@@ -253,5 +253,5 @@ export default function BOSControlTower() {
 
         <footer style={{padding:"22px 2px 0",fontSize:9,color:"#4e6a66",letterSpacing:.4}}>CT BOS NORTAGO · System of Record · System of Control · System of Intelligence · System of Visibility</footer>
       </div>
-    </main>
+    </main>  );
 }
