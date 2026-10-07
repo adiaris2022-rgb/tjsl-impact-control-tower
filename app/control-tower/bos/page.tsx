@@ -53,7 +53,7 @@ export default function BOSControlTower() {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
 
-    const [biz, orders, prod, cap, csr, finance] = await Promise.all([
+    const [biz, orders, prod, cap, csr, finance, intelligence, alerts] = await Promise.all([
       supabase.from("businesses").select("name").eq("id", id).maybeSingle(),
       supabase
         .from("otc_orders")
@@ -83,6 +83,18 @@ export default function BOSControlTower() {
         .select("*")
         .eq("business_id", id)
         .maybeSingle(),
+      supabase
+        .from("nortago_owner_intelligence")
+        .select("*")
+        .eq("business_id", id)
+        .maybeSingle(),
+      supabase
+        .from("nortago_owner_alerts")
+        .select("id,alert_code,severity,title,detail,status,detected_at")
+        .eq("business_id", id)
+        .eq("status", "OPEN")
+        .order("detected_at", { ascending: false })
+        .limit(10),
     ]);
 
     if (orders.error) throw orders.error;
@@ -96,6 +108,8 @@ export default function BOSControlTower() {
       cap: cap.data,
       csr: csr.data,
       finance: finance.data,
+      intelligence: intelligence.data,
+      alerts: alerts.data || [],
     });
   }
 
@@ -106,6 +120,8 @@ export default function BOSControlTower() {
   const orders = d.orders || [];
   const prod = d.prod || [];
   const f = d.finance || {};
+  const intelligence = d.intelligence || {};
+  const alerts = d.alerts || [];
 
   const todayRevenue = orders
     .filter((o: any) => ["SUCCESS", "PO_SUCCESS"].includes(o.status))
@@ -161,6 +177,25 @@ export default function BOSControlTower() {
           <Card title="Blocked Production" value={String(prod.filter((p: any) => p.status === "BLOCKED").length)} />
           <Card title="Total Investment" value={money(d.cap?.total_investment)} />
           <Card title="CSR Remaining" value={money(d.csr?.csr_remaining)} />
+        </section>
+
+        <section style={{ marginTop: 18, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
+          <h2>Owner Intelligence</h2>
+          <p style={{ color: "#64748b" }}>
+            CT BOS membaca indikator profitabilitas dan exception dari Finance System of Record.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 }}>
+            <Card title="Gross Profit" value={money(intelligence.gross_profit)} />
+            <Card title="Operating Profit" value={money(intelligence.operating_profit)} />
+            <Card title="Net Profit After CSR" value={money(intelligence.net_profit_after_csr)} />
+            <Card title="Net Margin" value={String(Number(intelligence.net_margin_percent || 0).toFixed(2)) + "%"} />
+            <Card title="Open Alerts" value={String(alerts.length)} />
+          </div>
+          {alerts.length > 0 && <div style={{ marginTop: 14 }}>
+            {alerts.map((a: any) => <div key={a.id} style={{ padding: 12, borderTop: "1px solid #eef2f7" }}>
+              <b>{a.severity} · {a.title}</b><div style={{ color: "#64748b", marginTop: 4 }}>{a.detail}</div>
+            </div>)}
+          </div>}
         </section>
 
         <section style={{ marginTop: 18, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
