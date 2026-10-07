@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
+const PUBLIC_APP_URL = "https://nortago-ct-bos-production.up.railway.app";
+
 const plans = [
   {name:"STARTER",price:"Rp499 ribu",period:"/bulan",desc:"Untuk bisnis yang ingin mulai punya sistem kendali.",items:["1 outlet","5 user","Sales & transaksi","Procurement dasar","Finance dasar"],featured:false},
   {name:"BUSINESS",price:"Rp999 ribu",period:"/bulan",desc:"Untuk bisnis yang membutuhkan Full BOS.",items:["Hingga 3 outlet","15 user","Sales + Procurement + Finance","Approval & Control","Owner Control Tower"],featured:true},
@@ -36,7 +38,7 @@ export default function LandingPage(){
       const config=await configResponse.json().catch(()=>({}));
       if(!configResponse.ok || !config.url || !config.key) throw new Error(config.error || "Konfigurasi akses belum tersedia.");
       const supabase=createBrowserClient(config.url,config.key);
-      const redirectTo=`${window.location.origin}/auth/callback?next=/control-tower`;
+      const redirectTo=`${PUBLIC_APP_URL}/auth/callback?next=/control-tower`;
       const {error:e1}=await supabase.auth.signInWithOtp({
         email:email.trim(),
         options:{emailRedirectTo:redirectTo,shouldCreateUser:true}
@@ -44,7 +46,7 @@ export default function LandingPage(){
       if(e1) throw e1;
       setSent(true);
     }catch(err){
-      setError(err instanceof Error?err.message:"Link akses gagal dikirim. Silakan coba lagi.");
+      setError(err instanceof Error && /rate limit/i.test(err.message) ? "Email sedang dibatasi sementara oleh layanan autentikasi. Tunggu sekitar 1 menit sebelum meminta link lagi." : err instanceof Error ? err.message : "Link akses gagal dikirim. Silakan coba lagi.");
     }finally{setBusy(false);}
   }
 
