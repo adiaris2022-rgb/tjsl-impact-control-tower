@@ -256,7 +256,7 @@ export default function BOSControlTower() {
           <h2 style={{margin:"7px 0 12px",fontSize:20}}>Masuk ke sistem</h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10}}>
             {[
-              ["/","SALES","NORTAGO OCT · Order & transaksi"],
+              ["/control-tower/bos","SALES","Sales System of Record · Order & transaksi"],
               ["/procurement","PROCUREMENT","Stock · PO · Receiving"],
               ["/finance","FINANCE","Revenue · COGS · Profit · Tax"],
               ["/control-tower/bos/approvals","APPROVALS","Approval matrix · Control"],
