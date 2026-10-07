@@ -3,10 +3,14 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key"
-);
+async function getSupabase() {
+  const response = await fetch("/api/supabase-config", { cache: "no-store" });
+  const config = await response.json().catch(() => ({}));
+  if (!response.ok || !config.url || !config.key) {
+    throw new Error(config.error || "Supabase runtime configuration is not available.");
+  }
+  return createClient(config.url, config.key);
+}
 
 const money = (n: any) =>
   new Intl.NumberFormat("id-ID", {
@@ -31,6 +35,7 @@ export default function BOSControlTower() {
 
   async function load() {
     setError("");
+    const supabase = await getSupabase();
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) {
       setError("Sesi login tidak ditemukan.");
