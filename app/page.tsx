@@ -21,8 +21,11 @@ export default function ControlTower() {
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   const [forgot, setForgot] = useState(false);
+  const [signup, setSignup] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [signupSent, setSignupSent] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const [role, setRole] = useState("");
   const [businessName, setBusinessName] = useState("TJSL Impact Control Tower");
   const [stats, setStats] = useState({ programs:0, partners:0, transactions:0, value:0 });
@@ -87,6 +90,32 @@ export default function ControlTower() {
     setSigning(false);
   }
 
+  async function signUp(e: React.FormEvent) {
+    e.preventDefault();
+    setRegistering(true); setError(""); setSignupSent(false);
+    try {
+      if (password.length < 8) throw new Error("Password minimal 8 karakter.");
+      const s = await getSupabase();
+      const { data, error: e1 } = await s.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (e1) throw e1;
+      if (data.session) {
+        setError("Akun berhasil dibuat, tetapi akun belum memiliki akses bisnis. Hubungi owner untuk aktivasi.");
+        return;
+      }
+      setSignupSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal membuat akun.");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
   async function sendReset(e: React.FormEvent) {
     e.preventDefault();
     setResetting(true); setError(""); setResetSent(false);
@@ -141,12 +170,26 @@ export default function ControlTower() {
         {["SALES","OPERATIONS","FINANCE"].map((item)=><div key={item} style={{border:"1px solid rgba(255,255,255,.10)",borderRadius:10,padding:"9px 7px",textAlign:"center",fontSize:10,letterSpacing:1.2,color:"rgba(255,255,255,.65)"}}>{item}</div>)}
       </div>
 
-      {!forgot ? <form onSubmit={signIn}>
+      {!forgot && !signup ? <form onSubmit={signIn}>
         <label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
         <label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" autoComplete="current-password" required /></label>
         {error&&<div className="error">{error}</div>}
         <button disabled={signing}>{signing?"Memverifikasi...":"Masuk ke CT BOS →"}</button>
-        <button type="button" onClick={()=>{setForgot(true);setError("");setResetSent(false)}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Lupa password?</button>
+        <div style={{display:"flex",justifyContent:"center",gap:14,alignItems:"center",marginTop:2}}>
+          <button type="button" onClick={()=>{setForgot(true);setSignup(false);setError("");setResetSent(false)}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Lupa password?</button>
+          <span style={{color:"rgba(255,255,255,.18)"}}>·</span>
+          <button type="button" onClick={()=>{setSignup(true);setForgot(false);setError("");setSignupSent(false);setPassword("");}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Daftar akun</button>
+        </div>
+      </form> : signup ? <form onSubmit={signUp}>
+        <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Daftar akun</div>
+        <div style={{fontSize:12,lineHeight:1.55,color:"#8fa9a5",marginBottom:8}}>Buat akun CT BOS menggunakan email Anda. Setelah pendaftaran, cek email untuk verifikasi akun.</div>
+        <label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
+        <label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" autoComplete="new-password" minLength={8} required /></label>
+        <label>Konfirmasi Password<input type="password" autoComplete="new-password" required onChange={e=>{if(e.target.value!==password){setError("Konfirmasi password tidak sama.");}else if(error==="Konfirmasi password tidak sama.")setError("");}} /></label>
+        {signupSent&&<div style={{fontSize:12,lineHeight:1.5,color:"#67d9c3",padding:"10px 12px",border:"1px solid #28584f",borderRadius:10}}>Akun berhasil didaftarkan. Cek inbox email Anda dan klik link verifikasi.</div>}
+        {error&&<div className="error">{error}</div>}
+        <button disabled={registering}>{registering?"Mendaftarkan...":"Daftar ke CT BOS →"}</button>
+        <button type="button" onClick={()=>{setSignup(false);setError("");setSignupSent(false);setPassword("");}} style={{background:"transparent",border:"0",color:"#8fa9a5",fontSize:12,padding:"4px",boxShadow:"none"}}>← Kembali ke login</button>
       </form> : <form onSubmit={sendReset}>
         <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Reset password</div>
         <div style={{fontSize:12,lineHeight:1.55,color:"#8fa9a5",marginBottom:8}}>Masukkan email akun CT BOS. Kami akan mengirimkan link untuk membuat password baru.</div>
