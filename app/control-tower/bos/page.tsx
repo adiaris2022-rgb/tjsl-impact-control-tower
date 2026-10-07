@@ -43,19 +43,20 @@ export default function BOSControlTower() {
     setD({biz:biz.data,orders:orders.data||[],prod:prod.data||[],cap:cap.data,csr:csr.data,pnl:pnl.data});
   }
 
-  useEffect(()=>{load().catch(e=>setError(e.message||"Gagal memuat Control Tower."));},[]);
+  useEffect(()=>{load().catch(e=>setError(e.message||"Gagal memuat CT BOS NORTAGO."));},[]);
 
   const orders=d.orders||[], prod=d.prod||[], pnl=d.pnl||{};
   const revenue=orders.filter((o:any)=>["SUCCESS","PO_SUCCESS"].includes(o.status)).reduce((s:number,o:any)=>s+Number(o.total||0),0);
   const net=Number(pnl.revenue||0)-Number(pnl.cogs||0)-Number(pnl.opex||0)-Number(pnl.tax||0);
 
-  if(error) return <main style={{padding:32}}><h1>NORTAGO Control Tower</h1><p>{error}</p><button onClick={load}>Retry</button></main>;
+  if(error) return <main style={{padding:32}}><div style={{color:"#64748b",fontSize:12,fontWeight:800,letterSpacing:".12em"}}>CT BOS NORTAGO</div><h1>Control Tower Business Owner System</h1><p>{error}</p><button onClick={load}>Retry</button></main>;
 
   return <main style={{minHeight:"100vh",background:"#f8fafc",padding:28,color:"#0f172a"}}>
     <div style={{maxWidth:1280,margin:"0 auto"}}>
-      <div style={{color:"#64748b",fontSize:12,fontWeight:800,letterSpacing:".12em"}}>NORTAGO FULL BOS</div>
-      <h1>{d.biz?.name||"Business"} — Owner Control Tower</h1>
-      <p style={{color:"#64748b"}}>System of Record · Control · Intelligence · Visibility</p>
+      <div style={{color:"#64748b",fontSize:12,fontWeight:800,letterSpacing:".12em"}}>NORTAGO ECOSYSTEM · CT BOS NORTAGO</div>
+      <h1>{d.biz?.name||"Business"} — CT BOS NORTAGO</h1>
+      <h2 style={{fontSize:18,marginTop:-4}}>Control Tower Business Owner System</h2>
+      <p style={{color:"#64748b"}}>System of Record · System of Control · System of Intelligence · System of Visibility</p>
       <button onClick={load} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #cbd5e1",background:"#fff"}}>Refresh</button>
       <section style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:14,marginTop:18}}>
         <Card title="Revenue Hari Ini" value={money(revenue)}/><Card title="Open Orders" value={String(orders.filter((o:any)=>!["SUCCESS","PO_SUCCESS"].includes(o.status)).length)}/>
