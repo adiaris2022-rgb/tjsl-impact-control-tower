@@ -251,6 +251,26 @@ export default function BOSControlTower() {
           {orders.length===0 ? <div style={{color:"#718d89",fontSize:12}}>Belum ada order hari ini.</div> : <div style={{overflowX:"auto"}}><table style={{width:"100%",minWidth:650,borderCollapse:"collapse",fontSize:11}}><thead><tr>{["Order","Status","Payment","Total"].map((x,i)=><th key={x} style={{textAlign:i===3?"right":"left",padding:"9px 8px",color:"#66827e",borderBottom:"1px solid #173136"}}>{x}</th>)}</tr></thead><tbody>{orders.map((o:any)=><tr key={o.id}><td style={{padding:"11px 8px",borderBottom:"1px solid #10282c"}}>{o.order_no}</td><td style={{padding:"11px 8px",borderBottom:"1px solid #10282c"}}>{o.status}</td><td style={{padding:"11px 8px",borderBottom:"1px solid #10282c",color:"#8ca6a2"}}>{o.payment_status}</td><td style={{padding:"11px 8px",borderBottom:"1px solid #10282c",textAlign:"right"}}>{money(o.total)}</td></tr>)}</tbody></table></div>}
         </section>
 
+        <section style={{marginTop:14}}>
+          <div style={{fontSize:10,letterSpacing:1.4,color:"#6f8c88",fontWeight:800}}>BUSINESS MODULES</div>
+          <h2 style={{margin:"7px 0 12px",fontSize:20}}>Masuk ke sistem</h2>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10}}>
+            {[
+              ["/","SALES","NORTAGO OCT · Order & transaksi"],
+              ["/procurement","PROCUREMENT","Stock · PO · Receiving"],
+              ["/finance","FINANCE","Revenue · COGS · Profit · Tax"],
+              ["/control-tower/bos/approvals","APPROVALS","Approval matrix · Control"],
+              ["/control-tower/subscription","SUBSCRIPTION","Plan · Billing · Status"],
+            ].map(([href,title,note]) => (
+              <a key={href} href={href} style={{display:"block",padding:"16px",border:"1px solid #19363a",borderRadius:14,background:"#08191c",textDecoration:"none",color:"#effbf9"}}>
+                <div style={{fontSize:11,fontWeight:900,letterSpacing:1.1,color:"#55d8c0"}}>{title}</div>
+                <div style={{fontSize:11,color:"#78938f",marginTop:7,lineHeight:1.45}}>{note}</div>
+                <div style={{fontSize:11,fontWeight:800,marginTop:12}}>Buka →</div>
+              </a>
+            ))}
+          </div>
+        </section>
+
         <footer style={{padding:"22px 2px 0",fontSize:9,color:"#4e6a66",letterSpacing:.4}}>CT BOS NORTAGO · System of Record · System of Control · System of Intelligence · System of Visibility</footer>
       </div>
     </main>  );
