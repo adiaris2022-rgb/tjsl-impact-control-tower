@@ -150,6 +150,7 @@ export default function BOSApprovals() {
         <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20, marginBottom: 18 }}>
           <h2>Approval Matrix</h2>
           {rules.length === 0 ? <p>Belum ada approval rule. RATER akan tetap WARNING sampai rule aktif dikonfigurasi.</p> : (
+            <>
             <div className="approval-matrix-desktop" style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr><th align="left">Module</th><th align="left">Action</th><th align="left">Role</th><th align="right">Range</th><th>Evidence</th><th>Status</th><th /></tr></thead>
@@ -164,7 +165,9 @@ export default function BOSApprovals() {
                 ))}</tbody>
               </table>
             </div>
-            <div className="approval-matrix-mobile">{rules.map((r) => <article className="approval-rule-card" key={r.id}><div className="rule-top"><b>{r.module} · {r.action}</b><span>{r.is_active ? "ACTIVE" : "INACTIVE"}</span></div><div className="rule-meta"><div><small>Role</small><strong>{r.role}</strong></div><div><small>Range</small><strong>{money(r.min_amount)} — {r.max_amount == null ? "∞" : money(r.max_amount)}</strong></div><div><small>Evidence</small><strong>{r.requires_evidence ? "YES" : "NO"}</strong></div></div><button onClick={() => editRule(r)}>Edit Rule</button></article>)}</div></section>
+            <div className="approval-matrix-mobile">{rules.map((r) => <article className="approval-rule-card" key={r.id}><div className="rule-top"><b>{r.module} · {r.action}</b><span>{r.is_active ? "ACTIVE" : "INACTIVE"}</span></div><div className="rule-meta"><div><small>Role</small><strong>{r.role}</strong></div><div><small>Range</small><strong>{money(r.min_amount)} — {r.max_amount == null ? "∞" : money(r.max_amount)}</strong></div><div><small>Evidence</small><strong>{r.requires_evidence ? "YES" : "NO"}</strong></div></div><button onClick={() => editRule(r)}>Edit Rule</button></article>)}</div>
+            </>
+          )}</section>
 
         <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
           <h2>Approval Queue</h2>
