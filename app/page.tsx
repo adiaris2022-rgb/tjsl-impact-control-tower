@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 const plans = [
   {name:"STARTER",price:"Rp499 ribu",period:"/bulan",desc:"Untuk bisnis yang ingin mulai punya sistem kendali.",items:["1 outlet","5 user","Sales & transaksi","Procurement dasar","Finance dasar"],featured:false},
@@ -22,7 +23,31 @@ function Logo(){
 
 export default function LandingPage(){
   const router=useRouter();
-  useEffect(()=>{ /* sales page is public; authentication is handled at /login */ },[]);
+  const [email,setEmail]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [sent,setSent]=useState(false);
+  const [error,setError]=useState("");
+
+  async function requestTestAccess(e:React.FormEvent){
+    e.preventDefault();
+    setBusy(true); setSent(false); setError("");
+    try{
+      const configResponse=await fetch("/api/supabase-config",{cache:"no-store",signal:AbortSignal.timeout(10000)});
+      const config=await configResponse.json().catch(()=>({}));
+      if(!configResponse.ok || !config.url || !config.key) throw new Error(config.error || "Konfigurasi akses belum tersedia.");
+      const supabase=createBrowserClient(config.url,config.key);
+      const redirectTo=`${window.location.origin}/auth/callback?next=/control-tower`;
+      const {error:e1}=await supabase.auth.signInWithOtp({
+        email:email.trim(),
+        options:{emailRedirectTo:redirectTo,shouldCreateUser:true}
+      });
+      if(e1) throw e1;
+      setSent(true);
+    }catch(err){
+      setError(err instanceof Error?err.message:"Link akses gagal dikirim. Silakan coba lagi.");
+    }finally{setBusy(false);}
+  }
+
   return <main style={{minHeight:"100vh",background:"radial-gradient(circle at 80% 10%,rgba(15,180,220,.14),transparent 32%),radial-gradient(circle at 15% 30%,rgba(24,228,198,.08),transparent 28%),#06100f",color:"#fff",fontFamily:"Inter,ui-sans-serif,system-ui,sans-serif"}}>
     <nav style={{maxWidth:1180,margin:"0 auto",padding:"22px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:20}}>
       <div style={{display:"flex",alignItems:"center",gap:11}}><Logo/><div><b style={{fontSize:18,letterSpacing:1.5}}>NORTAGO</b><div style={{fontSize:10,color:"#82a29d",letterSpacing:1}}>BUSINESS OPERATING SYSTEM</div></div></div>
@@ -34,12 +59,19 @@ export default function LandingPage(){
         <div style={{display:"inline-flex",border:"1px solid rgba(103,217,195,.24)",background:"rgba(103,217,195,.07)",color:"#67d9c3",borderRadius:999,padding:"7px 12px",fontSize:11,fontWeight:800,letterSpacing:1}}>CT BOS NORTAGO · MENARA KENDALI BISNIS</div>
         <h1 style={{fontSize:"clamp(42px,6vw,72px)",lineHeight:1.02,letterSpacing:-2.5,margin:"22px 0 18px"}}>Bisnis berjalan.<br/><span style={{color:"#67d9c3"}}>Owner tetap memegang kendali.</span></h1>
         <p style={{fontSize:18,lineHeight:1.7,color:"#a7bfbb",maxWidth:680,margin:0}}>Satu Business Operating System untuk melihat penjualan, operasional, procurement, finance, people, risiko, dan kinerja bisnis dalam satu control tower.</p>
-        <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:28}}>
-          <button onClick={()=>document.getElementById("harga")?.scrollIntoView({behavior:"smooth"})} style={{background:"#67d9c3",color:"#04100e",border:0,borderRadius:11,padding:"14px 20px",fontWeight:900}}>Lihat Paket & Harga →</button>
-          <button onClick={()=>router.push("/login")} style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,.16)",borderRadius:11,padding:"14px 20px",fontWeight:800}}>Sudah punya akun? Masuk</button>
+        <div style={{marginTop:28,padding:"20px",border:"1px solid rgba(103,217,195,.25)",borderRadius:18,background:"rgba(103,217,195,.06)"}}>
+          <div style={{fontSize:11,color:"#67d9c3",fontWeight:900,letterSpacing:1.3}}>AKSES GRATIS / TES</div>
+          <div style={{fontSize:24,fontWeight:900,marginTop:7}}>Coba CT BOS tanpa password.</div>
+          <p style={{fontSize:13,color:"#9db5b1",lineHeight:1.55,margin:"8px 0 14px"}}>Masukkan email. Kami kirim link sekali klik langsung ke CT BOS. Password belum diperlukan.</p>
+          <form onSubmit={requestTestAccess} style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+            <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nama@email.com" style={{flex:"1 1 220px",minWidth:0,padding:"13px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"#081714",color:"#fff",boxSizing:"border-box"}} />
+            <button disabled={busy} type="submit" style={{flex:"0 0 auto",background:"#67d9c3",color:"#04100e",border:0,borderRadius:10,padding:"13px 17px",fontWeight:900}}>{busy?"Mengirim…":"Kirim Link Tes →"}</button>
+          </form>
+          {sent&&<div style={{marginTop:12,padding:"10px 12px",borderRadius:10,border:"1px solid #28584f",background:"rgba(103,217,195,.07)",color:"#b8f1d3",fontSize:12}}>Link akses sudah dikirim. Buka email Anda lalu klik link tersebut untuk masuk langsung ke CT BOS.</div>}
+          {error&&<div style={{marginTop:12,padding:"10px 12px",borderRadius:10,background:"#35171b",color:"#ffb4bd",fontSize:12}}>{error}</div>}
         </div>
-        <div style={{display:"flex",gap:22,flexWrap:"wrap",marginTop:28,color:"#78918d",fontSize:11}}>
-          <span>✓ System of Record</span><span>✓ System of Control</span><span>✓ System of Intelligence</span><span>✓ System of Visibility</span>
+        <div style={{display:"flex",gap:22,flexWrap:"wrap",marginTop:18,color:"#78918d",fontSize:11}}>
+          <span>✓ Tanpa password untuk tes</span><span>✓ Link melalui email</span><span>✓ Langsung ke CT BOS</span>
         </div>
       </div>
       <div className="hero-card" style={{border:"1px solid rgba(103,217,195,.15)",borderRadius:24,padding:20,background:"linear-gradient(145deg,rgba(15,46,42,.88),rgba(7,20,19,.92))",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
@@ -86,7 +118,6 @@ export default function LandingPage(){
         :global(html), :global(body){width:100%!important;max-width:100%!important;overflow-x:hidden!important}
         :global(*){box-sizing:border-box}
         nav{padding:16px!important;width:100%!important;max-width:100%!important}
-
         .hero-section{grid-template-columns:1fr!important;gap:28px!important;padding:38px 16px 54px!important}
         .hero-section h1{font-size:46px!important;line-height:1.02!important;letter-spacing:-1.8px!important}
         .hero-section .hero-card{width:100%;box-sizing:border-box;padding:16px!important;border-radius:20px!important}
