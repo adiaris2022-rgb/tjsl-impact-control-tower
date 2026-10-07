@@ -164,7 +164,13 @@ export default function BOSApprovals() {
                 ))}</tbody>
               </table>
             </div>
-          )}
+            <div className="approval-matrix-mobile">{rules.map((r) => (
+              <article className="approval-rule-card" key={r.id}>
+                <div className="rule-top"><b>{r.module} · {r.action}</b><span>{r.is_active ? "ACTIVE" : "INACTIVE"}</span></div>
+                <div className="rule-meta"><div><small>Role</small><strong>{r.role}</strong></div><div><small>Range</small><strong>{money(r.min_amount)} — {r.max_amount == null ? "∞" : money(r.max_amount)}</strong></div><div><small>Evidence</small><strong>{r.requires_evidence ? "YES" : "NO"}</strong></div></div>
+                <button onClick={() => editRule(r)}>Edit Rule</button>
+              </article>
+            ))}</div>
         </section>
 
         <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 20 }}>
@@ -184,26 +190,28 @@ export default function BOSApprovals() {
           ))}
         </section>
       </div>
+      <style jsx>{`
+        .approval-matrix-mobile{display:none}
+        @media(max-width:700px){
+          .approval-page{padding:12px!important}
+          .approval-page>div{width:100%;max-width:100%!important}
+          .approval-page section{padding:16px!important;border-radius:14px!important;overflow:hidden}
+          .approval-page h1{font-size:28px;line-height:1.05}
+          .approval-page form{grid-template-columns:1fr!important}
+          .approval-page form button{min-height:44px}
+          .approval-matrix-desktop{display:none}
+          .approval-matrix-mobile{display:grid;gap:10px}
+          .approval-rule-card{border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#fff;display:grid;gap:12px}
+          .rule-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+          .rule-top b{overflow-wrap:anywhere}.rule-top span{font-size:11px;font-weight:800;color:#166534}
+          .rule-meta{display:grid;grid-template-columns:1fr;gap:8px}
+          .rule-meta>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #f1f5f9}
+          .rule-meta small{color:#64748b}.rule-meta strong{text-align:right;overflow-wrap:anywhere}
+          .approval-rule-card button{min-height:44px;width:100%;border-radius:10px}
+        }
+      `}</style>
     </main>
   );
 }
 
-const approvalMobileCss = \`\
-.approval-matrix-mobile{display:none}
-@media(max-width:700px){
- .approval-page{padding:12px!important}
- .approval-page>div{width:100%;max-width:100%!important}
- .approval-page section{padding:16px!important;border-radius:14px!important;overflow:hidden}
- .approval-page h1{font-size:28px;line-height:1.05}
- .approval-page form{grid-template-columns:1fr!important}
- .approval-page form>label,.approval-page form>div{min-width:0!important}
- .approval-page form button{min-height:44px}
- .approval-matrix-desktop{display:none}
- .approval-matrix-mobile{display:grid;gap:10px}
- .approval-rule-card{border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#fff;display:grid;gap:12px}
- .rule-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.rule-top b{overflow-wrap:anywhere}.rule-top span{font-size:11px;font-weight:800;color:#166534}
- .rule-meta{display:grid;grid-template-columns:1fr;gap:8px}.rule-meta>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #f1f5f9}.rule-meta small{color:#64748b}.rule-meta strong{text-align:right;overflow-wrap:anywhere}
- .approval-rule-card button{min-height:44px;width:100%;border-radius:10px}
-}
-\`;
 
