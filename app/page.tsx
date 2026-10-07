@@ -20,6 +20,9 @@ export default function ControlTower() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
+  const [forgot, setForgot] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [role, setRole] = useState("");
   const [businessName, setBusinessName] = useState("TJSL Impact Control Tower");
   const [stats, setStats] = useState({ programs:0, partners:0, transactions:0, value:0 });
@@ -83,6 +86,23 @@ export default function ControlTower() {
     else router.replace("/control-tower/bos");
     setSigning(false);
   }
+
+  async function sendReset(e: React.FormEvent) {
+    e.preventDefault();
+    setResetting(true); setError(""); setResetSent(false);
+    try {
+      const s = await getSupabase();
+      const { error: e1 } = await s.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/reset-password",
+      });
+      if (e1) throw e1;
+      setResetSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal mengirim link reset password.");
+    } finally {
+      setResetting(false);
+    }
+  }
   async function signOut(){ await (await getSupabase()).auth.signOut(); setRole(""); }
   const money=(v:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(v);
 
@@ -121,12 +141,21 @@ export default function ControlTower() {
         {["SALES","OPERATIONS","FINANCE"].map((item)=><div key={item} style={{border:"1px solid rgba(255,255,255,.10)",borderRadius:10,padding:"9px 7px",textAlign:"center",fontSize:10,letterSpacing:1.2,color:"rgba(255,255,255,.65)"}}>{item}</div>)}
       </div>
 
-      <form onSubmit={signIn}>
+      {!forgot ? <form onSubmit={signIn}>
         <label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
         <label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" autoComplete="current-password" required /></label>
         {error&&<div className="error">{error}</div>}
         <button disabled={signing}>{signing?"Memverifikasi...":"Masuk ke CT BOS →"}</button>
-      </form>
+        <button type="button" onClick={()=>{setForgot(true);setError("");setResetSent(false)}} style={{background:"transparent",border:"0",color:"#67d9c3",fontSize:12,padding:"4px",boxShadow:"none"}}>Lupa password?</button>
+      </form> : <form onSubmit={sendReset}>
+        <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Reset password</div>
+        <div style={{fontSize:12,lineHeight:1.55,color:"#8fa9a5",marginBottom:8}}>Masukkan email akun CT BOS. Kami akan mengirimkan link untuk membuat password baru.</div>
+        <label>Email<input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" required /></label>
+        {resetSent&&<div style={{fontSize:12,lineHeight:1.5,color:"#67d9c3",padding:"10px 12px",border:"1px solid #28584f",borderRadius:10}}>Link reset password sudah dikirim. Periksa inbox dan folder spam.</div>}
+        {error&&<div className="error">{error}</div>}
+        <button disabled={resetting}>{resetting?"Mengirim...":"Kirim link reset →"}</button>
+        <button type="button" onClick={()=>{setForgot(false);setError("");setResetSent(false)}} style={{background:"transparent",border:"0",color:"#8fa9a5",fontSize:12,padding:"4px",boxShadow:"none"}}>← Kembali ke login</button>
+      </form>}
 
       <div className="footnote">
         <b>CT BOS NORTAGO</b> · System of Record · Control · Intelligence · Visibility
