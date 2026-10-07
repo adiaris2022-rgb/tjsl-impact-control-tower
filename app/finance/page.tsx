@@ -169,6 +169,18 @@ export default function FinancePage() {
           </ul>
         </section>
       </div>
+      <style jsx>{`
+        .finance-page{box-sizing:border-box}.finance-page input,.finance-page button{max-width:100%;box-sizing:border-box}
+        @media(max-width:700px){
+          .finance-page{padding:12px!important}.finance-page>div{width:100%;max-width:100%!important}
+          .finance-page h1{font-size:28px;line-height:1.05}.finance-page section{min-width:0}
+          .finance-kpis{grid-template-columns:1fr 1fr!important;gap:10px!important}
+          .finance-secondary-kpis{grid-template-columns:1fr!important;gap:10px!important}
+          .finance-close-form{grid-template-columns:1fr!important;gap:10px!important}
+          .finance-page .finance-close-form input{min-height:44px}.finance-page button{min-height:44px;width:100%}
+          .finance-page ul{padding-left:20px}
+        }
+      `}</style>
     </main>
   );
 }
