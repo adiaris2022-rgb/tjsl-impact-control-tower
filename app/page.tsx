@@ -86,9 +86,22 @@ export default function ControlTower() {
   if(!user) return <main className="auth-shell">
     <section className="login-card">
       <div className="brand">
-        <span className="mark">N</span>
+        <span style={{display:"inline-flex",width:54,height:48,alignItems:"center",justifyContent:"center",flex:"0 0 auto"}}>
+          <svg viewBox="0 0 100 90" width="50" height="45" aria-label="NORTAGO logo" role="img">
+            <defs>
+              <linearGradient id="nortagoLogoGradient" x1="8" y1="72" x2="92" y2="18" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#19e4c7"/>
+                <stop offset="0.52" stopColor="#11cce2"/>
+                <stop offset="1" stopColor="#1769ee"/>
+              </linearGradient>
+            </defs>
+            <path d="M20 77 C14 77 10 72 12 66 L48 14 C52 8 60 6 66 10 C72 14 73 22 69 28 L34 78 C31 82 25 82 20 77 Z" fill="url(#nortagoLogoGradient)"/>
+            <path d="M66 10 C72 6 80 9 84 15 L96 35 C99 41 97 48 91 52 C85 55 78 53 75 47 L62 27 C58 21 60 14 66 10 Z" fill="url(#nortagoLogoGradient)"/>
+            <path d="M58 26 L75 47 C78 53 85 55 91 52 C85 56 78 56 73 51 L55 31 Z" fill="#0b75ea" opacity=".45"/>
+          </svg>
+        </span>
         <div>
-          <strong>NORTAGO</strong>
+          <strong style={{fontSize:22,letterSpacing:1.2,color:"#fff"}}>NORTAGO</strong>
           <small>Business Operating System</small>
         </div>
       </div>
