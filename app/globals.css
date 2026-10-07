@@ -184,3 +184,5 @@ button,a,input,select,textarea{
     max-width:100%!important;
   }
 }
+
+@media(max-width:600px){.otc-page .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.otc-page .table-wrap table{min-width:560px}.otc-page .section-toolbar{display:grid;gap:10px}.otc-page .section-toolbar>*{min-width:0}.otc-page .metric-grid{grid-template-columns:1fr 1fr}.otc-page .metric-grid article{min-width:0;padding:14px}.otc-page .metric-grid strong{font-size:19px;overflow-wrap:anywhere}.otc-page .receipt-actions{display:grid;grid-template-columns:1fr;gap:8px}.otc-page .receipt-actions button,.otc-page .receipt-actions a{width:100%;min-height:44px}.otc-page .narrow{margin-left:16px;margin-right:16px;width:auto;max-width:none}.otc-page .success-card h1{font-size:34px;overflow-wrap:anywhere}}
