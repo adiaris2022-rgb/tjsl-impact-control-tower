@@ -162,3 +162,25 @@ button,a,input,select,textarea{
     justify-content:space-between;
   }
 }
+
+
+/* CT BOS MOBILE-FIRST: inline dashboard grids collapse before they can widen viewport */
+@media(max-width:700px){
+  main [style*="grid-template-columns"]{
+    grid-template-columns:1fr!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  main [style*="display: grid"] > *{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  main [style*="display: flex"]{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  main [style*="display: flex"] > *{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+}
