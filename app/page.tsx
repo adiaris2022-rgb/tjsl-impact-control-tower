@@ -38,7 +38,7 @@ export default function LandingPage(){
       const config=await configResponse.json().catch(()=>({}));
       if(!configResponse.ok || !config.url || !config.key) throw new Error(config.error || "Konfigurasi akses belum tersedia.");
       const supabase=createBrowserClient(config.url,config.key);
-      const redirectTo=`${PUBLIC_APP_URL}/auth/callback?next=/control-tower`;
+      const redirectTo=`${PUBLIC_APP_URL}/auth/confirm?next=/control-tower`;
       const {error:e1}=await supabase.auth.signInWithOtp({
         email:email.trim(),
         options:{emailRedirectTo:redirectTo,shouldCreateUser:true}
