@@ -26,7 +26,7 @@ export default function DirectAccessPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${PUBLIC_APP_URL}/auth/callback?next=/control-tower`,
+          emailRedirectTo: `${PUBLIC_APP_URL}/auth/confirm?next=/control-tower`,
           shouldCreateUser: true,
         },
       });
