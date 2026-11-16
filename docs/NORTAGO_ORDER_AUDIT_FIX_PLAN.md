@@ -263,7 +263,7 @@ It adds:
 - `nortago_get_customer_receipt(token)`: returns only the receipt fields and line items for a matching token; it does not create a broad anonymous SELECT policy on customer order tables.
 - Explicit function execute grants for anon/authenticated and revocation from PUBLIC.
 
-The customer checkout page now calls the atomic RPC instead of inserting order and item rows separately. The digital receipt page now uses the capability token RPC rather than querying order tables by sequential order number. The checkout confirmation displays the server-returned total.
+The customer checkout page now calls the atomic RPC instead of inserting order and item rows separately. The RPC uses aggregate validation and a second server-side product lookup; it does not create caller-visible temporary tables. The digital receipt page now uses the capability token RPC rather than querying order tables by sequential order number. The checkout confirmation displays the server-returned total.
 
 Important limitations and release gates:
 - The migration has not been executed. SQL syntax, grants, trigger/RLS interaction, and behavior must be verified in a disposable/staging Supabase database.
