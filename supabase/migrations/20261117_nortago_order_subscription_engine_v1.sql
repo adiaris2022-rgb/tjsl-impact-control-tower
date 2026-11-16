@@ -98,7 +98,7 @@ create or replace function public.nortago_check_outlet_business()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 begin
   if not exists (
