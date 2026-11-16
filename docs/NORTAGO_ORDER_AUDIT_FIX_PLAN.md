@@ -193,6 +193,17 @@ Important boundaries:
 - The current role helper is only used for OWNER/PROGRAM_MANAGER billing reads; validate actual role assignments and helper behavior in staging before enabling the UI.
 - The SQL must be tested on a disposable/staging Supabase database, including trigger/RLS behavior and a cross-tenant denial matrix, before any environment is changed.
 
+
+### Follow-up implementation — price catalog and schema smoke test
+
+- The migration now seeds the two approved catalog prices: `NORTAGO_OUTLET_MONTHLY` = Rp50,000 and `NORTAGO_OUTLET_YEARLY` = Rp500,000. This is catalog metadata only; it does not issue invoices or collect payments.
+- Added `supabase/tests/nortago_subscription_schema_smoke.sql`, a read-only post-migration smoke test for the approved prices, RLS on payment records, the one-current-subscription-per-outlet index, and the tenant/outlet consistency trigger.
+- The smoke test has not been executed because no staging database was accessed.
+
+### API implementation gate
+
+The repository currently exposes only a public Supabase URL/anon-key endpoint and the inspected owner page performs client-side Supabase authentication. Before implementing subscription mutation APIs, inspect the complete auth/session model, the exact `business_users` role schema, and the deployed definition/signature of `has_business_role`. The API must validate a bearer/session token server-side and verify OWNER billing authority for the outlet's business; do not infer authorization from a client-supplied business ID or a role label. No payment gateway or invoice mutation endpoint has been added until that contract can be verified safely.
+
 ## Delivery plan
 
 1. **Security and data integrity:** RLS review in staging, server-side pricing, atomic order RPC/API, idempotency, receipt capability token.
