@@ -109,7 +109,9 @@ begin
   end if;
   return new;
 end;
-$$;
+$;
+
+revoke all on function public.nortago_check_outlet_business() from public, anon, authenticated;
 
 drop trigger if exists outlet_subscriptions_business_guard on public.outlet_subscriptions;
 create trigger outlet_subscriptions_business_guard
