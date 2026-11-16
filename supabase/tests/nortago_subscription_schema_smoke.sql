@@ -122,6 +122,23 @@ begin
     raise exception 'RLS must be enabled on otc_reservations';
   end if;
 
+
+  if not exists (
+    select 1 from pg_proc
+    where oid = 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
+      and coalesce(array_to_string(proconfig, ','), '') like '%search_path=pg_catalog, public, pg_temp%'
+  ) then
+    raise exception 'Customer checkout RPC search_path is not hardened';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc
+    where oid = 'public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)'::regprocedure
+      and coalesce(array_to_string(proconfig, ','), '') like '%search_path=pg_catalog, public, pg_temp%'
+  ) then
+    raise exception 'Customer reservation RPC search_path is not hardened';
+  end if;
+
   raise notice 'NORTAGO subscription, checkout, receipt, and reservation smoke checks passed';
 end;
 $$;
