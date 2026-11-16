@@ -1,5 +1,110 @@
 "use client";
-import Link from "next/link";import {useEffect,useState} from "react";import {useSearchParams} from "next/navigation";import {Suspense} from "react";import {createClient} from "@supabase/supabase-js";
-async function getSupabase(){const r=await fetch("/api/supabase-config",{cache:"no-store"});const c=await r.json().catch(()=>({}));if(!r.ok||!c.url||!c.key)throw new Error(c.error||"Supabase runtime configuration is not available.");return createClient(c.url,c.key);}
-function Receipt(){const q=useSearchParams();const ref=q.get("order")||"";const[order,setOrder]=useState<any>(null);const[items,setItems]=useState<any[]>([]);const[error,setError]=useState("");const[loading,setLoading]=useState(true);useEffect(()=>{if(!ref){setError("Nomor order belum diberikan.");setLoading(false);return}(async()=>{try{const s=await getSupabase();const{data:o,error:oe}=await s.from("otc_orders").select("id,order_no,customer_name,customer_whatsapp,outlet_id,status,payment_status,payment_method,fulfillment_type,scheduled_at,subtotal,delivery_fee,discount,total,pickup_code,created_at,otc_outlets(name)").eq("order_no",ref).maybeSingle();if(oe)throw oe;if(!o)throw new Error("Order tidak ditemukan.");const{data:i,error:ie}=await s.from("otc_order_items").select("product_name_snapshot,unit_price,quantity,line_total").eq("order_id",o.id).order("product_name_snapshot");if(ie)throw ie;setOrder(o);setItems(i||[])}catch(e:any){setError(e.message||"Gagal memuat receipt.")}finally{setLoading(false)}})()},[ref]);if(loading)return <main className="otc-page"><div className="loading">Memuat digital receipt…</div></main>;if(error)return <main className="otc-page"><div className="info-box wide">{error}</div></main>;const o=order;return <main className="otc-page"><header className="otc-head"><div><b>NORTAGO Order</b><small>Digital Receipt · System of Record</small></div><Link href="/otc/customer-order">Order lagi</Link></header><section className="success-card"><span className="eyebrow">DIGITAL RECEIPT</span><h1>{o.order_no}</h1><p>{o.otc_outlets?.name||"Outlet"} · {new Date(o.created_at).toLocaleString("id-ID")}</p><div className="receipt-mini"><span>Customer</span><b>{o.customer_name||"-"}</b><span>Fulfillment</span><b>{o.fulfillment_type}</b><span>Status</span><b>{o.status}</b><span>Payment</span><b>{o.payment_status} · {o.payment_method||"-"}</b>{o.scheduled_at&&<><span>Scheduled</span><b>{new Date(o.scheduled_at).toLocaleString("id-ID")}</b></>}</div><div className="receipt-items">{items.map((i:any)=><div className="cart-line" key={i.product_name_snapshot}><span>{i.product_name_snapshot} × {i.quantity}</span><b>Rp {Number(i.line_total||0).toLocaleString("id-ID")}</b></div>)}</div><div className="total-line"><span>Total</span><strong>Rp {Number(o.total||0).toLocaleString("id-ID")}</strong></div>{o.pickup_code&&<div className="info-box">Pickup Pass: <b>{o.pickup_code}</b></div>}<p className="muted">Receipt ini mengambil data langsung dari OCT. Tidak ada angka transaksi hardcode.</p></section><footer>Supported by NORTAGO · NORTAGO Order</footer></main>}
-export default function DigitalReceipt(){return <Suspense fallback={<main className="otc-page"><div className="loading">Memuat…</div></main>}><Receipt/></Suspense>}
+
+import Link from "next/link";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+async function getSupabase() {
+  const response = await fetch("/api/supabase-config", { cache: "no-store" });
+  const config = await response.json().catch(() => ({}));
+  if (!response.ok || !config.url || !config.key) {
+    throw new Error(config.error || "Konfigurasi Supabase tidak tersedia.");
+  }
+  return createClient(config.url, config.key);
+}
+
+type ReceiptData = {
+  order: {
+    order_no: string;
+    customer_name: string | null;
+    fulfillment_type: string;
+    status: string;
+    payment_status: string;
+    payment_method: string | null;
+    scheduled_at: string | null;
+    subtotal: number;
+    delivery_fee: number;
+    discount: number;
+    total: number;
+    pickup_code: string | null;
+    created_at: string;
+    outlet_name: string;
+  };
+  items: Array<{ product_name_snapshot: string; unit_price: number; quantity: number; line_total: number }>;
+};
+
+function Receipt() {
+  const query = useSearchParams();
+  const token = query.get("token") || "";
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    if (!token) {
+      setError("Tautan receipt tidak lengkap.");
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      try {
+        const supabase = await getSupabase();
+        const { data, error: rpcError } = await supabase.rpc("nortago_get_customer_receipt", {
+          p_receipt_token: token,
+        });
+        if (rpcError) throw rpcError;
+        if (!data?.order) throw new Error("Receipt tidak ditemukan atau tautan tidak valid.");
+        if (alive) setReceipt(data as ReceiptData);
+      } catch (cause: unknown) {
+        if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat receipt.");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [token]);
+
+  if (loading) return <main className="otc-page"><div className="loading">Memuat digital receipt…</div></main>;
+  if (error || !receipt) return <main className="otc-page"><div className="info-box wide">{error || "Receipt tidak tersedia."}</div></main>;
+
+  const order = receipt.order;
+  const money = (value: number) => Number(value || 0).toLocaleString("id-ID");
+  return (
+    <main className="otc-page">
+      <header className="otc-head">
+        <div><b>NORTAGO Order</b><small>Digital Receipt · Private Access</small></div>
+        <Link href="/otc/customer-order">Order lagi</Link>
+      </header>
+      <section className="success-card">
+        <span className="eyebrow">DIGITAL RECEIPT</span>
+        <h1>{order.order_no}</h1>
+        <p>{order.outlet_name || "Outlet"} · {new Date(order.created_at).toLocaleString("id-ID")}</p>
+        <div className="receipt-mini">
+          <span>Customer</span><b>{order.customer_name || "—"}</b>
+          <span>Fulfillment</span><b>{order.fulfillment_type}</b>
+          <span>Status</span><b>{order.status}</b>
+          <span>Payment</span><b>{order.payment_status} · {order.payment_method || "—"}</b>
+          {order.scheduled_at ? <><span>Scheduled</span><b>{new Date(order.scheduled_at).toLocaleString("id-ID")}</b></> : null}
+        </div>
+        <div className="receipt-items">
+          {receipt.items.map((item, index) => (
+            <div className="cart-line" key={index}>
+              <span>{item.product_name_snapshot} × {item.quantity}</span>
+              <b>Rp {money(item.line_total)}</b>
+            </div>
+          ))}
+        </div>
+        <div className="total-line"><span>Total</span><strong>Rp {money(order.total)}</strong></div>
+        {order.pickup_code ? <div className="info-box">Pickup Pass: <b>{order.pickup_code}</b></div> : null}
+        <p className="muted">Receipt diakses menggunakan tautan privat khusus pesanan ini.</p>
+      </section>
+      <footer>Supported by NORTAGO · NORTAGO Order</footer>
+    </main>
+  );
+}
+
+export default function DigitalReceipt() {
+  return <Suspense fallback={<main className="otc-page"><div className="loading">Memuat…</div></main>}><Receipt /></Suspense>;
+}
