@@ -142,3 +142,53 @@ begin
   raise notice 'NORTAGO subscription, checkout, receipt, and reservation smoke checks passed';
 end;
 $$;
+
+
+-- Functional smoke checks run in a transaction and are rolled back.
+begin;
+do $$
+declare
+  v_business uuid := gen_random_uuid();
+  v_outlet uuid := gen_random_uuid();
+  v_product uuid := gen_random_uuid();
+  v_checkout jsonb;
+  v_receipt jsonb;
+  v_reservation jsonb;
+  v_token uuid;
+begin
+  insert into public.businesses(id) values (v_business);
+  insert into public.otc_outlets(id, business_id, name, is_active)
+  values (v_outlet, v_business, 'CI Test Outlet', true);
+  insert into public.otc_products(id, business_id, name, base_price, is_active)
+  values (v_product, v_business, 'CI Test Product', 100, true);
+  insert into public.otc_outlet_products(outlet_id, product_id, price, is_available)
+  values (v_outlet, v_product, 125, true);
+
+  v_checkout := public.nortago_create_customer_order(
+    v_outlet, 'CI Customer', '081234567890', 'TAKE_AWAY',
+    jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 2)),
+    'QRIS', null, null, null
+  );
+
+  if (v_checkout->>'total')::numeric <> 250 then
+    raise exception 'Checkout must use outlet override price; expected 250, got %', v_checkout->>'total';
+  end if;
+
+  v_token := (v_checkout->>'receipt_token')::uuid;
+  v_receipt := public.nortago_get_customer_receipt(v_token);
+  if v_receipt->'order'->>'order_no' is distinct from v_checkout->>'order_no' then
+    raise exception 'Receipt RPC did not return the created order';
+  end if;
+  if jsonb_array_length(v_receipt->'items') <> 1 then
+    raise exception 'Receipt RPC did not return the expected order item';
+  end if;
+
+  v_reservation := public.nortago_create_customer_reservation(
+    v_outlet, 'CI Guest', '081234567890', now() + interval '1 day', 3, 'CI smoke test'
+  );
+  if v_reservation->>'status' <> 'PENDING' or v_reservation->>'reservation_no' is null then
+    raise exception 'Reservation RPC did not return a pending reservation number';
+  end if;
+end;
+$$;
+rollback;
