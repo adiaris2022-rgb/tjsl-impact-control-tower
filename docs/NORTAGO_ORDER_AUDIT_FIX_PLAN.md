@@ -249,3 +249,27 @@ The repository currently exposes only a public Supabase URL/anon-key endpoint an
 - Changing the selected business reloads the outlet and subscription rows under that business ID; existing RLS remains the security boundary.
 - The selector uses a shortened business ID as its label. No business-name join was added because the available schema/display-name contract has not yet been verified.
 - This is a UI improvement only; it does not add subscription mutation, invoice, payment, or entitlement APIs. Multi-business and cross-tenant behavior still requires staging validation.
+
+
+## Secure customer checkout foundation — implemented in branch (2026-11-17)
+
+A second reviewable migration was added:
+
+`supabase/migrations/20261117_nortago_customer_checkout_secure_v1.sql`
+
+It adds:
+- `nortago_create_customer_order(...)`: a narrowly scoped SECURITY DEFINER RPC for anonymous/authenticated customer checkout. The browser submits outlet ID, customer details, fulfillment data, product IDs, and quantities; PostgreSQL verifies outlet/product availability, resolves outlet-specific price, calculates totals, and inserts the order header and items in one transaction.
+- `receipt_access_token`: a UUID capability token generated for each new order.
+- `nortago_get_customer_receipt(token)`: returns only the receipt fields and line items for a matching token; it does not create a broad anonymous SELECT policy on customer order tables.
+- Explicit function execute grants for anon/authenticated and revocation from PUBLIC.
+
+The customer checkout page now calls the atomic RPC instead of inserting order and item rows separately. The digital receipt page now uses the capability token RPC rather than querying order tables by sequential order number. The checkout confirmation displays the server-returned total.
+
+Important limitations and release gates:
+- The migration has not been executed. SQL syntax, grants, trigger/RLS interaction, and behavior must be verified in a disposable/staging Supabase database.
+- The public checkout RPC needs abuse controls (rate limiting, bot protection, monitoring) before production exposure.
+- The RPC currently accepts only product IDs and quantities. Client-supplied variant/add-on prices are intentionally not trusted or included in the server total; a validated modifier/variant price model must be designed before selling priced add-ons.
+- Delivery fee is currently zero and payment remains PENDING; no gateway, tax, discount, or delivery pricing engine is implemented.
+- Receipt capability tokens should be treated as secrets. Add suitable referrer/logging controls and a revocation/expiry policy before production launch.
+- The existing legacy receipt links using `?order=` are no longer resolved by the updated receipt page; any already-issued legacy links need a compatibility/migration plan.
+- No build, lint, SQL execution, RLS test, or end-to-end test has been run in this environment.
