@@ -37,6 +37,7 @@ export default function OwnerSubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [businessId, setBusinessId] = useState("");
+  const [businessIds, setBusinessIds] = useState<string[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -49,17 +50,14 @@ export default function OwnerSubscriptionsPage() {
         const { data: auth, error: authError } = await supabase.auth.getUser();
         if (authError || !auth.user) throw new Error("Silakan masuk menggunakan akun bisnis terlebih dahulu.");
 
-        const { data: membership, error: membershipError } = await supabase
+        const { data: memberships, error: membershipError } = await supabase
           .from("business_users")
           .select("business_id")
-          .eq("user_id", auth.user.id)
-          .limit(1)
-          .maybeSingle();
-        if (membershipError || !membership?.business_id) {
-          throw new Error(membershipError?.message || "Akun ini belum terhubung dengan bisnis.");
-        }
-
-        const id = membership.business_id as string;
+          .eq("user_id", auth.user.id);
+        if (membershipError) throw membershipError;
+        const ids = [...new Set((memberships || []).map((row) => row.business_id as string).filter(Boolean))];
+        if (!ids.length) throw new Error("Akun ini belum terhubung dengan bisnis.");
+        const id = ids[0];
         const [planResult, subscriptionResult, outletResult] = await Promise.all([
           supabase.from("subscription_plans")
             .select("id,plan_code,billing_interval,amount_idr,is_active")
@@ -79,6 +77,7 @@ export default function OwnerSubscriptionsPage() {
         if (outletResult.error) throw outletResult.error;
 
         if (!alive) return;
+        setBusinessIds(ids);
         setBusinessId(id);
         setPlans((planResult.data || []) as Plan[]);
         setSubscriptions((subscriptionResult.data || []) as Subscription[]);
@@ -91,6 +90,34 @@ export default function OwnerSubscriptionsPage() {
     })();
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const supabase = await getSupabase();
+        const [subscriptionResult, outletResult] = await Promise.all([
+          supabase.from("outlet_subscriptions")
+            .select("id,outlet_id,plan_id,status,current_period_start,current_period_end,next_due_at,grace_period_end,auto_renew")
+            .eq("business_id", businessId)
+            .order("created_at", { ascending: false }),
+          supabase.from("otc_outlets")
+            .select("id,name")
+            .eq("business_id", businessId)
+            .order("name", { ascending: true }),
+        ]);
+        if (subscriptionResult.error) throw subscriptionResult.error;
+        if (outletResult.error) throw outletResult.error;
+        if (!alive) return;
+        setSubscriptions((subscriptionResult.data || []) as Subscription[]);
+        setOutlets((outletResult.data || []) as Outlet[]);
+      } catch (cause: unknown) {
+        if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat bisnis terpilih.");
+      }
+    })();
+    return () => { alive = false; };
+  }, [businessId]);
 
   const outletNames = useMemo(() => new Map(outlets.map((outlet) => [outlet.id, outlet.name])), [outlets]);
   const planById = useMemo(() => new Map(plans.map((plan) => [plan.id, plan])), [plans]);
@@ -122,6 +149,13 @@ export default function OwnerSubscriptionsPage() {
         <section className="data-panel">
           <div className="section-toolbar">
             <div><span className="eyebrow">SUBSCRIPTION OVERVIEW</span><h2>Status langganan per outlet</h2></div>
+            {businessIds.length > 1 ? (
+              <label className="business-switcher">Pilih bisnis
+                <select value={businessId} onChange={(event) => setBusinessId(event.target.value)}>
+                  {businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}
+                </select>
+              </label>
+            ) : null}
           </div>
           {subscriptions.length === 0 ? (
             <div className="muted">Belum ada catatan langganan untuk bisnis ini. Aktivasi paket akan tersedia setelah alur invoice dan pembayaran disiapkan.</div>
