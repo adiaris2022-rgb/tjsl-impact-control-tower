@@ -22,7 +22,7 @@ create or replace function public.nortago_create_customer_order(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_outlet public.otc_outlets%rowtype;
@@ -114,7 +114,7 @@ create or replace function public.nortago_get_customer_receipt(p_receipt_token u
 returns jsonb
 language sql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, public, pg_temp
 as $$
   select jsonb_build_object(
     'order', jsonb_build_object(
