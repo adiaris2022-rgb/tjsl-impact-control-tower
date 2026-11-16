@@ -306,3 +306,8 @@ All newly introduced SECURITY DEFINER functions now explicitly set their search 
 
 
 The PostgreSQL smoke suite now also performs transactional functional checks against disposable test records: it verifies outlet-specific price override calculation, atomic order/line-item persistence, receipt lookup using the capability token, and creation of a PENDING Dine-In reservation. The test transaction is rolled back and leaves no persistent fixture records.
+
+
+## Owner reservation visibility — 2026-11-17
+
+The Owner Control Tower now reads upcoming reservation requests for the selected business and displays reservation number, customer, outlet, local date/time, party size, and current status. This is a read-only operational view; confirmation, cancellation, capacity allocation, and customer notifications remain pending.
