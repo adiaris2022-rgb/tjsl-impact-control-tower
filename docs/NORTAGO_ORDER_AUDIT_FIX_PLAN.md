@@ -64,6 +64,30 @@ The repository includes a TJSL core SQL smoke test but no dedicated NORTAGO Orde
 
 **Fix:** Add automated tests for customer authorization boundaries, catalog pricing, order idempotency, atomic persistence, all fulfillment modes, receipt token access, payment webhook replay, and owner metric calculations.
 
+
+## Commercial model — owner decision (2026-11-17)
+
+NORTAGO Order is intended as an affordable subscription platform for businesses of every size, from UMKM to large enterprises.
+
+- Monthly subscription: **Rp50,000 per month**.
+- Annual subscription: **Rp500,000 per year**.
+- Annual saving versus twelve monthly payments: **Rp100,000 (16.7%)**.
+- Annual effective monthly equivalent: approximately **Rp41,667**.
+
+### Product and architecture implications
+
+- Keep the core ordering workflow broadly usable across business categories; do not hard-code the product as restaurant-only.
+- Use multi-tenant business isolation, with outlet/branch, user, and role scopes.
+- Design for one-outlet micro businesses and multi-outlet organizations without splitting the product into separate codebases.
+- Subscription entitlement and billing must be separate from order/payment transactions.
+- Do not let subscription expiry erase business data or historical orders; define graceful read-only/suspension behavior and a recovery path.
+- Meter and monitor infrastructure consumption so the low subscription price remains economically viable at scale.
+- Enterprise-scale capability should be achieved through scalable architecture and controlled usage/operational policies, not by promising unlimited resources at the same price.
+
+### Commercial decisions still required
+
+The owner has set the monthly and annual price points. The billing unit is not yet specified: per business account, per outlet, or another package basis. This must be decided before subscription tables, entitlements, checkout, and pricing pages are implemented. Also define transaction/payment fees, user limits, outlet limits, storage/retention, support scope, and fair-use thresholds before public launch.
+
 ## Delivery plan
 
 1. **Security and data integrity:** RLS review in staging, server-side pricing, atomic order RPC/API, idempotency, receipt capability token.
