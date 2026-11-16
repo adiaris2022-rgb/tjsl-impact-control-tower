@@ -200,6 +200,15 @@ Important boundaries:
 - Added `supabase/tests/nortago_subscription_schema_smoke.sql`, a read-only post-migration smoke test for the approved prices, RLS on payment records, the one-current-subscription-per-outlet index, and the tenant/outlet consistency trigger.
 - The smoke test has not been executed because no staging database was accessed.
 
+
+### Owner subscription dashboard — read-only UI added
+
+- Added `app/otc/owner/subscriptions/page.tsx` to show the signed-in business context, active price catalog, and per-outlet subscription status/period dates.
+- Added a navigation link from the existing Owner Control Tower.
+- The page performs read-only Supabase queries; it does not create or update subscriptions, invoices, or payments.
+- Reads depend on the migration's RLS policies and existing `business_users` membership model. Validate with actual OWNER, PROGRAM_MANAGER, outlet-manager, and cross-business accounts in staging.
+- The current repository's Owner dashboard selects the first `business_users` row. This UI follows that existing behavior for now; a business switcher and verified owner-only billing authorization are still required before mutation actions.
+
 ### API implementation gate
 
 The repository currently exposes only a public Supabase URL/anon-key endpoint and the inspected owner page performs client-side Supabase authentication. Before implementing subscription mutation APIs, inspect the complete auth/session model, the exact `business_users` role schema, and the deployed definition/signature of `has_business_role`. The API must validate a bearer/session token server-side and verify OWNER billing authority for the outlet's business; do not infer authorization from a client-supplied business ID or a role label. No payment gateway or invoice mutation endpoint has been added until that contract can be verified safely.
