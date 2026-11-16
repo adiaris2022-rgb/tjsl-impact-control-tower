@@ -273,3 +273,15 @@ Important limitations and release gates:
 - Receipt capability tokens should be treated as secrets. Add suitable referrer/logging controls and a revocation/expiry policy before production launch.
 - The existing legacy receipt links using `?order=` are no longer resolved by the updated receipt page; any already-issued legacy links need a compatibility/migration plan.
 - No build, lint, SQL execution, RLS test, or end-to-end test has been run in this environment.
+
+
+## Additional customer-flow and validation hardening — 2026-11-17
+
+- Corrected the PL/pgSQL dollar-quote terminator in the subscription consistency-trigger function.
+- Customer menu now loads `otc_outlet_products` for the selected outlet, including outlet-specific override prices and availability, rather than displaying the business-wide product catalog at base prices.
+- Changing the selected outlet clears the existing cart to prevent items from a previous outlet being submitted against another outlet.
+- Delivery landing page now routes customers through outlet/menu selection before checkout; it no longer links directly to a checkout with a lowercase unsupported fulfillment value or an empty cart.
+- Added GitHub Actions pull-request CI to install dependencies and run the production Next.js build. This repository currently has no package lockfile, so the workflow uses `npm install` without npm cache configuration.
+- CI has been triggered, but the result must be checked before considering the build validated.
+
+Remaining release blockers include real staging database execution, RLS/SECURITY DEFINER verification, rate limiting/bot protection, receipt token expiry/revocation, payment provider integration and webhook verification, delivery pricing/provider integration, subscription invoice/payment/renewal automation, entitlement enforcement, and end-to-end UAT.
