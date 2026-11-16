@@ -285,3 +285,16 @@ Important limitations and release gates:
 - CI has been triggered, but the result must be checked before considering the build validated.
 
 Remaining release blockers include real staging database execution, RLS/SECURITY DEFINER verification, rate limiting/bot protection, receipt token expiry/revocation, payment provider integration and webhook verification, delivery pricing/provider integration, subscription invoice/payment/renewal automation, entitlement enforcement, and end-to-end UAT.
+
+
+## Dine-In reservation persistence — 2026-11-17
+
+The reservation page no longer simulates a successful reservation in browser state. It now:
+- Loads active outlets for the customer to choose from.
+- Calls `nortago_create_customer_reservation` to validate and persist a reservation request in PostgreSQL.
+- Generates a unique reservation number server-side.
+- Validates customer name, WhatsApp format, future reservation time, and party size (1–30).
+- Records the initial state as `PENDING`; the UI no longer falsely tells customers that the table is CONFIRMED before outlet approval.
+- Enables RLS and allows business staff to read reservation records through the existing business-role helper. Customer writes go only through the SECURITY DEFINER RPC.
+
+The disposable PostgreSQL CI job now applies the reservation migration and checks the table, RLS, and RPC execute grant. Table-capacity management, double-booking prevention, owner confirmation/cancellation UI, and reminder delivery are not implemented yet.
