@@ -86,7 +86,7 @@ NORTAGO Order is intended as an affordable subscription platform for businesses 
 
 ### Commercial decisions still required
 
-The owner has set the monthly and annual price points. The billing unit is not yet specified: per business account, per outlet, or another package basis. This must be decided before subscription tables, entitlements, checkout, and pricing pages are implemented. Also define transaction/payment fees, user limits, outlet limits, storage/retention, support scope, and fair-use thresholds before public launch.
+The owner has set the monthly and annual price points. The billing unit has since been confirmed as **per outlet** and is documented below. Remaining commercial decisions include transaction/payment fees, user limits, storage/retention, support scope, and fair-use thresholds; these must be settled before public launch.
 
 
 ## Subscription Engine and access model — owner decision (2026-11-17)
@@ -169,6 +169,30 @@ The owner has confirmed the billing unit and base prices. Before public launch, 
 - Past-due, grace-period, suspension, cancellation, and reactivation preserve historical data.
 - Outlet transfer, closure, and ownership changes follow audited workflows.
 
+
+## Subscription Engine schema foundation — implemented in branch (2026-11-17)
+
+A reviewable SQL migration has been added at:
+
+`supabase/migrations/20261117_nortago_order_subscription_engine_v1.sql`
+
+It creates:
+- `subscription_plans` with monthly/yearly billing interval, IDR amount, effective dates, and JSONB entitlement metadata.
+- `outlet_subscriptions` with one current subscription per outlet, independent lifecycle status, period dates, due date, grace period, and renewal flag.
+- `subscription_invoices` scoped to business, outlet, and subscription.
+- `subscription_payments` with provider reference, unique idempotency key, server verification timestamp, and provider payload.
+- `subscription_events` as an append-oriented lifecycle audit trail.
+- Tenant/outlet consistency triggers for subscription, invoice, and event records.
+- RLS: active plan catalog can be read publicly; billing records can be read by OWNER/PROGRAM_MANAGER of their business; payment records and all writes have no client policies and remain server-side.
+
+Important boundaries:
+- This is a schema foundation only. It does not yet issue invoices, accept payments, renew subscriptions, calculate entitlements, suspend checkout, or expose billing APIs.
+- No seed plan rows are inserted yet; commercial plan activation needs a controlled server-side provisioning flow.
+- No migration has been applied to staging or production.
+- The migration assumes existing `public.businesses`, `public.otc_outlets`, and `public.has_business_role(uuid,text[])` definitions from the repository.
+- The current role helper is only used for OWNER/PROGRAM_MANAGER billing reads; validate actual role assignments and helper behavior in staging before enabling the UI.
+- The SQL must be tested on a disposable/staging Supabase database, including trigger/RLS behavior and a cross-tenant denial matrix, before any environment is changed.
+
 ## Delivery plan
 
 1. **Security and data integrity:** RLS review in staging, server-side pricing, atomic order RPC/API, idempotency, receipt capability token.
@@ -194,3 +218,6 @@ The owner has confirmed the billing unit and base prices. Before public launch, 
 - Existing Railway commit status was reported as success for that commit; this is not proof that every NORTAGO Order customer journey or database policy works.
 - No live production database, payment provider, customer order, or production runtime mutation was performed during this audit.
 - Build/test commands have not been executed in this GitHub-only review; they remain required validation gates.
+
+
+- Subscription Engine schema foundation committed to `feature/nortago-order-audit-fix`; migration is not applied to any database.
