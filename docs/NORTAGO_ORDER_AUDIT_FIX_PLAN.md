@@ -303,3 +303,6 @@ The disposable PostgreSQL CI job now applies the reservation migration and check
 ## SECURITY DEFINER search-path hardening — 2026-11-17
 
 All newly introduced SECURITY DEFINER functions now explicitly set their search path with `pg_catalog` first, followed by the required `public` schema and `pg_temp` last (or omit `pg_temp` where not needed). This reduces the risk of an attacker shadowing built-in function names or objects through a writable schema. Staging review must still verify function owner, execute grants, and Supabase role behavior.
+
+
+The PostgreSQL smoke suite now also performs transactional functional checks against disposable test records: it verifies outlet-specific price override calculation, atomic order/line-item persistence, receipt lookup using the capability token, and creation of a PENDING Dine-In reservation. The test transaction is rolled back and leaves no persistent fixture records.
