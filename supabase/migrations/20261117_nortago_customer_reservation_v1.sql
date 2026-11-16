@@ -39,7 +39,7 @@ create or replace function public.nortago_create_customer_reservation(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_outlet public.otc_outlets%rowtype;
