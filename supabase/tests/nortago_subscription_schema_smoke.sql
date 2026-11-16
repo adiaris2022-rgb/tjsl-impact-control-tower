@@ -60,6 +60,24 @@ begin
     raise exception 'subscription_payments must not expose client-facing RLS policies';
   end if;
 
-  raise notice 'NORTAGO subscription schema smoke checks passed';
+
+  if to_regprocedure('public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)') is null then
+    raise exception 'Missing atomic server-priced customer checkout RPC';
+  end if;
+
+  if to_regprocedure('public.nortago_get_customer_receipt(uuid)') is null then
+    raise exception 'Missing capability-token receipt RPC';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'otc_orders'
+      and column_name = 'receipt_access_token'
+  ) then
+    raise exception 'Missing private receipt access token column';
+  end if;
+
+  raise notice 'NORTAGO subscription and customer checkout schema smoke checks passed';
 end;
 $$;
