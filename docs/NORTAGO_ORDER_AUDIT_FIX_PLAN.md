@@ -88,6 +88,87 @@ NORTAGO Order is intended as an affordable subscription platform for businesses 
 
 The owner has set the monthly and annual price points. The billing unit is not yet specified: per business account, per outlet, or another package basis. This must be decided before subscription tables, entitlements, checkout, and pricing pages are implemented. Also define transaction/payment fees, user limits, outlet limits, storage/retention, support scope, and fair-use thresholds before public launch.
 
+
+## Subscription Engine and access model — owner decision (2026-11-17)
+
+### Billing unit and price
+
+The official billing unit is **one outlet**. A business may own multiple outlets under one business account; each billable outlet has its own subscription.
+
+- Monthly: **Rp50,000 per outlet per month**.
+- Annual: **Rp500,000 per outlet per year**.
+- Annual saving per outlet versus 12 monthly payments: **Rp100,000 (16.7%)**.
+- Annual effective monthly equivalent: approximately **Rp41,667 per outlet**.
+
+Examples:
+- 1 outlet: Rp50,000/month or Rp500,000/year.
+- 3 outlets: Rp150,000/month or Rp1,500,000/year.
+- 5 outlets: Rp250,000/month or Rp2,500,000/year.
+- 10 outlets: Rp500,000/month or Rp5,000,000/year.
+- 20 outlets: Rp1,000,000/month or Rp10,000,000/year.
+
+### Tenant and outlet hierarchy
+
+Use the following hierarchy:
+
+`Business (tenant) -> Business Users / Roles -> Outlets -> Outlet Subscription -> Outlet Orders / Catalog availability / Fulfillment`
+
+- A business is the tenant and owns its shared identity, billing contact, users, and outlet portfolio.
+- An outlet is the independently billable service unit.
+- Product master data may be shared at business level; outlet-specific availability, price overrides, operating hours, and fulfillment configuration remain outlet-scoped.
+- An owner can see and manage all outlets belonging to their business, subject to role and subscription entitlements.
+- A manager may be scoped to selected outlets.
+- Staff/cashier accounts should be scoped to assigned outlets and only the operational actions they need.
+- Cross-business access must always be denied unless a future explicit platform-operator role is introduced with audited support procedures.
+
+### Subscription Engine data model (proposed)
+
+1. `subscription_plans`: plan code, billing interval (MONTHLY/YEARLY), price in IDR minor units or integer rupiah, currency, entitlement definition, active dates.
+2. `outlet_subscriptions`: outlet_id, plan_id, status (TRIALING/ACTIVE/PAST_DUE/SUSPENDED/CANCELED/EXPIRED), current_period_start/end, next_due_at, grace_period_end, auto_renew, created_at.
+3. `subscription_invoices`: business_id, outlet_id, subscription_id, invoice_no, amount, currency, period, status (DRAFT/OPEN/PAID/FAILED/VOID/REFUNDED), due_at, paid_at.
+4. `subscription_payments`: invoice_id, provider, provider_reference, amount, status, verified_at, idempotency_key; payment status is updated only by trusted server-side provider verification.
+5. `subscription_events`: append-only audit trail for activation, renewal, failed payment, grace-period transition, suspension, cancellation, refund, and manual adjustment.
+6. `outlet_entitlements` (or derived entitlement service): effective feature and quota state for a given outlet and period. Avoid trusting entitlement values sent by the browser.
+
+All subscription tables must be tenant-scoped and protected by RLS. Subscription writes, invoice issuance, payment verification, and entitlement transitions must be server-controlled. Never accept a client assertion that an invoice is paid.
+
+### Access and authorization model
+
+- **Platform Super Admin:** cross-tenant support/operations only through explicit audited privileged access; not a default business role.
+- **Business Owner:** manage business profile, all owned outlets, outlet subscriptions, billing overview, user invitations, and business-wide reporting.
+- **Business Admin:** manage assigned business operations and users, but billing/payment administration may be withheld unless explicitly granted.
+- **Outlet Manager:** manage assigned outlet catalog availability, orders, fulfillment, schedules, and outlet-level reports.
+- **Cashier/Staff:** handle assigned outlet orders and fulfillment steps; no subscription, user-role, or business-wide financial administration by default.
+- **Read-only/Analyst:** view only explicitly assigned outlet or business reports.
+
+Authorization must check both tenant membership and outlet assignment. A role name alone is insufficient. Enforce server-side and in database policies; hide UI controls only as a secondary convenience. Use least privilege and record privileged changes in an audit log.
+
+### Subscription lifecycle and service behavior
+
+- A newly created outlet is not commercially active until its subscription is active or an explicitly configured trial is granted.
+- Each outlet subscription has independent renewal and payment status.
+- Failed renewal enters PAST_DUE and a clearly defined grace period; during grace, notify the owner and allow payment recovery.
+- After grace expires, suspend new customer checkout for that outlet. Preserve owner access to billing, data export, and historical records.
+- Do not delete outlet, catalog, order, or receipt history when a subscription expires or is canceled.
+- Reactivation restores eligible service after verified payment; it must not duplicate invoices or payment events.
+- Adding an outlet triggers a separate subscription selection and invoice for that outlet.
+- Removing an outlet stops future renewal according to cancellation policy; it does not erase historical transactions or bypass any outstanding invoice.
+
+### Pricing and commercial guardrails still to decide
+
+The owner has confirmed the billing unit and base prices. Before public launch, define whether the price includes all listed features, user counts, order volumes, storage, support, and payment-provider fees. Establish fair-use and infrastructure safeguards that do not unexpectedly change the advertised base price. Large enterprises can subscribe for many outlets, while any bespoke SLA, integrations, or high-volume infrastructure commitments should be separately specified and approved rather than silently assumed unlimited.
+
+### Required tests
+
+- Business with 1, 3, 10, and 20 outlets produces the correct invoice totals.
+- One outlet's expired/failed subscription does not suspend sibling outlets.
+- Owner sees all business outlets; outlet manager sees only assigned outlets.
+- Cashier cannot alter subscriptions, billing, roles, or cross-outlet data.
+- Cross-business read/write attempts are denied.
+- Duplicate payment webhooks do not double-activate or double-charge.
+- Past-due, grace-period, suspension, cancellation, and reactivation preserve historical data.
+- Outlet transfer, closure, and ownership changes follow audited workflows.
+
 ## Delivery plan
 
 1. **Security and data integrity:** RLS review in staging, server-side pricing, atomic order RPC/API, idempotency, receipt capability token.
