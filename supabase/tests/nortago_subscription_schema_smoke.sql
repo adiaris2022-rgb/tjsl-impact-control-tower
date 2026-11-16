@@ -102,6 +102,26 @@ begin
     raise exception 'Anonymous receipt RPC is not executable';
   end if;
 
-  raise notice 'NORTAGO subscription and customer checkout schema smoke checks passed';
+
+  if to_regclass('public.otc_reservations') is null then
+    raise exception 'Missing persistent Dine-In reservation table';
+  end if;
+
+  if to_regprocedure('public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)') is null then
+    raise exception 'Missing customer reservation RPC';
+  end if;
+
+  if not has_function_privilege('anon', 'public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)', 'EXECUTE') then
+    raise exception 'Anonymous customer reservation RPC is not executable';
+  end if;
+
+  if not exists (
+    select 1 from pg_class
+    where oid = 'public.otc_reservations'::regclass and relrowsecurity = true
+  ) then
+    raise exception 'RLS must be enabled on otc_reservations';
+  end if;
+
+  raise notice 'NORTAGO subscription, checkout, receipt, and reservation smoke checks passed';
 end;
 $$;
