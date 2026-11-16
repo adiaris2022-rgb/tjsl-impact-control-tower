@@ -1,6 +1,6 @@
 -- NORTAGO Order Subscription Engine schema smoke checks.
 -- Run only after applying the migration to a disposable/staging database.
--- This script is read-only and does not create or mutate business data.
+-- Schema assertions are read-only. Functional RPC fixtures are inserted in a transaction and rolled back.
 
 do $$
 declare
