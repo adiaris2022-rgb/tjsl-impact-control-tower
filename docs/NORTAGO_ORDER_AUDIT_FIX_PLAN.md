@@ -207,7 +207,7 @@ Important boundaries:
 - Added a navigation link from the existing Owner Control Tower.
 - The page performs read-only Supabase queries; it does not create or update subscriptions, invoices, or payments.
 - Reads depend on the migration's RLS policies and existing `business_users` membership model. Validate with actual OWNER, PROGRAM_MANAGER, outlet-manager, and cross-business accounts in staging.
-- The current repository's Owner dashboard selects the first `business_users` row. This UI follows that existing behavior for now; a business switcher and verified owner-only billing authorization are still required before mutation actions.
+- The dashboard now loads all `business_users` memberships for the signed-in user and provides a business selector when more than one business is available. The selector scopes the read-only outlet/subscription queries to the selected business. It displays a shortened business ID because a verified business display-name field was not established. Verified owner-only billing authorization is still required before mutation actions.
 
 ### API implementation gate
 
@@ -241,3 +241,11 @@ The repository currently exposes only a public Supabase URL/anon-key endpoint an
 
 
 - Subscription Engine schema foundation committed to `feature/nortago-order-audit-fix`; migration is not applied to any database.
+
+
+### Follow-up implementation — business context selector
+
+- The read-only subscription dashboard now loads the signed-in user's business memberships and offers a selector for multi-business accounts.
+- Changing the selected business reloads the outlet and subscription rows under that business ID; existing RLS remains the security boundary.
+- The selector uses a shortened business ID as its label. No business-name join was added because the available schema/display-name contract has not yet been verified.
+- This is a UI improvement only; it does not add subscription mutation, invoice, payment, or entitlement APIs. Multi-business and cross-tenant behavior still requires staging validation.
