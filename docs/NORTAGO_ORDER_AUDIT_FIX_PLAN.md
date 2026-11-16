@@ -298,3 +298,8 @@ The reservation page no longer simulates a successful reservation in browser sta
 - Enables RLS and allows business staff to read reservation records through the existing business-role helper. Customer writes go only through the SECURITY DEFINER RPC.
 
 The disposable PostgreSQL CI job now applies the reservation migration and checks the table, RLS, and RPC execute grant. Table-capacity management, double-booking prevention, owner confirmation/cancellation UI, and reminder delivery are not implemented yet.
+
+
+## SECURITY DEFINER search-path hardening — 2026-11-17
+
+All newly introduced SECURITY DEFINER functions now explicitly set their search path with `pg_catalog` first, followed by the required `public` schema and `pg_temp` last (or omit `pg_temp` where not needed). This reduces the risk of an attacker shadowing built-in function names or objects through a writable schema. Staging review must still verify function owner, execute grants, and Supabase role behavior.
