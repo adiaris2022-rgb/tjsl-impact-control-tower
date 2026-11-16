@@ -59,16 +59,8 @@ begin
   where id = p_outlet_id and is_active = true;
   if not found then raise exception 'Outlet tidak ditemukan atau tidak aktif'; end if;
 
-  create temporary table if not exists pg_temp.nortago_order_items (
-    product_id uuid, product_name text, unit_price numeric(14,2), quantity integer, line_total numeric(14,2)
-  ) on commit drop;
-  truncate table pg_temp.nortago_order_items;
-
-  insert into pg_temp.nortago_order_items(product_id, product_name, unit_price, quantity, line_total)
-  select p.id, p.name,
-         coalesce(op.price, p.base_price)::numeric(14,2),
-         item.quantity,
-         (coalesce(op.price, p.base_price) * item.quantity)::numeric(14,2)
+    select count(*), coalesce(sum(coalesce(op.price, p.base_price) * item.quantity), 0)::numeric(14,2)
+    into v_count, v_subtotal
   from jsonb_to_recordset(p_items) as item(product_id uuid, quantity integer)
   join public.otc_products p on p.id = item.product_id
   join public.otc_outlet_products op on op.product_id = p.id and op.outlet_id = p_outlet_id
@@ -77,12 +69,10 @@ begin
     and op.is_available = true
     and item.quantity between 1 and 99;
 
-  get diagnostics v_count = row_count;
   if v_count = 0 or v_count <> jsonb_array_length(p_items) then
     raise exception 'Ada produk tidak tersedia atau jumlah item tidak valid';
   end if;
 
-  select sum(line_total) into v_subtotal from pg_temp.nortago_order_items;
   v_order_no := 'NGO-' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISS') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
   v_receipt_token := gen_random_uuid();
 
@@ -101,8 +91,15 @@ begin
   insert into public.otc_order_items (
     order_id, product_id, product_name_snapshot, unit_price, quantity, line_total
   )
-  select v_order_id, product_id, product_name, unit_price, quantity, line_total
-  from pg_temp.nortago_order_items;
+  select v_order_id, p.id, p.name, coalesce(op.price, p.base_price)::numeric(14,2),
+         item.quantity, (coalesce(op.price, p.base_price) * item.quantity)::numeric(14,2)
+  from jsonb_to_recordset(p_items) as item(product_id uuid, quantity integer)
+  join public.otc_products p on p.id = item.product_id
+  join public.otc_outlet_products op on op.product_id = p.id and op.outlet_id = p_outlet_id
+  where p.business_id = v_outlet.business_id
+    and p.is_active = true
+    and op.is_available = true
+    and item.quantity between 1 and 99;
 
   return jsonb_build_object(
     'order_no', v_order_no,
