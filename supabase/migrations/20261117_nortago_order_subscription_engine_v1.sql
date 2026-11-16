@@ -156,6 +156,20 @@ create policy subscription_events_owner_read on public.subscription_events
   for select to authenticated
   using (public.has_business_role(business_id, array['OWNER','PROGRAM_MANAGER']));
 
+
+-- Official owner-approved base prices. These rows are catalog entries only;
+-- invoice creation and payment collection are not enabled by this migration.
+insert into public.subscription_plans
+  (plan_code, billing_interval, amount_idr, currency, entitlements, is_active)
+values
+  ('NORTAGO_OUTLET_MONTHLY', 'MONTHLY', 50000, 'IDR', '{}'::jsonb, true),
+  ('NORTAGO_OUTLET_YEARLY', 'YEARLY', 500000, 'IDR', '{}'::jsonb, true)
+on conflict (plan_code) do update
+set billing_interval = excluded.billing_interval,
+    amount_idr = excluded.amount_idr,
+    currency = excluded.currency,
+    is_active = excluded.is_active;
+
 -- Intentionally no anon/authenticated policies for subscription_payments:
 -- payment records and provider payloads are server-only.
 -- Intentionally no client write policies on subscription tables.
