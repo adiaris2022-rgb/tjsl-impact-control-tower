@@ -78,6 +78,30 @@ begin
     raise exception 'Missing private receipt access token column';
   end if;
 
+
+  if not exists (
+    select 1 from pg_proc
+    where oid = 'public.nortago_check_outlet_business()'::regprocedure
+  ) then
+    raise exception 'Missing outlet/business consistency trigger function';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc
+    where oid = 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
+      and prosecdef = true
+  ) then
+    raise exception 'Customer checkout RPC must be SECURITY DEFINER';
+  end if;
+
+  if not has_function_privilege('anon', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
+    raise exception 'Anonymous customer checkout RPC is not executable';
+  end if;
+
+  if not has_function_privilege('anon', 'public.nortago_get_customer_receipt(uuid)', 'EXECUTE') then
+    raise exception 'Anonymous receipt RPC is not executable';
+  end if;
+
   raise notice 'NORTAGO subscription and customer checkout schema smoke checks passed';
 end;
 $$;
