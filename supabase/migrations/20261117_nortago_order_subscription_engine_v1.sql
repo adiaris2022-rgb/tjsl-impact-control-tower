@@ -109,7 +109,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 revoke all on function public.nortago_check_outlet_business() from public, anon, authenticated;
 
