@@ -81,6 +81,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_customer_reservation_v1.sql
+      - name: Apply reservation management schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_reservation_management_v1.sql
       - name: Run schema and transactional RPC smoke checks
         env:
           PGPASSWORD: postgres
