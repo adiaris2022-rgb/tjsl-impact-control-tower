@@ -25,11 +25,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const businessId = typeof body.business_id === "string" ? body.business_id : "";
-    const outletIds = Array.isArray(body.outlet_ids) ? [...new Set(body.outlet_ids.filter((id: unknown) => typeof id === "string"))] as string[] : [];
+    const outletIds = Array.isArray(body.outlet_ids)
+      ? [...new Set(body.outlet_ids.filter((id: unknown) => typeof id === "string"))] as string[]
+      : [];
     const planCode = body.plan_code === "NORTAGO_OUTLET_YEARLY"
-      ? "NORTAGO_OUTLET_YEARLY" : body.plan_code === "NORTAGO_OUTLET_MONTHLY"
-      ? "NORTAGO_OUTLET_MONTHLY" : "";
-    if (!businessId || !outletIds.length || outletIds.length > 100 || !planCode) return json({ error: "INVALID_REQUEST" }, 400);
+      ? "NORTAGO_OUTLET_YEARLY"
+      : body.plan_code === "NORTAGO_OUTLET_MONTHLY" ? "NORTAGO_OUTLET_MONTHLY" : "";
+    if (!businessId || !outletIds.length || outletIds.length > 100 || !planCode) {
+      return json({ error: "INVALID_REQUEST" }, 400);
+    }
 
     const userClient = createClient(supabaseUrl, anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -41,52 +45,34 @@ export async function POST(request: NextRequest) {
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const payments: Array<{ outlet_id: string; invoice_no: string; amount_idr: number; payment_url: string; expires_at: string | null }> = [];
+    const payments: Array<{
+      outlet_id: string;
+      invoice_no: string;
+      amount_idr: number;
+      payment_url: string;
+      expires_at: string | null;
+    }> = [];
     const failures: Array<{ outlet_id: string; error: string }> = [];
 
     for (const outletId of outletIds) {
-      const { data: invoice, error: invoiceError } = await userClient.rpc("nortago_prepare_subscription_invoice", {
-        p_business_id: businessId,
-        p_outlet_id: outletId,
-        p_plan_code: planCode,
-      });
+      const { data: invoice, error: invoiceError } = await userClient.rpc(
+        "nortago_prepare_subscription_invoice",
+        { p_business_id: businessId, p_outlet_id: outletId, p_plan_code: planCode },
+      );
       if (invoiceError || !invoice) {
         failures.push({ outlet_id: outletId, error: invoiceError?.message || "INVOICE_PREPARATION_FAILED" });
         continue;
       }
 
-      const payload = {
-        title: `NORTAGO Order — ${invoice.plan_code}`,
-        description: `Langganan NORTAGO Order outlet ${invoice.outlet_id} · invoice ${invoice.invoice_no}`,
-        amount: Number(invoice.amount_idr),
-        reference_id: invoice.invoice_no,
-        customer: {
-          name: typeof body.customer_name === "string" ? body.customer_name.slice(0, 120) : "Pemilik Bisnis",
-          email: typeof body.customer_email === "string" ? body.customer_email.slice(0, 160) : undefined,
-          phone: typeof body.customer_phone === "string" ? body.customer_phone.replace(/[^0-9+]/g, "").slice(0, 15) : undefined,
-        },
-        return_url: `${appUrl}/otc/owner/subscriptions?invoice=${encodeURIComponent(invoice.invoice_no)}`,
-        metadata: {
-          source: "NORTAGO_ORDER_SUBSCRIPTION",
-          invoice_id: invoice.invoice_id,
-          subscription_id: invoice.subscription_id,
-          outlet_id: invoice.outlet_id,
-          business_id: invoice.business_id,
-        },
-      };
-      if (!payload.customer.email) delete payload.customer.email;
-      if (!payload.customer.phone) delete payload.customer.phone;
+      const invoiceNo = String(invoice.invoice_no);
+      const amount = Number(invoice.amount_idr);
+      const paymentUrl = `https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(invoiceNo)}`;
+      const headers = { Authorization: `Bearer ${orderHeroKey}` };
 
-      // Reconcile first: Idempotency-Key is retained by OrderHero for 24h,
-      // while reference_id remains the durable unique key for this invoice.
-      // This also recovers a bill created before a previous request timed out
-      // or before its provider reference was persisted locally.
-      let paymentRequest: any = null;
-      const lookupResponse = await fetch(
-        `https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(String(invoice.invoice_no))}`,
-        { headers: { Authorization: `Bearer ${orderHeroKey}` }, cache: "no-store" },
-      );
+      // Always reconcile the durable reference before creating a new bill.
+      const lookupResponse = await fetch(paymentUrl, { headers, cache: "no-store" });
       const lookupBody = await lookupResponse.json().catch(() => ({}));
+      let paymentRequest: any = null;
       if (lookupResponse.ok && lookupBody.ok === true) {
         paymentRequest = lookupBody.data?.payment_request || lookupBody.data;
       } else if (lookupResponse.status !== 404) {
@@ -94,18 +80,58 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      if (paymentRequest && paymentRequest.status !== "open") {
+        failures.push({
+          outlet_id: outletId,
+          error: `ORDERHERO_PAYMENT_NOT_OPEN_${String(paymentRequest.status || "UNKNOWN").toUpperCase()}`,
+        });
+        continue;
+      }
+
       if (!paymentRequest) {
+        // A previous POST may have timed out after OrderHero accepted it.
+        // On GET 404, use a fresh idempotency key while retaining the same
+        // durable reference_id. This follows OrderHero's recovery contract.
+        const { data: paymentRow, error: paymentReadError } = await admin
+          .from("subscription_payments")
+          .select("idempotency_key")
+          .eq("id", invoice.payment_id)
+          .eq("invoice_id", invoice.invoice_id)
+          .single();
+        if (paymentReadError || !paymentRow?.idempotency_key) {
+          failures.push({ outlet_id: outletId, error: "IDEMPOTENCY_STATE_UNAVAILABLE" });
+          continue;
+        }
+
+        const currentKey = String(paymentRow.idempotency_key);
+        const revision = Number(currentKey.match(/\.r(\d+)$/)?.[1] || 1) + 1;
+        const nextKey = `${invoiceNo}.r${revision}`;
+        const { data: claimedKey, error: claimError } = await admin
+          .from("subscription_payments")
+          .update({ idempotency_key: nextKey })
+          .eq("id", invoice.payment_id)
+          .eq("invoice_id", invoice.invoice_id)
+          .eq("idempotency_key", currentKey)
+          .select("idempotency_key")
+          .maybeSingle();
+        if (claimError || !claimedKey) {
+          failures.push({ outlet_id: outletId, error: "CHECKOUT_RETRY_CONFLICT" });
+          continue;
+        }
+
         const payload = {
           title: `NORTAGO Order — ${invoice.plan_code}`,
-          description: `Langganan NORTAGO Order outlet ${invoice.outlet_id} · invoice ${invoice.invoice_no}`,
-          amount: Number(invoice.amount_idr),
-          reference_id: invoice.invoice_no,
+          description: `Langganan NORTAGO Order outlet ${invoice.outlet_id} · invoice ${invoiceNo}`,
+          amount,
+          reference_id: invoiceNo,
           customer: {
             name: typeof body.customer_name === "string" ? body.customer_name.slice(0, 120) : "Pemilik Bisnis",
             email: typeof body.customer_email === "string" ? body.customer_email.slice(0, 160) : undefined,
-            phone: typeof body.customer_phone === "string" ? body.customer_phone.replace(/[^0-9+]/g, "").slice(0, 15) : undefined,
+            phone: typeof body.customer_phone === "string"
+              ? body.customer_phone.replace(/[^0-9+]/g, "").slice(0, 15)
+              : undefined,
           },
-          return_url: `${appUrl}/otc/owner/subscriptions?invoice=${encodeURIComponent(invoice.invoice_no)}`,
+          return_url: `${appUrl}/otc/owner/subscriptions?invoice=${encodeURIComponent(invoiceNo)}`,
           metadata: {
             source: "NORTAGO_ORDER_SUBSCRIPTION",
             invoice_id: invoice.invoice_id,
@@ -120,9 +146,9 @@ export async function POST(request: NextRequest) {
         const providerResponse = await fetch("https://api.orderhero.id/v1/payment-requests", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${orderHeroKey}`,
+            ...headers,
             "Content-Type": "application/json",
-            "Idempotency-Key": String(invoice.invoice_no).slice(0, 128),
+            "Idempotency-Key": nextKey,
           },
           body: JSON.stringify(payload),
           cache: "no-store",
@@ -132,12 +158,7 @@ export async function POST(request: NextRequest) {
           paymentRequest = providerBody.data?.payment_request || providerBody.data;
         } else if (providerBody.error === "REFERENCE_ID_EXISTS"
           || providerBody.error === "IDEMPOTENCY_OUTCOME_UNKNOWN") {
-          // The first POST may have succeeded even though its response was lost.
-          // Reconcile using the durable reference_id instead of creating another bill.
-          const recoveryResponse = await fetch(
-            `https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(String(invoice.invoice_no))}`,
-            { headers: { Authorization: `Bearer ${orderHeroKey}` }, cache: "no-store" },
-          );
+          const recoveryResponse = await fetch(paymentUrl, { headers, cache: "no-store" });
           const recoveryBody = await recoveryResponse.json().catch(() => ({}));
           if (recoveryResponse.ok && recoveryBody.ok === true) {
             paymentRequest = recoveryBody.data?.payment_request || recoveryBody.data;
@@ -151,15 +172,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      if (paymentRequest?.status !== "open") {
+        failures.push({
+          outlet_id: outletId,
+          error: `ORDERHERO_PAYMENT_NOT_OPEN_${String(paymentRequest?.status || "UNKNOWN").toUpperCase()}`,
+        });
+        continue;
+      }
       if (!paymentRequest?.url
-        || paymentRequest?.reference_id !== invoice.invoice_no
-        || Number(paymentRequest?.amount) !== Number(invoice.amount_idr)
-        || paymentRequest?.currency !== "IDR") {
+        || paymentRequest.reference_id !== invoiceNo
+        || Number(paymentRequest.amount) !== amount
+        || paymentRequest.currency !== "IDR") {
         failures.push({ outlet_id: outletId, error: "ORDERHERO_RESPONSE_INVALID_OR_MISMATCHED" });
         continue;
       }
+
       const { error: saveError } = await admin.from("subscription_payments")
-        .update({ provider_reference: String(paymentRequest.reference_id), provider_payload: paymentRequest })
+        .update({
+          provider_reference: String(paymentRequest.reference_id),
+          provider_payload: paymentRequest,
+        })
         .eq("id", invoice.payment_id)
         .eq("invoice_id", invoice.invoice_id);
       if (saveError) {
@@ -168,8 +200,8 @@ export async function POST(request: NextRequest) {
       }
       payments.push({
         outlet_id: outletId,
-        invoice_no: invoice.invoice_no,
-        amount_idr: Number(invoice.amount_idr),
+        invoice_no: invoiceNo,
+        amount_idr: amount,
         payment_url: paymentRequest.url,
         expires_at: paymentRequest.expires_at || null,
       });
@@ -178,6 +210,9 @@ export async function POST(request: NextRequest) {
     if (!payments.length) return json({ error: "NO_PAYMENT_LINK_CREATED", failures }, 502);
     return json({ ok: true, payments, failures }, failures.length ? 207 : 201);
   } catch (error) {
-    return json({ error: "SUBSCRIPTION_CHECKOUT_FAILED", message: error instanceof Error ? error.message : "Unexpected error" }, 500);
+    return json({
+      error: "SUBSCRIPTION_CHECKOUT_FAILED",
+      message: error instanceof Error ? error.message : "Unexpected error",
+    }, 500);
   }
 }
