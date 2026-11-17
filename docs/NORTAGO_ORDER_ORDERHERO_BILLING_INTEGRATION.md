@@ -97,7 +97,7 @@ This specification does not claim that OrderHero has been connected. No live API
 
 ## 10. Implemented application layer (2026-11-17)
 
-The feature branch now contains:
+The feature branch now contains (CI workflow updated to validate the new billing migration):
 - `app/otc/subscribe`: authenticated owner/Program Manager subscription page; loads business memberships and active outlets, lets the user select multiple outlets, and displays the aggregate amount.
 - `POST /api/nortago/subscriptions/checkout`: validates the user's Supabase bearer session, calls the authenticated invoice RPC once per selected outlet, then creates one OrderHero LinkBayar payment request per invoice using its server-generated invoice number as both `reference_id` and `Idempotency-Key`.
 - `POST /api/nortago/subscriptions/webhook`: validates the LinkBayar HMAC-SHA256 signature over timestamp + raw body, rejects stale signatures and test events, re-reads the provider payment request, and calls a restricted server-only settlement RPC.
