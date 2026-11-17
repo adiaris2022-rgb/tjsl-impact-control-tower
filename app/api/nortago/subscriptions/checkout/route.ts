@@ -77,24 +77,85 @@ export async function POST(request: NextRequest) {
       if (!payload.customer.email) delete payload.customer.email;
       if (!payload.customer.phone) delete payload.customer.phone;
 
-      const providerResponse = await fetch("https://api.orderhero.id/v1/payment-requests", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${orderHeroKey}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": String(invoice.invoice_no).slice(0, 128),
-        },
-        body: JSON.stringify(payload),
-        cache: "no-store",
-      });
-      const providerBody = await providerResponse.json().catch(() => ({}));
-      if (!providerResponse.ok || providerBody.ok !== true) {
-        failures.push({ outlet_id: outletId, error: providerBody.error || "ORDERHERO_REQUEST_FAILED" });
+      // Reconcile first: Idempotency-Key is retained by OrderHero for 24h,
+      // while reference_id remains the durable unique key for this invoice.
+      // This also recovers a bill created before a previous request timed out
+      // or before its provider reference was persisted locally.
+      let paymentRequest: any = null;
+      const lookupResponse = await fetch(
+        `https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(String(invoice.invoice_no))}`,
+        { headers: { Authorization: `Bearer ${orderHeroKey}` }, cache: "no-store" },
+      );
+      const lookupBody = await lookupResponse.json().catch(() => ({}));
+      if (lookupResponse.ok && lookupBody.ok === true) {
+        paymentRequest = lookupBody.data?.payment_request || lookupBody.data;
+      } else if (lookupResponse.status !== 404) {
+        failures.push({ outlet_id: outletId, error: lookupBody.error || "ORDERHERO_LOOKUP_FAILED" });
         continue;
       }
-      const paymentRequest = providerBody.data?.payment_request || providerBody.data;
-      if (!paymentRequest?.url || !paymentRequest?.reference_id) {
-        failures.push({ outlet_id: outletId, error: "ORDERHERO_RESPONSE_INVALID" });
+
+      if (!paymentRequest) {
+        const payload = {
+          title: `NORTAGO Order — ${invoice.plan_code}`,
+          description: `Langganan NORTAGO Order outlet ${invoice.outlet_id} · invoice ${invoice.invoice_no}`,
+          amount: Number(invoice.amount_idr),
+          reference_id: invoice.invoice_no,
+          customer: {
+            name: typeof body.customer_name === "string" ? body.customer_name.slice(0, 120) : "Pemilik Bisnis",
+            email: typeof body.customer_email === "string" ? body.customer_email.slice(0, 160) : undefined,
+            phone: typeof body.customer_phone === "string" ? body.customer_phone.replace(/[^0-9+]/g, "").slice(0, 15) : undefined,
+          },
+          return_url: `${appUrl}/otc/owner/subscriptions?invoice=${encodeURIComponent(invoice.invoice_no)}`,
+          metadata: {
+            source: "NORTAGO_ORDER_SUBSCRIPTION",
+            invoice_id: invoice.invoice_id,
+            subscription_id: invoice.subscription_id,
+            outlet_id: invoice.outlet_id,
+            business_id: invoice.business_id,
+          },
+        };
+        if (!payload.customer.email) delete payload.customer.email;
+        if (!payload.customer.phone) delete payload.customer.phone;
+
+        const providerResponse = await fetch("https://api.orderhero.id/v1/payment-requests", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${orderHeroKey}`,
+            "Content-Type": "application/json",
+            "Idempotency-Key": String(invoice.invoice_no).slice(0, 128),
+          },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        });
+        const providerBody = await providerResponse.json().catch(() => ({}));
+        if (providerResponse.ok && providerBody.ok === true) {
+          paymentRequest = providerBody.data?.payment_request || providerBody.data;
+        } else if (providerBody.error === "REFERENCE_ID_EXISTS"
+          || providerBody.error === "IDEMPOTENCY_OUTCOME_UNKNOWN") {
+          // The first POST may have succeeded even though its response was lost.
+          // Reconcile using the durable reference_id instead of creating another bill.
+          const recoveryResponse = await fetch(
+            `https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(String(invoice.invoice_no))}`,
+            { headers: { Authorization: `Bearer ${orderHeroKey}` }, cache: "no-store" },
+          );
+          const recoveryBody = await recoveryResponse.json().catch(() => ({}));
+          if (recoveryResponse.ok && recoveryBody.ok === true) {
+            paymentRequest = recoveryBody.data?.payment_request || recoveryBody.data;
+          } else {
+            failures.push({ outlet_id: outletId, error: recoveryBody.error || providerBody.error });
+            continue;
+          }
+        } else {
+          failures.push({ outlet_id: outletId, error: providerBody.error || "ORDERHERO_REQUEST_FAILED" });
+          continue;
+        }
+      }
+
+      if (!paymentRequest?.url
+        || paymentRequest?.reference_id !== invoice.invoice_no
+        || Number(paymentRequest?.amount) !== Number(invoice.amount_idr)
+        || paymentRequest?.currency !== "IDR") {
+        failures.push({ outlet_id: outletId, error: "ORDERHERO_RESPONSE_INVALID_OR_MISMATCHED" });
         continue;
       }
       const { error: saveError } = await admin.from("subscription_payments")
