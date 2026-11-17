@@ -26,6 +26,7 @@ declare
   v_outlet public.otc_outlets%rowtype;
   v_plan public.subscription_plans%rowtype;
   v_subscription public.outlet_subscriptions%rowtype;
+  v_invoice public.subscription_invoices%rowtype;
   v_invoice_id uuid;
   v_invoice_no text;
   v_payment_id uuid;
@@ -61,6 +62,24 @@ begin
       set plan_id = v_plan.id, updated_at = now()
       where id = v_subscription.id
       returning * into v_subscription;
+  end if;
+
+  select * into v_invoice from public.subscription_invoices
+  where outlet_id=p_outlet_id and subscription_id=v_subscription.id
+    and amount_idr=v_plan.amount_idr and status='OPEN'
+  order by created_at desc limit 1 for update;
+  if found then
+    select id into v_payment_id from public.subscription_payments
+    where invoice_id=v_invoice.id and provider='ORDERHERO_LINKBAYAR';
+    if v_payment_id is not null then
+      return jsonb_build_object(
+        'invoice_id',v_invoice.id,'invoice_no',v_invoice.invoice_no,
+        'payment_id',v_payment_id,'subscription_id',v_subscription.id,
+        'business_id',p_business_id,'outlet_id',p_outlet_id,
+        'plan_code',v_plan.plan_code,'billing_interval',v_plan.billing_interval,
+        'amount_idr',v_invoice.amount_idr,'currency','IDR','reused',true
+      );
+    end if;
   end if;
 
   v_invoice_no := 'NGSUB-' || to_char(clock_timestamp(),'YYYYMMDDHH24MISS') || '-' ||
