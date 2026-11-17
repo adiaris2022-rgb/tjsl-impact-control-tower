@@ -22,7 +22,10 @@ export async function POST(request: NextRequest) {
   const secret = process.env.ORDERHERO_LINKBAYAR_WEBHOOK_SECRET;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret || !supabaseUrl || !serviceKey) return json({ error: "WEBHOOK_SERVER_CONFIG_MISSING" }, 503);
+  const apiKey = process.env.ORDERHERO_SECRET_KEY;
+  if (!secret || !supabaseUrl || !serviceKey || !apiKey) {
+    return json({ error: "WEBHOOK_SERVER_CONFIG_MISSING" }, 503);
+  }
 
   const rawBody = await request.text();
   const signature = request.headers.get("x-webhook-signature") || "";
@@ -34,12 +37,23 @@ export async function POST(request: NextRequest) {
   }
 
   let event: any;
-  try { event = JSON.parse(rawBody); } catch { return json({ error: "INVALID_JSON" }, 400); }
-  const eventType = eventHeader || event.type || event.event;
-  if (event?.data?.test === true || event?.test === true) return json({ ok: true, ignored: "TEST_EVENT" });
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return json({ error: "INVALID_JSON" }, 400);
+  }
+  const bodyEventType = event?.type || event?.event || "";
+  if (eventHeader && bodyEventType && eventHeader !== bodyEventType) {
+    return json({ error: "WEBHOOK_EVENT_HEADER_MISMATCH" }, 400);
+  }
+  const eventType = eventHeader || bodyEventType;
+  if (event?.data?.test === true || event?.test === true) {
+    return json({ ok: true, ignored: "TEST_EVENT" });
+  }
   if (!["payment_request.paid", "payment_request.cancelled", "payment_request.expired"].includes(eventType)) {
     return json({ ok: true, ignored: "UNSUPPORTED_EVENT" });
   }
+
   const object = event?.data?.object;
   const referenceId = object?.reference_id;
   if (!referenceId) return json({ error: "MISSING_REFERENCE_ID" }, 400);
@@ -56,23 +70,26 @@ export async function POST(request: NextRequest) {
   const invoice = Array.isArray(payment.invoice) ? payment.invoice[0] : payment.invoice;
   if (!invoice?.invoice_no) return json({ error: "INVOICE_NOT_FOUND" }, 404);
 
-  let verified = object;
-  if (eventType === "payment_request.paid") {
-    const apiKey = process.env.ORDERHERO_SECRET_KEY;
-    if (!apiKey) return json({ error: "ORDERHERO_API_KEY_MISSING" }, 503);
-    const providerResponse = await fetch(`https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(referenceId)}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      cache: "no-store",
-    });
-    const providerBody = await providerResponse.json().catch(() => ({}));
-    if (!providerResponse.ok || providerBody.ok !== true) return json({ error: "PROVIDER_RECHECK_FAILED" }, 502);
-    verified = providerBody.data?.payment_request || providerBody.data;
-    if (verified?.status !== "paid"
-      || verified?.reference_id !== referenceId
-      || Number(verified?.amount) !== Number(invoice.amount_idr)
-      || verified?.currency !== "IDR") {
-      return json({ error: "PROVIDER_PAYMENT_MISMATCH" }, 409);
-    }
+  // Re-fetch the authoritative provider state for every supported event,
+  // not only "paid". A signed notification is an event signal, not the
+  // canonical payment record; delayed/out-of-order events must not regress it.
+  const providerResponse = await fetch(
+    `https://api.orderhero.id/v1/payment-requests/${encodeURIComponent(referenceId)}`,
+    { headers: { Authorization: `Bearer ${apiKey}` }, cache: "no-store" },
+  );
+  const providerBody = await providerResponse.json().catch(() => ({}));
+  if (!providerResponse.ok || providerBody.ok !== true) {
+    return json({ error: "PROVIDER_RECHECK_FAILED" }, 502);
+  }
+  const verified = providerBody.data?.payment_request || providerBody.data;
+  const expectedStatus = eventType === "payment_request.paid"
+    ? "paid"
+    : eventType === "payment_request.cancelled" ? "cancelled" : "expired";
+  if (verified?.status !== expectedStatus
+    || verified?.reference_id !== referenceId
+    || Number(verified?.amount) !== Number(invoice.amount_idr)
+    || verified?.currency !== "IDR") {
+    return json({ error: "PROVIDER_EVENT_MISMATCH" }, 409);
   }
 
   const { data: result, error: settleError } = await admin.rpc("nortago_settle_subscription_payment", {
@@ -80,11 +97,13 @@ export async function POST(request: NextRequest) {
     p_event_type: eventType,
     p_invoice_no: invoice.invoice_no,
     p_provider_reference: referenceId,
-    p_provider_status: verified?.status || "",
-    p_amount_idr: Number(verified?.amount || 0),
-    p_currency: verified?.currency || "",
+    p_provider_status: verified.status,
+    p_amount_idr: Number(verified.amount),
+    p_currency: verified.currency,
     p_provider_payload: verified || {},
   });
-  if (settleError) return json({ error: "SUBSCRIPTION_SETTLEMENT_FAILED", message: settleError.message }, 500);
+  if (settleError) {
+    return json({ error: "SUBSCRIPTION_SETTLEMENT_FAILED", message: settleError.message }, 500);
+  }
   return json({ ok: true, result });
 }
