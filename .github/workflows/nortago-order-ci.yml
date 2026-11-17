@@ -59,7 +59,8 @@ jobs:
           psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 <<'SQL'
           create extension if not exists pgcrypto;
           create role anon nologin;
-          create role authenticated nologin;\n          create role service_role nologin;
+          create role authenticated nologin;
+          create role service_role nologin;
           create table public.businesses (id uuid primary key default gen_random_uuid());
           create table public.tjsl_partners (id uuid primary key default gen_random_uuid());
           create function public.has_business_role(p_business_id uuid, p_roles text[])
@@ -73,7 +74,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_engine_v1.sql
-      - name: Apply subscription billing schema\n        env:\n          PGPASSWORD: postgres\n        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_billing_v1.sql\n      - name: Apply secure customer checkout schema
+      - name: Apply subscription billing schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_billing_v1.sql
+      - name: Apply secure customer checkout schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_customer_checkout_secure_v1.sql
@@ -85,7 +90,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_reservation_management_v1.sql
-      - name: Run subscription billing security smoke checks\n        env:\n          PGPASSWORD: postgres\n        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_billing_smoke.sql\n      - name: Run schema and transactional RPC smoke checks
+      - name: Run subscription billing security smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_billing_smoke.sql
+      - name: Run schema and transactional RPC smoke checks
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_schema_smoke.sql
