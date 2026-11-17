@@ -128,6 +128,6 @@ Do not enable the feature flag or deploy live collection until staging has verif
 ## 12. Operational caveats
 
 - One invoice and one payment link are created per selected outlet. Customers must complete each outlet payment separately.
-- The current endpoint reports partial failures explicitly. Operators should reconcile open invoices before asking customers to retry.
+- The current endpoint reuses an existing open invoice on a retry and reports partial failures explicitly. Operators should reconcile open invoices before asking customers to retry.
 - The authenticated invoice RPC relies on the existing `has_business_role(business_id, ['OWNER','PROGRAM_MANAGER'])` policy contract.
 - No live secrets, workspace access, Supabase staging credentials, or production deployment are available in this repository session. These changes are code and migration artifacts only.
