@@ -321,3 +321,33 @@ The Owner Control Tower now reads upcoming reservation requests for the selected
 - CI applies the new reservation-management migration and verifies execute grants (authenticated only; no anon execute).
 
 Capacity-based availability, conflict prevention, role-specific UI restrictions, audit history for status changes, and notifications remain future release items. The dashboard's reservation list is currently scoped to the first business membership returned for the signed-in user; multi-business switching is not yet implemented on this dashboard.
+
+
+## Latest validation and current release status — 2026-11-17
+
+This section supersedes earlier progress notes in this document where they describe reservation actions, multi-business reporting, or CI as still pending.
+
+- CI run #37 on commit `5f032bc8d5ef7231386d145299766da536a073ee` completed successfully.
+- Next.js production build passed.
+- PostgreSQL 16 disposable-database job successfully applied the OTC core contract and all four NORTAGO migrations, then passed the schema and transactional smoke tests.
+- Owner Control Tower now supports switching between all business memberships returned for the authenticated user.
+- Owner subscription dashboard now also refreshes outlet/subscription rows when the selected business changes.
+- Owner hourly report now supports the same business selector and counts paid revenue only from records whose `payment_status` is `PAID`.
+
+CI result: https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/43998318267
+
+### Confirmed limitations — not production-ready
+
+- Disposable PostgreSQL CI does not prove Supabase Auth, actual RLS tenant isolation, function ownership, or real user role behavior. No Supabase staging database has been validated.
+- No payment gateway or webhook is connected; customer orders remain payment-pending until a separately verified payment workflow exists.
+- Subscription tables and read-only dashboard are foundations only; invoice creation, collections, renewal, dunning, and entitlement enforcement are not implemented.
+- Delivery provider handoff, delivery fee calculation, and dispatch integration are not implemented.
+- Reservation capacity allocation, double-booking prevention, status audit history, and customer notifications are not implemented.
+- Checkout modifiers/variants are not included in the server-side order total. Delivery fees, tax, and discounts are not calculated.
+- Public checkout and reservation endpoints still need rate limiting, bot mitigation, abuse monitoring, and operational alerting.
+- Receipt token expiry/revocation and migration/compatibility for legacy `?order=` receipt links remain unresolved.
+- The duplicate legacy `otc/` source tree remains untouched pending deployment route verification.
+
+### Release boundary
+
+PR #1 remains Draft and unmerged. No Supabase staging/production migrations, Railway environment changes, or production deployment have been performed. Production release requires separate staging validation, completion or explicit acceptance of the above limitations, and explicit release authorization.
