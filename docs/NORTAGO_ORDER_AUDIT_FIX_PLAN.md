@@ -351,3 +351,14 @@ CI result: https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/
 ### Release boundary
 
 PR #1 remains Draft and unmerged. No Supabase staging/production migrations, Railway environment changes, or production deployment have been performed. Production release requires separate staging validation, completion or explicit acceptance of the above limitations, and explicit release authorization.
+
+
+## OrderHero subscription billing decision — 2026-11-17
+
+- Selected customer checkout channel: the merchant's published OrderHero Form Order page, mapped per outlet. This is separate from NORTAGO subscription collection.
+- Subscription collection design: use OrderHero LinkBayar Payment Requests to create one exact-amount bill per NORTAGO subscription invoice. Monthly IDR 50,000 and annual IDR 500,000 remain per outlet.
+- Billing is prepaid/manual per period; do not assume recurring automatic charges. NORTAGO Subscription Engine remains the source of truth for invoice state, period dates, and outlet entitlements.
+- Payment activation must follow a verified LinkBayar payment_request.paid webhook: validate HMAC against the raw body, enforce timestamp freshness, deduplicate delivery_id, then re-read the bill through OrderHero GET /payment-requests/{reference_id} and verify reference, amount, currency, and paid status before atomically settling the invoice and activating only its outlet.
+- Cancelled/expired bills do not activate access. Browser return URLs and webhook payloads alone are not proof of payment. Do not double-process the generic order_paid event for the same LinkBayar settlement.
+- Detailed flow, configuration, period rules, security controls, and acceptance tests: docs/NORTAGO_ORDER_ORDERHERO_BILLING_INTEGRATION.md.
+- This is a documented integration design, not a live connection. No OrderHero API key, LinkBayar enablement, webhook secret, Form Order URL mapping, Supabase staging access, or live payment verification was available. Do not claim payment integration is complete until these dependencies are configured and end-to-end tested.
