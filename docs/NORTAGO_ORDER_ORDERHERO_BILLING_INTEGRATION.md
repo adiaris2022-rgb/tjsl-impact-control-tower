@@ -93,3 +93,41 @@ This specification does not claim that OrderHero has been connected. No live API
 - LinkBayar payment requests: https://docs.orderhero.id/docs/developer/linkbayar
 - Webhook signature and events: https://docs.orderhero.id/en/docs/developer/webhooks
 - API authentication: https://docs.orderhero.id/docs/developer/api/authentication
+
+
+## 10. Implemented application layer (2026-11-17)
+
+The feature branch now contains:
+- `app/otc/subscribe`: authenticated owner/Program Manager subscription page; loads business memberships and active outlets, lets the user select multiple outlets, and displays the aggregate amount.
+- `POST /api/nortago/subscriptions/checkout`: validates the user's Supabase bearer session, calls the authenticated invoice RPC once per selected outlet, then creates one OrderHero LinkBayar payment request per invoice using its server-generated invoice number as both `reference_id` and `Idempotency-Key`.
+- `POST /api/nortago/subscriptions/webhook`: validates the LinkBayar HMAC-SHA256 signature over timestamp + raw body, rejects stale signatures and test events, re-reads the provider payment request, and calls a restricted server-only settlement RPC.
+- `20261117_nortago_order_subscription_billing_v1.sql`: creates authenticated invoice preparation and server-only settlement functions, plus a webhook delivery deduplication ledger.
+- `nortago_subscription_billing_smoke.sql`: asserts function presence, grants, and delivery-ledger RLS.
+- CI applies the billing migration and runs its security smoke checks.
+
+The UI creates a separate invoice per outlet. The displayed aggregate is informational; it does not create a single combined bill. A partial multi-outlet result is returned explicitly so a failed outlet does not silently appear paid.
+
+## 11. Required deployment configuration and OrderHero workspace setup
+
+Server-side environment variables:
+- `ORDERHERO_SECRET_KEY`: secret API key created by the OrderHero workspace owner, with LinkBayar payment-request read/write scopes.
+- `ORDERHERO_LINKBAYAR_ENABLED=true`: explicit operator feature flag; keep false until access is confirmed.
+- `ORDERHERO_LINKBAYAR_WEBHOOK_SECRET`: full webhook secret including `whsec_`.
+- `SUPABASE_SERVICE_ROLE_KEY`: server-only service role key; never prefix with `NEXT_PUBLIC_`.
+- `NEXT_PUBLIC_APP_URL`: canonical public HTTPS application origin used for payment return URL.
+
+In the OrderHero workspace:
+1. Obtain LinkBayar programme access; the feature may return `FEATURE_NOT_AVAILABLE / NOT_WHITELISTED` otherwise.
+2. Enable Plugin → LinkBayar and ensure ePayment plus at least one payment channel are active.
+3. Create a secret API key as workspace owner with `payment_requests:read` and `payment_requests:write`.
+4. Configure LinkBayar paid notifications to `https://<app-host>/api/nortago/subscriptions/webhook`.
+5. Copy the full webhook secret into the server environment.
+
+Do not enable the feature flag or deploy live collection until staging has verified a successful payment, a duplicate webhook, a bad signature, a wrong amount, and an expired/cancelled bill. The webhook endpoint re-reads the bill from OrderHero before settlement; the browser return URL never activates access.
+
+## 12. Operational caveats
+
+- One invoice and one payment link are created per selected outlet. Customers must complete each outlet payment separately.
+- The current endpoint reports partial failures explicitly. Operators should reconcile open invoices before asking customers to retry.
+- The authenticated invoice RPC relies on the existing `has_business_role(business_id, ['OWNER','PROGRAM_MANAGER'])` policy contract.
+- No live secrets, workspace access, Supabase staging credentials, or production deployment are available in this repository session. These changes are code and migration artifacts only.
