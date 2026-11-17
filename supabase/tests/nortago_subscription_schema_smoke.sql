@@ -139,7 +139,20 @@ begin
     raise exception 'Customer reservation RPC search_path is not hardened';
   end if;
 
-  raise notice 'NORTAGO subscription, checkout, receipt, and reservation smoke checks passed';
+
+  if to_regprocedure('public.nortago_update_reservation_status(uuid,text)') is null then
+    raise exception 'Missing reservation management RPC';
+  end if;
+
+  if has_function_privilege('anon', 'public.nortago_update_reservation_status(uuid,text)', 'EXECUTE') then
+    raise exception 'Anonymous users must not execute reservation management RPC';
+  end if;
+
+  if not has_function_privilege('authenticated', 'public.nortago_update_reservation_status(uuid,text)', 'EXECUTE') then
+    raise exception 'Authenticated users need execute grant for reservation management RPC';
+  end if;
+
+  raise notice 'NORTAGO subscription, checkout, receipt, and reservation management smoke checks passed';
 end;
 $$;
 
