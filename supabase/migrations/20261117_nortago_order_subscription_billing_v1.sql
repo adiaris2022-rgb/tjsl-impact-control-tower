@@ -118,7 +118,7 @@ declare
   v_now timestamptz := now();
   v_period_start timestamptz;
   v_period_end timestamptz;
-  v_existing boolean;
+  v_inserted integer;
 begin
   if p_delivery_id is null or length(p_delivery_id) < 8 then raise exception 'INVALID_DELIVERY_ID'; end if;
   if p_event_type not in ('payment_request.paid','payment_request.cancelled','payment_request.expired') then
@@ -128,8 +128,8 @@ begin
   insert into public.subscription_webhook_deliveries(delivery_id,event_type)
   values (p_delivery_id,p_event_type)
   on conflict (delivery_id) do nothing;
-  get diagnostics v_existing = row_count;
-  if not v_existing then
+  get diagnostics v_inserted = row_count;
+  if v_inserted = 0 then
     return jsonb_build_object('ok',true,'duplicate',true);
   end if;
 
