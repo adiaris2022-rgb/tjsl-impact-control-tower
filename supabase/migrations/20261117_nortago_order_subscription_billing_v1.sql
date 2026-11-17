@@ -208,4 +208,5 @@ $$;
 
 revoke all on function public.nortago_prepare_subscription_invoice(uuid,uuid,text) from public, anon;
 grant execute on function public.nortago_prepare_subscription_invoice(uuid,uuid,text) to authenticated;
-revoke all on function public.nortago_settle_subscription_payment(text,text,text,text,text,bigint,text,jsonb) from public, anon, authenticated;\ngrant execute on function public.nortago_settle_subscription_payment(text,text,text,text,text,bigint,text,jsonb) to service_role;
+revoke all on function public.nortago_settle_subscription_payment(text,text,text,text,text,bigint,text,jsonb) from public, anon, authenticated;
+grant execute on function public.nortago_settle_subscription_payment(text,text,text,text,text,bigint,text,jsonb) to service_role;
