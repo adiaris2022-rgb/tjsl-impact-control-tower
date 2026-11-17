@@ -311,3 +311,13 @@ The PostgreSQL smoke suite now also performs transactional functional checks aga
 ## Owner reservation visibility — 2026-11-17
 
 The Owner Control Tower now reads upcoming reservation requests for the selected business and displays reservation number, customer, outlet, local date/time, party size, and current status. This is a read-only operational view; confirmation, cancellation, capacity allocation, and customer notifications remain pending.
+
+
+## Owner reservation operations — 2026-11-17
+
+- Added an authenticated, server-authorized reservation status RPC. It resolves the reservation's business on the server and checks `has_business_role`; the browser cannot nominate a business or self-assert a role.
+- Allowed state transitions: PENDING → CONFIRMED/CANCELLED; CONFIRMED → CANCELLED/CHECKED_IN/NO_SHOW; CHECKED_IN → COMPLETED. Closed states cannot be reopened by this RPC.
+- Owner Control Tower now lists upcoming reservations and provides confirm, cancel, check-in, and complete actions, with the RPC enforcing authorization and transitions.
+- CI applies the new reservation-management migration and verifies execute grants (authenticated only; no anon execute).
+
+Capacity-based availability, conflict prevention, role-specific UI restrictions, audit history for status changes, and notifications remain future release items. The dashboard's reservation list is currently scoped to the first business membership returned for the signed-in user; multi-business switching is not yet implemented on this dashboard.
