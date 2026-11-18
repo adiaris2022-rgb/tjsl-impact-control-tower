@@ -1,153 +1,28 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 const PUBLIC_APP_URL = "https://nortago-ct-bos-production.up.railway.app";
-
-
-function Logo(){
-  return <svg viewBox="0 0 120 110" width="46" height="42" aria-label="NORTAGO logo" role="img" data-logo-lock="nortago-original-reference">
-    <defs>
-      <linearGradient id="landingLeft" x1="18" y1="96" x2="66" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#18e4c6"/><stop offset=".55" stopColor="#10cfe0"/><stop offset="1" stopColor="#18aee8"/></linearGradient>
-      <linearGradient id="landingRight" x1="60" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#16b8ed"/><stop offset=".55" stopColor="#1689ed"/><stop offset="1" stopColor="#145be9"/></linearGradient>
-    </defs>
-    <path d="M24 91 L64 22" fill="none" stroke="url(#landingLeft)" strokeWidth="30" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M62 22 L103 91" fill="none" stroke="url(#landingRight)" strokeWidth="30" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
-}
-
+function Logo(){return <svg viewBox="0 0 120 110" width="42" height="39" aria-label="NORTAGO" role="img"><defs><linearGradient id="logoA" x1="18" y1="96" x2="66" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#18b99e"/><stop offset="1" stopColor="#1689d8"/></linearGradient><linearGradient id="logoB" x1="60" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#1689d8"/><stop offset="1" stopColor="#315bd8"/></linearGradient></defs><path d="M24 91 L64 22" fill="none" stroke="url(#logoA)" strokeWidth="30" strokeLinecap="round"/><path d="M62 22 L103 91" fill="none" stroke="url(#logoB)" strokeWidth="30" strokeLinecap="round"/></svg>}
+const modules=[["01","Sales","Order, transaksi, dan performa penjualan.","↗"],["02","Procurement","Persediaan, pembelian, dan purchase order.","▤"],["03","Finance","Arus keuangan, biaya, profit, dan pajak.","◫"],["04","HR & Operations","Tim, aktivitas, dan proses operasional.","◎"],["05","Control Tower","Kontrol, insight, risiko, dan keputusan owner.","⌘"]];
 export default function LandingPage(){
-  const router=useRouter();
-  const [email,setEmail]=useState("");
-  const [busy,setBusy]=useState(false);
-  const [sent,setSent]=useState(false);
-  const [error,setError]=useState("");
-  const [quoteCycle,setQuoteCycle]=useState<"MONTHLY"|"YEARLY">("MONTHLY");
-
-  async function requestTestAccess(e:React.FormEvent){
-    e.preventDefault();
-    setBusy(true); setSent(false); setError("");
-    try{
-      const configResponse=await fetch("/api/supabase-config",{cache:"no-store",signal:AbortSignal.timeout(10000)});
-      const config=await configResponse.json().catch(()=>({}));
-      if(!configResponse.ok || !config.url || !config.key) throw new Error(config.error || "Konfigurasi akses belum tersedia.");
-      const supabase=createBrowserClient(config.url,config.key);
-      const redirectTo=`${PUBLIC_APP_URL}/auth/confirm?next=/control-tower`;
-      const {error:e1}=await supabase.auth.signInWithOtp({
-        email:email.trim(),
-        options:{emailRedirectTo:redirectTo,shouldCreateUser:true}
-      });
-      if(e1) throw e1;
-      setSent(true);
-    }catch(err){
-      setError(err instanceof Error && /rate limit/i.test(err.message) ? "Email sedang dibatasi sementara oleh layanan autentikasi. Tunggu sekitar 1 menit sebelum meminta link lagi." : err instanceof Error ? err.message : "Link akses gagal dikirim. Silakan coba lagi.");
-    }finally{setBusy(false);}
-  }
-
-  return <main style={{minHeight:"100vh",background:"radial-gradient(circle at 80% 10%,rgba(15,180,220,.14),transparent 32%),radial-gradient(circle at 15% 30%,rgba(24,228,198,.08),transparent 28%),#06100f",color:"#fff",fontFamily:"Inter,ui-sans-serif,system-ui,sans-serif"}}>
-    <nav style={{maxWidth:1180,margin:"0 auto",padding:"22px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:20}}>
-      <div style={{display:"flex",alignItems:"center",gap:11}}><Logo/><div><b style={{fontSize:18,letterSpacing:1.5}}>NORTAGO</b><div style={{fontSize:10,color:"#82a29d",letterSpacing:1}}>BUSINESS OPERATING SYSTEM</div></div></div>
-      <button onClick={()=>router.push("/login")} style={{border:"1px solid rgba(255,255,255,.16)",background:"rgba(255,255,255,.04)",color:"#fff",borderRadius:10,padding:"10px 17px",fontWeight:700}}>Masuk</button>
-    </nav>
-
-    <section className="hero-section" style={{maxWidth:1180,margin:"0 auto",padding:"72px 22px 86px",display:"grid",gridTemplateColumns:"1.15fr .85fr",gap:42,alignItems:"center"}}>
-      <div>
-        <div style={{display:"inline-flex",border:"1px solid rgba(103,217,195,.24)",background:"rgba(103,217,195,.07)",color:"#67d9c3",borderRadius:999,padding:"7px 12px",fontSize:11,fontWeight:800,letterSpacing:1}}>CT BOS NORTAGO · MENARA KENDALI BISNIS</div>
-        <h1 style={{fontSize:"clamp(42px,6vw,72px)",lineHeight:1.02,letterSpacing:-2.5,margin:"22px 0 18px"}}>Bisnis berjalan.<br/><span style={{color:"#67d9c3"}}>Owner tetap memegang kendali.</span></h1>
-        <p style={{fontSize:18,lineHeight:1.7,color:"#a7bfbb",maxWidth:680,margin:0}}>Satu Business Operating System untuk melihat penjualan, operasional, procurement, finance, people, risiko, dan kinerja bisnis dalam satu control tower.</p>
-        <div style={{marginTop:28,padding:"20px",border:"1px solid rgba(103,217,195,.25)",borderRadius:18,background:"rgba(103,217,195,.06)"}}>
-          <div style={{fontSize:11,color:"#67d9c3",fontWeight:900,letterSpacing:1.3}}>AKSES GRATIS / TES</div>
-          <div style={{fontSize:24,fontWeight:900,marginTop:7}}>Coba CT BOS tanpa password.</div>
-          <p style={{fontSize:13,color:"#9db5b1",lineHeight:1.55,margin:"8px 0 14px"}}>Masukkan email. Kami kirim link sekali klik langsung ke CT BOS. Password belum diperlukan.</p>
-          <form onSubmit={requestTestAccess} style={{display:"flex",gap:9,flexWrap:"wrap"}}>
-            <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nama@email.com" style={{flex:"1 1 220px",minWidth:0,padding:"13px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,.15)",background:"#081714",color:"#fff",boxSizing:"border-box"}} />
-            <button disabled={busy} type="submit" style={{flex:"0 0 auto",background:"#67d9c3",color:"#04100e",border:0,borderRadius:10,padding:"13px 17px",fontWeight:900}}>{busy?"Mengirim…":"Kirim Link Tes →"}</button>
-          </form>
-          {sent&&<div style={{marginTop:12,padding:"10px 12px",borderRadius:10,border:"1px solid #28584f",background:"rgba(103,217,195,.07)",color:"#b8f1d3",fontSize:12}}>Link akses sudah dikirim. Buka email Anda lalu klik link tersebut untuk masuk langsung ke CT BOS.</div>}
-          {error&&<div style={{marginTop:12,padding:"10px 12px",borderRadius:10,background:"#35171b",color:"#ffb4bd",fontSize:12}}>{error}</div>}
-        </div>
-        <div style={{display:"flex",gap:22,flexWrap:"wrap",marginTop:18,color:"#78918d",fontSize:11}}>
-          <span>✓ Tanpa password untuk tes</span><span>✓ Link melalui email</span><span>✓ Langsung ke CT BOS</span>
-        </div>
-      </div>
-      <div className="hero-card" style={{border:"1px solid rgba(103,217,195,.15)",borderRadius:24,padding:20,background:"linear-gradient(145deg,rgba(15,46,42,.88),rgba(7,20,19,.92))",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
-        <div style={{fontSize:10,color:"#67d9c3",fontWeight:900,letterSpacing:1.5}}>OWNER CONTROL TOWER</div>
-        <div style={{fontSize:28,fontWeight:900,marginTop:8}}>Apa yang terjadi di bisnis Anda?</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:18}}>
-          {["Revenue","COGS","OPEX","Net Profit","Open Orders","Risk & Alert"].map((x,i)=><div key={x} style={{padding:15,border:"1px solid rgba(255,255,255,.08)",borderRadius:14,background:"rgba(255,255,255,.025)"}}><div style={{fontSize:10,color:"#78918d"}}>{x}</div><div style={{fontSize:20,fontWeight:900,marginTop:7}}>{["Rp 24,8 jt","Rp 9,2 jt","Rp 5,1 jt","Rp 10,5 jt","12","3"][i]}</div></div>)}
-        </div>
-        <div style={{marginTop:12,padding:14,borderRadius:13,background:"rgba(103,217,195,.06)",color:"#a7bfbb",fontSize:12}}>Data → Evidence → Control → Intelligence → Keputusan Owner</div>
-      </div>
-    </section>
-
-    <section style={{maxWidth:1180,margin:"0 auto",padding:"20px 22px 80px"}}>
-      <div style={{textAlign:"center",maxWidth:700,margin:"0 auto 34px"}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>SATU EKOSISTEM</div><h2 style={{fontSize:38,margin:"10px 0"}}>Bukan sekadar dashboard.</h2><p style={{color:"#8fa9a5",lineHeight:1.7}}>CT BOS menghubungkan aktivitas bisnis dengan bukti, approval, laporan, dan kontrol Owner.</p></div>
-      <div className="module-grid" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10}}>
-        {["SALES","PROCUREMENT","FINANCE","HR & OPS","CT BOS"].map((x,i)=><div key={x} style={{border:"1px solid rgba(255,255,255,.09)",borderRadius:14,padding:"22px 14px",textAlign:"center",background:i===4?"rgba(103,217,195,.08)":"rgba(255,255,255,.02)"}}><div style={{fontWeight:900,fontSize:12}}>{x}</div><div style={{fontSize:10,color:"#78918d",marginTop:7}}>{["Order & transaksi","Stock & PO","Profit & tax","People & operations","Control & intelligence"][i]}</div></div>)}
-      </div>
-    </section>
-
-    <section id="harga" style={{maxWidth:1180,margin:"0 auto",padding:"20px 22px 90px"}}>
-      <div style={{textAlign:"center",maxWidth:760,margin:"0 auto 28px"}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>PENAWARAN BERDASARKAN KEBUTUHAN</div><h2 style={{fontSize:38,margin:"10px 0"}}>Harga CT BOS bersifat custom.</h2><p style={{color:"#8fa9a5",lineHeight:1.7}}>Setiap bisnis memiliki skala operasional, jumlah outlet, pengguna, modul, dan kebutuhan integrasi yang berbeda. Tim NORTAGO menyusun penawaran setelah asesmen ruang lingkup bisnis Anda.</p></div>
-      <article style={{maxWidth:850,margin:"0 auto",border:"1px solid rgba(103,217,195,.35)",borderRadius:22,padding:28,background:"linear-gradient(145deg,rgba(20,69,61,.35),rgba(8,23,21,.88))"}}>
-        <div style={{fontSize:11,color:"#67d9c3",fontWeight:900,letterSpacing:1.4}}>CT BOS · CUSTOM BUSINESS SCOPE</div>
-        <h3 style={{fontSize:25,margin:"10px 0"}}>Satu sistem, disesuaikan dengan struktur bisnis Anda.</h3>
-        <p style={{fontSize:13,color:"#a7bfbb",lineHeight:1.7}}>Nilai penawaran ditentukan berdasarkan jumlah outlet dan user, modul yang digunakan, integrasi, migrasi data, konfigurasi, pelatihan, serta kebutuhan dukungan operasional.</p>
-        <div style={{fontSize:12,fontWeight:800,color:"#d8e9e5",marginTop:22}}>Preferensi periode pembayaran</div>
-        <div role="group" aria-label="Preferensi periode pembayaran CT BOS" style={{display:"flex",gap:9,marginTop:10,flexWrap:"wrap"}}>
-          <button type="button" aria-pressed={quoteCycle==="MONTHLY"} onClick={()=>setQuoteCycle("MONTHLY")} style={{border:"1px solid rgba(103,217,195,.45)",background:quoteCycle==="MONTHLY"?"#67d9c3":"rgba(255,255,255,.04)",color:quoteCycle==="MONTHLY"?"#04100e":"#fff",borderRadius:999,padding:"11px 18px",fontWeight:800}}>Bulanan</button>
-          <button type="button" aria-pressed={quoteCycle==="YEARLY"} onClick={()=>setQuoteCycle("YEARLY")} style={{border:"1px solid rgba(103,217,195,.45)",background:quoteCycle==="YEARLY"?"#67d9c3":"rgba(255,255,255,.04)",color:quoteCycle==="YEARLY"?"#04100e":"#fff",borderRadius:999,padding:"11px 18px",fontWeight:800}}>Tahunan</button>
-        </div>
-        <div style={{marginTop:18,padding:16,borderRadius:13,background:"rgba(255,255,255,.035)",border:"1px solid rgba(255,255,255,.08)"}}>
-          <div style={{fontSize:12,color:"#67d9c3",fontWeight:900}}>Ruang lingkup yang dinilai</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginTop:12}}>
-            {["Jumlah outlet dan pengguna","Modul Sales, Procurement, Finance, HR & Ops","Integrasi dan alur kerja khusus","Migrasi data dan konfigurasi","Pelatihan dan onboarding","Dukungan operasional / SLA"].map(x=><div key={x} style={{fontSize:12,color:"#b6cbc7"}}>✓ {x}</div>)}
-          </div>
-        </div>
-        <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.7,margin:"18px 0 0"}}>Periode yang dipilih: <b style={{color:"#fff"}}>{quoteCycle==="MONTHLY"?"Bulanan":"Tahunan"}</b>. Nilai langganan CT BOS dan biaya implementasi/onboarding akan dirinci terpisah dalam penawaran resmi setelah asesmen. Tidak ada harga paket tetap yang ditampilkan pada halaman ini.</p>
-        <div style={{marginTop:18,padding:"13px 15px",borderRadius:12,border:"1px solid rgba(103,217,195,.18)",color:"#a7bfbb",fontSize:12,lineHeight:1.6}}>Untuk memulai asesmen, gunakan akses tes di bagian atas halaman lalu hubungi tim NORTAGO untuk pembahasan kebutuhan dan penawaran.</div>
-      </article>
-      <article style={{margin:"34px auto 0",maxWidth:850,border:"1px solid rgba(103,217,195,.25)",borderRadius:18,padding:22,background:"rgba(103,217,195,.045)",textAlign:"center"}}>
-        <div style={{fontSize:10,color:"#67d9c3",fontWeight:900,letterSpacing:1.4}}>PRODUK MANDIRI · NORTAGO ORDER</div>
-        <h3 style={{fontSize:23,margin:"8px 0"}}>Sistem Pemesanan Digital Terintegrasi</h3>
-        <div style={{fontSize:25,fontWeight:900}}>Rp50.000 <span style={{fontSize:12,color:"#8fa9a5",fontWeight:500}}>/ outlet / bulan</span></div>
-        <div style={{fontSize:14,color:"#b6cbc7",marginTop:6}}>Rp500.000 / outlet / tahun · Hemat Rp100.000 (16,7%)</div>
-        <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.6}}>Ditagihkan per outlet, terpisah dari CT BOS. Setiap outlet memiliki invoice dan masa aktif sendiri. Pembayaran bersifat prepaid/manual; tidak mengasumsikan auto-renewal.</p>
-        <button onClick={()=>router.push("/otc/subscribe")} style={{border:"1px solid rgba(103,217,195,.45)",background:"transparent",color:"#fff",borderRadius:10,padding:"11px 18px",fontWeight:800}}>Lihat NORTAGO Order →</button>
-      </article>
-    </section>
-
-    <section style={{borderTop:"1px solid rgba(255,255,255,.07)",borderBottom:"1px solid rgba(255,255,255,.07)",background:"rgba(255,255,255,.018)"}}>
-      <div style={{maxWidth:900,margin:"0 auto",padding:"68px 22px",textAlign:"center"}}><h2 style={{fontSize:36,margin:"0 0 14px"}}>Owner tidak perlu mengejar data.</h2><p style={{color:"#8fa9a5",lineHeight:1.7,fontSize:16}}>CT BOS dirancang agar aktivitas penting tercatat, approval terlacak, evidence tersedia, dan penyimpangan terlihat lebih cepat.</p><button onClick={()=>document.getElementById("harga")?.scrollIntoView({behavior:"smooth"})} style={{marginTop:16,background:"#67d9c3",border:0,borderRadius:11,padding:"14px 22px",fontWeight:900}}>Lihat Penawaran CT BOS →</button></div>
-    </section>
-
-    <footer style={{maxWidth:1180,margin:"0 auto",padding:"28px 22px 36px",display:"flex",justifyContent:"space-between",gap:20,flexWrap:"wrap",color:"#607873",fontSize:10}}>
-      <span><b style={{color:"#a7bfbb"}}>NORTAGO</b> · Business Operating System</span><span>System of Record · Control · Intelligence · Visibility</span>
-    </footer>
-
-    <style jsx>{`
-      @media (max-width: 820px){
-        :global(html), :global(body){width:100%!important;max-width:100%!important;overflow-x:hidden!important}
-        :global(*){box-sizing:border-box}
-        nav{padding:16px!important;width:100%!important;max-width:100%!important}
-        .hero-section{grid-template-columns:1fr!important;gap:28px!important;padding:38px 16px 54px!important}
-        .hero-section h1{font-size:46px!important;line-height:1.02!important;letter-spacing:-1.8px!important}
-        .hero-section .hero-card{width:100%;box-sizing:border-box;padding:16px!important;border-radius:20px!important}
-        .hero-section .hero-card > div:nth-child(3){grid-template-columns:1fr 1fr!important}
-        .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-        .plans-grid{grid-template-columns:1fr!important;max-width:430px;margin-left:auto;margin-right:auto}
-        section{box-sizing:border-box;width:100%!important;max-width:100%!important}
-        .hero-section > div,.module-grid > div,.plans-grid > article{min-width:0!important;max-width:100%!important}
-        button{max-width:100%!important}
-      }
-      @media (max-width: 480px){
-        .hero-section h1{font-size:42px!important}
-        .hero-section p{font-size:16px!important;line-height:1.6!important}
-        .module-grid{gap:8px!important}
-        .module-grid > div{min-width:0!important;padding:16px 10px!important}
-      }
-    `}</style>
-  </main>
+ const router=useRouter(); const[email,setEmail]=useState("");const[busy,setBusy]=useState(false);const[sent,setSent]=useState(false);const[error,setError]=useState("");const[quoteCycle,setQuoteCycle]=useState<"MONTHLY"|"YEARLY">("MONTHLY");
+ async function requestTestAccess(e:React.FormEvent){e.preventDefault();setBusy(true);setSent(false);setError("");try{const response=await fetch("/api/supabase-config",{cache:"no-store",signal:AbortSignal.timeout(10000)});const config=await response.json().catch(()=>({}));if(!response.ok||!config.url||!config.key)throw new Error(config.error||"Konfigurasi akses belum tersedia.");const supabase=createBrowserClient(config.url,config.key);const redirectTo=`${PUBLIC_APP_URL}/auth/confirm?next=/control-tower`;const{error:e1}=await supabase.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:redirectTo,shouldCreateUser:true}});if(e1)throw e1;setSent(true);}catch(err){setError(err instanceof Error&&/rate limit/i.test(err.message)?"Email sedang dibatasi sementara. Tunggu sekitar 1 menit sebelum meminta link lagi.":err instanceof Error?err.message:"Link akses gagal dikirim. Silakan coba lagi.");}finally{setBusy(false);}}
+ return <main className="nt-page">
+ <header className="nt-nav"><a className="nt-brand" href="/"><Logo/><span><strong>NORTAGO</strong><small>BUSINESS OPERATING SYSTEM</small></span></a><nav><a href="#ekosistem">Ekosistem</a><a href="#solusi">Solusi</a><a href="#penawaran">Penawaran</a></nav><button className="nt-btn nt-outline" onClick={()=>router.push("/login")}>Masuk</button></header>
+ <section className="nt-hero"><div><div className="nt-kicker">● CT BOS NORTAGO　/　MENARA KENDALI BISNIS</div><h1>Bisnis lebih terarah.<br/><span>Kendali tetap di tangan Anda.</span></h1><p className="nt-lead">Satu Business Operating System untuk menghubungkan penjualan, operasional, procurement, finance, people, dan risiko dalam satu pandangan yang utuh.</p><div className="nt-actions"><a className="nt-btn nt-primary" href="#akses">Coba CT BOS　→</a><a className="nt-link" href="#ekosistem">Jelajahi ekosistem ↓</a></div><div className="nt-proof">✓ Satu pusat kendali　 ✓ Aktivitas lebih terukur　 ✓ Insight untuk owner</div></div>
+ <div className="nt-preview"><div className="nt-preview-head"><b>● CONTOH TAMPILAN</b><span>OWNER CONTROL TOWER</span></div><h2>Ringkasan bisnis Anda</h2><p>Pantau indikator utama dalam satu tempat.</p><div className="nt-kpis">{[["Revenue","Rp 24,8 jt","Periode berjalan"],["COGS","Rp 9,2 jt","Biaya produk"],["OPEX","Rp 5,1 jt","Biaya operasional"],["Net Profit","Rp 10,5 jt","Laba bersih"]].map(x=><div className="nt-kpi" key={x[0]}><small>{x[0]}</small><strong>{x[1]}</strong><small>{x[2]}</small></div>)}</div><div className="nt-flow">Data　→　Evidence　→　Control　→　<b>Keputusan Owner</b></div><div className="nt-demo">Ilustrasi data — bukan data bisnis aktual.</div></div></section>
+ <section className="nt-band" id="ekosistem"><div className="nt-heading"><b>EKOSISTEM TERINTEGRASI</b><h2>Bukan sekadar dashboard.</h2><p>Hubungkan aktivitas bisnis dengan bukti, approval, laporan, dan kontrol owner. Setiap fungsi bekerja dalam satu alur yang saling terhubung.</p></div><div className="nt-modules">{modules.map(m=><article key={m[0]}><div><small>{m[0]}</small><b>{m[3]}</b></div><h3>{m[1]}</h3><p>{m[2]}</p></article>)}</div></section>
+ <section className="nt-section" id="solusi"><div className="nt-heading"><b>DARI DATA MENJADI KEPUTUSAN</b><h2>Owner tidak perlu mengejar data.</h2><p>Aktivitas penting tercatat, approval terlacak, evidence tersedia, dan penyimpangan lebih mudah terlihat.</p></div><div className="nt-steps">{["Data operasional","Evidence & approval","Kontrol & analisis","Keputusan owner"].map((x,i)=><div key={x}><small>0{i+1}</small><strong>{x}</strong></div>)}</div></section>
+ <section className="nt-section nt-offers" id="penawaran"><div className="nt-heading"><b>PENAWARAN YANG FLEKSIBEL</b><h2>Sesuai kebutuhan bisnis Anda.</h2><p>CT BOS dirancang mengikuti skala operasional, jumlah outlet, pengguna, modul, dan kebutuhan integrasi setiap bisnis.</p></div>
+ <article className="nt-quote"><div><b className="nt-label">CT BOS · CUSTOM BUSINESS SCOPE</b><h3>Satu sistem. Disesuaikan dengan struktur bisnis Anda.</h3><p>Tim NORTAGO menyusun penawaran setelah asesmen ruang lingkup dan kebutuhan operasional bisnis Anda.</p><strong className="nt-cycle-label">Preferensi periode pembayaran</strong><div className="nt-switch"><button className={quoteCycle==="MONTHLY"?"selected":""} aria-pressed={quoteCycle==="MONTHLY"} onClick={()=>setQuoteCycle("MONTHLY")}>Bulanan</button><button className={quoteCycle==="YEARLY"?"selected":""} aria-pressed={quoteCycle==="YEARLY"} onClick={()=>setQuoteCycle("YEARLY")}>Tahunan</button></div><p className="nt-cycle-note">Preferensi Anda: <b>{quoteCycle==="MONTHLY"?"Bulanan":"Tahunan"}</b>. Biaya langganan dan implementasi/onboarding dirinci terpisah dalam penawaran resmi setelah asesmen.</p><a className="nt-btn nt-primary" href="#akses">Mulai asesmen kebutuhan →</a></div><aside><h4>Ruang lingkup yang dinilai</h4>{["Jumlah outlet dan pengguna","Modul Sales, Procurement, Finance, HR & Ops","Integrasi dan alur kerja khusus","Migrasi data dan konfigurasi","Pelatihan dan onboarding","Dukungan operasional / SLA"].map(x=><p key={x}><b>✓</b>{x}</p>)}</aside></article>
+ <article className="nt-order"><div><b className="nt-label">PRODUK MANDIRI · NORTAGO ORDER</b><h3>Sistem Pemesanan Digital Terintegrasi</h3><p>Kelola pemesanan pelanggan dengan alur digital yang praktis untuk setiap outlet.</p></div><div className="nt-price"><strong>Rp50.000</strong><span>/ outlet / bulan</span><p>Rp500.000 / outlet / tahun</p><b>Hemat Rp100.000 (16,7%)</b></div><div><p>Ditagihkan per outlet. Setiap outlet memiliki invoice dan masa aktif sendiri. Pembayaran prepaid/manual.</p><button className="nt-btn nt-outline" onClick={()=>router.push("/otc/subscribe")}>Lihat NORTAGO Order →</button></div></article></section>
+ <section className="nt-access" id="akses"><div><b className="nt-label">AKSES GRATIS / TES</b><h2>Kenali CT BOS melalui pengalaman langsung.</h2><p>Masukkan email untuk menerima tautan akses sekali klik. Password belum diperlukan untuk tahap tes ini.</p><small>✓ Tanpa password　 ✓ Tautan melalui email　 ✓ Akses langsung ke CT BOS</small></div><div className="nt-formbox"><form onSubmit={requestTestAccess}><label htmlFor="nt-email">Email kerja Anda</label><div><input id="nt-email" required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nama@perusahaan.com"/><button className="nt-btn nt-primary" disabled={busy}>{busy?"Mengirim…":"Kirim link tes →"}</button></div></form>{sent&&<p className="nt-success" role="status">Link akses sudah dikirim. Buka email Anda lalu klik tautan untuk masuk ke CT BOS.</p>}{error&&<p className="nt-error" role="alert">{error}</p>}</div></section>
+ <footer className="nt-footer"><a className="nt-brand" href="/"><Logo/><span><strong>NORTAGO</strong><small>BUSINESS OPERATING SYSTEM</small></span></a><span>System of Record · Control · Intelligence · Visibility</span><small>© {new Date().getFullYear()} NORTAGO</small></footer>
+ <style jsx>{`
+ .nt-page{--ink:#172b3a;--muted:#627486;--line:#dce5eb;--teal:#087f73;min-height:100vh;background:#fff;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif}.nt-nav{height:78px;max-width:1200px;margin:auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:25px;border-bottom:1px solid #edf1f4}.nt-brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none}.nt-brand strong,.nt-brand small{display:block}.nt-brand strong{font-size:16px;letter-spacing:1.5px}.nt-brand small{font-size:9px;letter-spacing:1px;color:#7b8b98;margin-top:3px}.nt-nav nav{display:flex;gap:28px}.nt-nav nav a,.nt-link{font-size:13px;color:#536779;text-decoration:none;font-weight:650}.nt-btn{display:inline-flex;align-items:center;justify-content:center;min-height:45px;padding:0 18px;border-radius:9px;font-size:13px;font-weight:750;text-decoration:none;cursor:pointer}.nt-primary{background:var(--teal);border:1px solid var(--teal);color:#fff}.nt-primary:hover{background:#06685f}.nt-outline{background:#fff;border:1px solid #cbd7df;color:var(--ink)}.nt-outline:hover{border-color:var(--teal);color:var(--teal)}.nt-hero{max-width:1200px;margin:auto;padding:76px 28px 84px;display:grid;grid-template-columns:1.04fr .96fr;gap:60px;align-items:center}.nt-kicker,.nt-label,.nt-heading>b{font-size:10px;letter-spacing:1.4px;font-weight:850;color:var(--teal)}.nt-hero h1{font-size:clamp(42px,5vw,63px);line-height:1.08;letter-spacing:-2.5px;margin:22px 0 18px}.nt-hero h1 span{color:var(--teal)}.nt-lead{font-size:17px;line-height:1.75;color:var(--muted);max-width:580px}.nt-actions{display:flex;align-items:center;gap:23px;flex-wrap:wrap;margin-top:28px}.nt-proof{margin-top:32px;color:#718291;font-size:11px}.nt-preview{padding:25px;border:1px solid #dce6eb;border-radius:17px;background:linear-gradient(145deg,#fff,#f6fafb);box-shadow:0 22px 55px #1d3e5215}.nt-preview-head{display:flex;justify-content:space-between;color:#718291;font-size:9px;letter-spacing:1px}.nt-preview-head b{color:var(--teal)}.nt-preview h2{font-size:22px;margin:27px 0 5px}.nt-preview>p{font-size:12px;color:#7a8b98}.nt-kpis{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:19px}.nt-kpi{padding:16px;border:1px solid #e2e9ee;border-radius:11px;background:#fff}.nt-kpi small{display:block;color:#7b8c98;font-size:10px}.nt-kpi strong{display:block;font-size:21px;margin:8px 0 5px}.nt-flow{margin-top:15px;padding:13px;border-radius:9px;background:#edf5f5;color:#526b79;font-size:10px}.nt-flow b{color:var(--teal)}.nt-demo{text-align:right;font-size:9px;color:#8998a3;margin-top:10px}.nt-band{background:#f5f8fa;padding:76px 28px}.nt-section{max-width:1200px;margin:auto;padding:76px 28px}.nt-heading{text-align:center;max-width:720px;margin:0 auto 35px}.nt-heading h2{font-size:clamp(30px,3.6vw,42px);letter-spacing:-1.4px;margin:12px 0;color:#172b3a}.nt-heading p{font-size:14px;line-height:1.75;color:var(--muted)}.nt-modules{max-width:1144px;margin:auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px}.nt-modules article{padding:21px 17px;border:1px solid #e0e8ed;border-radius:13px;background:#fff;min-height:160px}.nt-modules article>div{display:flex;justify-content:space-between;color:#90a0aa}.nt-modules article>div b{color:var(--teal);font-size:19px}.nt-modules h3{font-size:14px;margin:20px 0 7px}.nt-modules p{font-size:11px;line-height:1.6;color:#718291}.nt-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.nt-steps div{display:flex;align-items:center;gap:13px;padding:18px;border:1px solid #e0e8ed;border-radius:11px}.nt-steps small{color:var(--teal);font-weight:900}.nt-steps strong{font-size:12px}.nt-offers{padding-top:50px}.nt-quote{display:grid;grid-template-columns:1.1fr .9fr;gap:30px;padding:30px;border:1px solid #d9e5e9;border-radius:17px;background:linear-gradient(135deg,#f7fbfb,#fff)}.nt-quote h3{font-size:26px;line-height:1.25;margin:13px 0}.nt-quote p{font-size:12px;line-height:1.7;color:var(--muted)}.nt-cycle-label{display:block;font-size:11px;margin-top:21px}.nt-switch{display:flex;gap:8px;margin-top:10px}.nt-switch button{border:1px solid #cbd8df;border-radius:8px;background:#fff;color:#506474;padding:10px 15px;font-size:12px;font-weight:750}.nt-switch button.selected{background:#e7f4f1;border-color:#8fc9bd;color:var(--teal)}.nt-cycle-note{font-size:11px!important}.nt-quote aside{padding:22px;border:1px solid #e1e9ed;border-radius:12px;background:#fff}.nt-quote aside h4{font-size:13px;margin:0 0 13px}.nt-quote aside p{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f0f3f5;margin:0}.nt-quote aside p b{color:var(--teal)}.nt-order{display:grid;grid-template-columns:1.1fr .8fr auto;gap:22px;align-items:center;margin-top:18px;padding:25px 28px;border:1px solid #dce6eb;border-radius:15px;background:#fff}.nt-order h3{font-size:18px;margin:9px 0 6px}.nt-order p{font-size:11px;line-height:1.6;color:#718291}.nt-price{border-left:1px solid #e6ecef;padding-left:23px}.nt-price strong{font-size:25px}.nt-price span{font-size:10px;color:#718291}.nt-price p{margin:6px 0 0}.nt-price>b{font-size:10px;color:var(--teal)}.nt-access{padding:55px max(28px,calc((100% - 1144px)/2));background:#f1f6f7;border-top:1px solid #e3ebee;display:grid;grid-template-columns:1fr 1fr;gap:45px;align-items:center}.nt-access h2{font-size:27px;line-height:1.2;margin:12px 0}.nt-access p{font-size:12px;line-height:1.7;color:var(--muted)}.nt-access small{font-size:10px;color:#617687}.nt-formbox{padding:22px;border:1px solid #dce6eb;border-radius:13px;background:#fff}.nt-formbox label{display:block;font-size:11px;font-weight:800;margin-bottom:9px}.nt-formbox form>div{display:flex;gap:8px}.nt-formbox input{min-width:0;flex:1;height:45px;padding:0 12px;border:1px solid #cbd7df;border-radius:8px;background:#fff;color:#20394a}.nt-success,.nt-error{padding:11px;border-radius:8px}.nt-success{background:#edf8f2;color:#236444}.nt-error{background:#fff1f1;color:#9b3030}.nt-footer{max-width:1200px;margin:auto;padding:25px 28px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.nt-footer>span,.nt-footer>small{font-size:10px;color:#84939d}
+ @media(max-width:900px){.nt-hero{grid-template-columns:1fr;gap:38px;padding-top:55px}.nt-preview{max-width:680px;width:100%;margin:auto}.nt-modules{grid-template-columns:repeat(3,1fr)}.nt-order{grid-template-columns:1fr 1fr}.nt-order>div:last-child{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:15px}.nt-steps div{padding:14px}.nt-access{padding:48px 28px}}@media(max-width:620px){.nt-nav{height:68px;padding:0 17px}.nt-nav nav{display:none}.nt-hero{padding:45px 18px 55px;gap:30px}.nt-hero h1{font-size:clamp(37px,10vw,47px);letter-spacing:-1.8px}.nt-lead{font-size:15px}.nt-proof{line-height:1.9}.nt-preview{padding:17px}.nt-kpi{padding:12px}.nt-kpi strong{font-size:18px}.nt-band,.nt-section{padding:58px 18px}.nt-heading h2{font-size:29px}.nt-modules{grid-template-columns:1fr 1fr;gap:9px}.nt-modules article{padding:16px 12px;min-height:150px}.nt-modules h3{font-size:13px}.nt-modules p{font-size:10px}.nt-steps{grid-template-columns:1fr 1fr}.nt-steps strong{font-size:10px}.nt-quote{grid-template-columns:1fr;padding:20px;gap:20px}.nt-quote h3{font-size:22px}.nt-order{grid-template-columns:1fr;padding:21px;gap:12px}.nt-price{border-left:0;border-top:1px solid #e6ecef;padding:14px 0 0}.nt-order>div:last-child{grid-column:auto;display:block}.nt-access{padding:45px 18px;grid-template-columns:1fr;gap:20px}.nt-access h2{font-size:24px}.nt-formbox form>div{flex-direction:column}.nt-formbox .nt-btn{width:100%}.nt-footer{padding:22px 18px;align-items:flex-start;flex-direction:column}}
+ @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+ `}</style></main>;
 }
