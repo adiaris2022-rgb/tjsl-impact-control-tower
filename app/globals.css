@@ -271,3 +271,59 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 footer{color:#64748b!important}
 @media(max-width:700px){.topbar{gap:12px}.userbox{gap:8px}.hero{padding-top:30px}.tower-tabs{margin-bottom:14px}.data-panel,.brand-settings{padding:16px}.section-toolbar{gap:12px}.section-toolbar button{min-height:42px}}
 @media(prefers-reduced-motion:no-preference){.metric,.panel,.data-panel,.engine-card{transition:box-shadow .18s ease,border-color .18s ease}.metric:hover,.panel:hover,.data-panel:hover,.engine-card:hover{border-color:#cbd9e5!important;box-shadow:0 9px 24px rgba(15,35,60,.06)}}
+
+
+/* NORTAGO LIGHT CORPORATE — Order storefront and subscription surfaces */
+.otc-page{
+  --otc-ink:#17263c;--otc-muted:#64748b;--otc-line:#e2e8f0;--otc-surface:#fff;--otc-soft:#f8fafc;
+  background:#f5f7fb!important;color:var(--otc-ink)!important;
+}
+.otc-page :is(h1,h2,h3,h4,strong,b){color:var(--otc-ink)}
+.otc-page :is(p,small,.muted,.eyebrow,.method,.hint){color:var(--otc-muted)}
+.otc-page :is(section,article,.panel,.card,.data-panel,.sub-panel,.summary-card,.checkout-card,.receipt-card,.menu-card){
+  background:#fff;border-color:var(--otc-line);color:var(--otc-ink);
+}
+.otc-page :is(input,select,textarea){
+  background:#fff!important;color:#17263c!important;border:1px solid #cbd5e1!important;
+}
+.otc-page :is(button,.button,.primary-action,.subscribe-submit){
+  background:#176b78;color:#fff;border-color:#176b78;
+}
+.otc-page :is(button,.button):focus-visible{outline:3px solid rgba(22,125,131,.28);outline-offset:2px}
+.otc-page :is(table th){background:#f8fafc;color:#64748b;border-color:#e8edf3}
+.otc-page :is(table td){color:#334155;border-color:#e8edf3}
+.otc-page :is(.status-badge,.pill,.tag){background:#e9f6f3;color:#147568;border-color:#bfe5dc}
+.otc-page :is(.empty,.muted-note){color:#94a3b8}
+.subscribe-hero{color:#17263c}
+.subscribe-hero h1{color:#17263c}
+.subscribe-hero h1 em{color:#167d83}
+.subscribe-hero p{color:#64748b}
+.subscribe-proof span{background:#e9f6f3;border-color:#bfe5dc;color:#147568}
+.subscribe-section,.subscribe-summary{
+  background:#fff!important;border:1px solid #e2e8f0!important;
+  box-shadow:0 5px 18px rgba(15,35,60,.035);color:#17263c!important;
+}
+.subscribe-step{background:#e9f6f3;color:#147568}
+.subscribe-section-content h2,.subscribe-summary h2{color:#17263c}
+.subscribe-section-content>p,.subscribe-hint,.subscribe-terms,.summary-caption{color:#64748b}
+.plan-option{background:#f8fafc;color:#17263c;border-color:#dbe3ec}
+.plan-option.selected{background:#eaf5f3;border-color:#167d83;box-shadow:inset 0 0 0 1px #167d83}
+.plan-option small{color:#64748b}
+.plan-option .plan-radio{color:#167d83}
+.plan-option>strong{color:#17263c}
+.saving-note{background:#edf8f4;border-color:#bfe5d8;color:#176b58}
+.subscribe-fields label{color:#475569}
+.subscribe-summary .summary-row{border-color:#e8edf3;color:#64748b}
+.subscribe-summary .summary-row b{color:#17263c}
+.summary-total span{color:#64748b}
+.summary-total strong{color:#167d83}
+.payment-notice{background:#fff8e8;border-color:#f0d99d}
+.payment-notice b{color:#8a5b12}
+.payment-notice p{color:#806a43}
+.payment-notice span{color:#9a6a16}
+.summary-preview{background:#edf8f4;border-color:#bfe5d8;color:#176b58}
+.summary-preview b{color:#145b4d}
+@media(max-width:700px){
+  .subscribe-layout{padding-left:16px;padding-right:16px}
+  .subscribe-hero{padding-left:18px;padding-right:18px}
+}
