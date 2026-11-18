@@ -1,70 +1,61 @@
 # NORTAGO — Final Pricing & Staging Change Specification
 
-Decision status: CT BOS launch-price recommendation selected for staging validation; NORTAGO Order prices retained.
-Scope: public pricing page and commercial specification only. This document does not activate billing, change database catalog rows, or enable payment collection.
+Status: user-approved commercial decision; staging implementation only.
+Scope: public pricing presentation and commercial specification. This does not activate billing, modify database catalogue rows, or authorize production release.
 
-## 1. Commercial architecture
+## 1. Product separation
+- CT BOS NORTAGO: Business Operating System subscription, priced by custom quotation based on assessed business scope.
+- NORTAGO Order: standalone digital ordering subscription, billed per outlet.
+- Keep both catalogues, invoice references, subscriptions, and entitlement checks separate.
 
-Keep two separately priced products:
-- **CT BOS NORTAGO**: business operating system subscription, billed per business account/package.
-- **NORTAGO Order**: standalone digital ordering subscription, billed per outlet.
+## 2. CT BOS — custom quotation (approved)
+CT BOS must not display fixed public package prices or invented Starter/Business/Pro price tiers.
 
-Do not combine the two catalogues or use CT BOS package prices in NORTAGO Order invoices.
+Both payment periods are supported:
+- Monthly subscription.
+- Annual subscription.
 
-## 2. CT BOS launch price proposal
+The public landing page may let prospects select their preferred billing period, but must not calculate or imply a price before assessment.
 
-| Package | Monthly | Annual | Annual saving | Limits |
-|---|---:|---:|---:|---|
-| STARTER | IDR 249,000 | IDR 2,490,000 | IDR 498,000 (16.7%) | 1 outlet, 5 users |
-| BUSINESS | IDR 649,000 | IDR 6,490,000 | IDR 1,298,000 (16.7%) | Up to 3 outlets, 15 users |
-| PRO | IDR 1,299,000 | IDR 12,990,000 | IDR 2,598,000 (16.7%) | Multi-outlet, 50 users |
+The quotation is based on:
+- Number of business outlets and users.
+- Selected modules and required access/approval roles.
+- Integrations and custom workflows.
+- Data migration and initial configuration.
+- Training, onboarding, operational support, and any agreed SLA.
 
-Annual amount is ten monthly payments (two months free); annual commitment is prepaid. CT BOS package prices are per business subscription, not per outlet, unless a later commercial amendment explicitly changes the billing unit.
+The formal quotation must separate:
+1. CT BOS subscription fee (monthly or annual, as quoted).
+2. One-time implementation/onboarding fee, if applicable.
+3. Optional integration, migration, training, or support scope.
 
-### Included scope shown publicly
-- STARTER: Sales & transactions, basic Procurement, basic Finance.
-- BUSINESS: Sales, Procurement, Finance, Approval & Control, Owner Control Tower.
-- PRO: Full BOS, Priority Support, Control & Intelligence.
+No amounts are approved for CT BOS until the commercial assessment and quotation are completed. Do not seed or activate fixed CT BOS prices based on the prior unapproved proposal.
 
-The package feature lists and capacity limits are the current public offer; entitlement enforcement must be verified separately before paid launch.
-
-## 3. Separate NORTAGO Order price (already approved)
+## 3. NORTAGO Order — retained approved price
 
 | Period | Price | Billing unit |
 |---|---:|---|
 | Monthly | IDR 50,000 | Per outlet |
 | Annual | IDR 500,000 | Per outlet |
 
-Annual savings: IDR 100,000 (16.7%) versus twelve monthly payments. Each outlet receives a separate invoice, subscription period, and entitlement. Prepaid/manual renewal; no automatic recurring charge is assumed.
+Annual saving is IDR 100,000 (16.7%) versus 12 monthly payments. Each outlet has a separate invoice, subscription period, and entitlement. Payment is prepaid/manual; no automatic recurring charge is assumed.
 
-## 4. Implementation and onboarding
+## 4. Staging page requirements
+1. Remove all fixed CT BOS tier names/prices and any price calculator based on those tiers.
+2. Present CT BOS as custom quotation after business-scope assessment.
+3. Provide Monthly and Annual as preferred billing-period choices only; do not display a numeric CT BOS amount.
+4. Explain the assessment dimensions: outlets, users, modules, integrations, migration/configuration, training, and support/SLA.
+5. Quote implementation/onboarding separately from the subscription.
+6. Keep a distinct NORTAGO Order panel showing IDR 50,000/outlet/month and IDR 500,000/outlet/year, with its separate subscription route.
+7. Do not change NORTAGO Order checkout API or database prices.
 
-Implementation and onboarding are quoted separately after a needs assessment. Do not show a fabricated fixed fee or silently include implementation in recurring subscription prices. The quote should identify outlet count, data migration, configuration, role setup, integrations, training, and go-live scope.
+## 5. Billing and release gates
+- The public landing page is informational and is not the billing source of truth.
+- Verify the authenticated NORTAGO Order subscription page and its database-backed plan rows before payment activation.
+- CT BOS quote acceptance, subscription records, invoicing, and entitlement enforcement require a separate approved commercial configuration.
+- Keep LinkBayar disabled until Supabase staging, webhook, secrets, and payment tests pass.
+- No Supabase migration, payment collection activation, production environment change, or production deployment is authorized by this pricing-page change.
+- Keep PR in Draft until staging validation and explicit release approval.
 
-## 5. Staging page changes
-
-1. Replace legacy CT BOS prices (IDR 499k / 999k / 1.999m monthly) with the launch price proposal above.
-2. Add Bulanan / Tahunan selector. Annual mode shows annual total, effective monthly equivalent, and 16.7% saving.
-3. Preserve current package capacity and included feature descriptions; clarify that Business is recommended.
-4. Add note: implementation/onboarding is separate and quoted after assessment.
-5. Add a distinct NORTAGO Order panel showing IDR 50k/outlet/month or IDR 500k/outlet/year, with a separate subscription CTA.
-6. Do not change Order subscription API pricing or database catalogue; existing Order backend already uses IDR 50,000 and IDR 500,000 plan codes.
-7. Do not activate production billing or represent prices as validated market willingness-to-pay until pilot interviews and conversion tests are complete.
-
-## 6. Billing and acceptance requirements
-
-- CT BOS supports monthly and annual billing; annual equals 10x monthly.
-- NORTAGO Order remains per-outlet with separate invoices.
-- UI and server-side invoice/catalog amounts must match before enabling collection.
-- Verify the authenticated subscription screen and its database-backed plan rows; the public landing page is not the billing source of truth.
-- Confirm implementation fee quote workflow and entitlement limits.
-- Test mobile layout at 360px–430px widths and verify no horizontal overflow.
-- Keep staging deployment separate from production. No merge or production release is implied by this change.
-
-## 7. Commercial validation gates
-
-Before calling these prices validated:
-- Interview at least 3 target businesses across small single-outlet, growing multi-outlet, and established multi-outlet segments.
-- Test package comprehension, preferred billing cycle, price objections, and willingness to start a paid pilot.
-- Record conversion to paid pilot, activation cost, onboarding effort, and support load.
-- Review after the first 5–10 qualified sales conversations; adjust prices or limits only with evidence.
+## 6. Commercial validation
+Use qualified prospect assessments to validate willingness to pay, preferred billing period, onboarding effort, support load, and paid-pilot conversion. Adjust the quote model only from documented customer evidence and explicit commercial approval.

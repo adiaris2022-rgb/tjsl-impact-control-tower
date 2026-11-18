@@ -1,9 +1,132 @@
 "use client";
-import Link from "next/link";import {useEffect,useMemo,useState} from "react";import {createClient} from "@supabase/supabase-js";
-async function getSupabase(){const r=await fetch("/api/supabase-config",{cache:"no-store"});const c=await r.json().catch(()=>({}));if(!r.ok||!c.url||!c.key)throw new Error(c.error||"Supabase runtime configuration is not available.");return createClient(c.url,c.key);}
-const money=(n:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n||0);
-export default function Report(){const[orders,setOrders]=useState<any[]>([]);const[error,setError]=useState("");const[loading,setLoading]=useState(true);
-useEffect(()=>{(async()=>{try{const s=await getSupabase();const{data:auth}=await s.auth.getUser();if(!auth.user)throw new Error("Sesi login tidak ditemukan.");const{data:bu,error:be}=await s.from("business_users").select("business_id").eq("user_id",auth.user.id).limit(1).maybeSingle();if(be||!bu?.business_id)throw new Error(be?.message||"Business belum terhubung.");const start=new Date();start.setHours(0,0,0,0);const{data,error:e}=await s.from("otc_orders").select("id,total,status,created_at").eq("business_id",bu.business_id).gte("created_at",start.toISOString()).order("created_at");if(e)throw e;setOrders(data||[]);}catch(e:any){setError(e.message||"Gagal memuat laporan.")}finally{setLoading(false)}})()},[]);
-const rows=useMemo(()=>{const map=new Map<string,{count:number;total:number}>();for(const o of orders){const h=new Date(o.created_at).toLocaleTimeString("id-ID",{hour:"2-digit",hour12:false});const x=map.get(h)||{count:0,total:0};x.count++;x.total+=Number(o.total||0);map.set(h,x)}return Array.from(map.entries()).map(([hour,x])=>({hour,count:x.count,total:x.total})).sort((a,b)=>a.hour.localeCompare(b.hour));},[orders]);
-if(loading)return <main className="otc-page"><div className="loading">Memuat laporan…</div></main>;if(error)return <main className="otc-page"><div className="info-box wide">{error}</div></main>;
-return <main className="otc-page"><header className="otc-head"><div><b>NORTAGO OTC</b><small>Automatic Hourly Report · Live OCT data</small></div><Link href="/otc/owner">← Owner</Link></header><section className="customer-title"><span>AUTOMATIC REPORT</span><h1>Laporan setiap jam</h1><p>Count dan nominal per jam dihitung dari order OCT hari ini.</p></section><section className="data-panel"><div className="table-wrap">{rows.length===0?<div className="muted">Belum ada order hari ini.</div>:<table><thead><tr><th>Jam</th><th>Transaksi</th><th>Nominal</th></tr></thead><tbody>{rows.map(r=><tr key={r.hour}><td>{r.hour}</td><td>{r.count}</td><td>{money(r.total)}</td></tr>)}</tbody></table>}</div></section><div className="info-box wide">Detail order dan fulfillment tetap berada di scope Manager/Staff sesuai RBAC.</div><footer>Supported by NORTAGO · Report from OCT System of Record</footer></main>}
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+type Order = { id: string; total: number | string; status: string; payment_status: string; created_at: string };
+
+async function getSupabase() {
+  const response = await fetch("/api/supabase-config", { cache: "no-store" });
+  const config = await response.json().catch(() => ({}));
+  if (!response.ok || !config.url || !config.key) {
+    throw new Error(config.error || "Konfigurasi Supabase tidak tersedia.");
+  }
+  return createClient(config.url, config.key);
+}
+
+const money = (value: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
+
+export default function Report() {
+  const [businessIds, setBusinessIds] = useState<string[]>([]);
+  const [businessId, setBusinessId] = useState("");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const supabase = await getSupabase();
+        const { data: auth, error: authError } = await supabase.auth.getUser();
+        if (authError || !auth.user) throw new Error("Sesi login tidak ditemukan.");
+        const { data, error: membershipError } = await supabase
+          .from("business_users").select("business_id").eq("user_id", auth.user.id);
+        if (membershipError) throw membershipError;
+        const ids = [...new Set((data || []).map((row) => row.business_id as string).filter(Boolean))];
+        if (!ids.length) throw new Error("Akun ini belum terhubung dengan bisnis.");
+        if (alive) {
+          setBusinessIds(ids);
+          setBusinessId(ids[0]);
+        }
+      } catch (cause) {
+        if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat akun bisnis.");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    setLoading(true);
+    setError("");
+    (async () => {
+      try {
+        const supabase = await getSupabase();
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const { data, error: queryError } = await supabase.from("otc_orders")
+          .select("id,total,status,payment_status,created_at")
+          .eq("business_id", businessId)
+          .gte("created_at", start.toISOString())
+          .order("created_at");
+        if (queryError) throw queryError;
+        if (alive) setOrders((data || []) as Order[]);
+      } catch (cause) {
+        if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat laporan.");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [businessId]);
+
+  const rows = useMemo(() => {
+    const grouped = new Map<string, { count: number; paidTotal: number }>();
+    for (const order of orders) {
+      const hour = new Date(order.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", hour12: false });
+      const value = grouped.get(hour) || { count: 0, paidTotal: 0 };
+      value.count += 1;
+      if (order.payment_status === "PAID") value.paidTotal += Number(order.total || 0);
+      grouped.set(hour, value);
+    }
+    return Array.from(grouped.entries())
+      .map(([hour, value]) => ({ hour, ...value }))
+      .sort((a, b) => a.hour.localeCompare(b.hour));
+  }, [orders]);
+
+  if (loading && !businessId) return <main className="otc-page"><div className="loading">Memuat laporan…</div></main>;
+  if (error && !businessId) return <main className="otc-page"><div className="info-box wide">{error}</div></main>;
+
+  return (
+    <main className="otc-page">
+      <header className="otc-head">
+        <div><b>NORTAGO Order</b><small>Automatic Hourly Report · NORTAGO Order data</small></div>
+        <Link href="/otc/owner">← Owner</Link>
+      </header>
+      <section className="customer-title">
+        <span>AUTOMATIC REPORT</span><h1>Laporan setiap jam</h1>
+        <p>Jumlah order dan pembayaran terverifikasi per jam untuk bisnis yang dipilih, hari ini.</p>
+        {businessIds.length > 1 ? (
+          <label className="business-switcher">Pilih bisnis
+            <select value={businessId} onChange={(event) => setBusinessId(event.target.value)}>
+              {businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}
+            </select>
+          </label>
+        ) : null}
+      </section>
+      {error ? <div className="info-box wide">{error}</div> : null}
+      {loading ? <div className="loading">Memuat data bisnis…</div> : (
+        <section className="data-panel">
+          <div className="table-wrap">
+            {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : (
+              <table>
+                <thead><tr><th>Jam</th><th>Jumlah order</th><th>Pembayaran terverifikasi</th></tr></thead>
+                <tbody>{rows.map((row) => <tr key={row.hour}>
+                  <td>{row.hour}</td><td>{row.count}</td><td>{money(row.paidTotal)}</td>
+                </tr>)}</tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
+      <div className="info-box wide">Nominal hanya menjumlahkan order dengan payment_status PAID. Status order dan status pembayaran adalah dua indikator yang berbeda.</div>
+      <footer>Supported by NORTAGO · Report from NORTAGO Order · Business ID: {businessId || "—"}</footer>
+    </main>
+  );
+}
