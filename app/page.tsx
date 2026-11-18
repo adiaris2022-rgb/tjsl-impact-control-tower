@@ -6,11 +6,13 @@ import { createBrowserClient } from "@supabase/ssr";
 
 const PUBLIC_APP_URL = "https://nortago-ct-bos-production.up.railway.app";
 
+type BillingCycle = "MONTHLY" | "YEARLY";
 const plans = [
-  {name:"STARTER",price:"Rp499 ribu",period:"/bulan",desc:"Untuk bisnis yang ingin mulai punya sistem kendali.",items:["1 outlet","5 user","Sales & transaksi","Procurement dasar","Finance dasar"],featured:false},
-  {name:"BUSINESS",price:"Rp999 ribu",period:"/bulan",desc:"Untuk bisnis yang membutuhkan Full BOS.",items:["Hingga 3 outlet","15 user","Sales + Procurement + Finance","Approval & Control","Owner Control Tower"],featured:true},
-  {name:"PRO",price:"Rp1,999 juta",period:"/bulan",desc:"Untuk bisnis multi-outlet dan kebutuhan prioritas.",items:["Multi-outlet","50 user","Full BOS","Priority support","Control & Intelligence"],featured:false},
+  {name:"STARTER",monthly:249000,annual:2490000,desc:"Untuk UMKM yang mulai menata operasional dalam satu outlet.",items:["1 outlet","5 user","Sales & transaksi","Procurement dasar","Finance dasar"],featured:false},
+  {name:"BUSINESS",monthly:649000,annual:6490000,desc:"Untuk bisnis berkembang yang mengelola beberapa outlet.",items:["Maksimal 3 outlet","15 user","Sales + Procurement + Finance","Approval & Control","Owner Control Tower"],featured:true},
+  {name:"PRO",monthly:1299000,annual:12990000,desc:"Untuk bisnis multi-outlet dengan kebutuhan kontrol lebih luas.",items:["Multi-outlet","50 user","Full BOS","Priority support","Control & Intelligence"],featured:false},
 ];
+const money = (amount:number) => new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(amount);
 
 function Logo(){
   return <svg viewBox="0 0 120 110" width="46" height="42" aria-label="NORTAGO logo" role="img" data-logo-lock="nortago-original-reference">
@@ -29,6 +31,7 @@ export default function LandingPage(){
   const [busy,setBusy]=useState(false);
   const [sent,setSent]=useState(false);
   const [error,setError]=useState("");
+  const [billingCycle,setBillingCycle]=useState<BillingCycle>("MONTHLY");
 
   async function requestTestAccess(e:React.FormEvent){
     e.preventDefault();
@@ -94,17 +97,31 @@ export default function LandingPage(){
     </section>
 
     <section id="harga" style={{maxWidth:1180,margin:"0 auto",padding:"20px 22px 90px"}}>
-      <div style={{textAlign:"center",marginBottom:34}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>PILIH SESUAI SKALA BISNIS</div><h2 style={{fontSize:38,margin:"10px 0"}}>Mulai dari sistem yang benar.</h2><p style={{color:"#8fa9a5"}}>Harga awal untuk paket berlangganan CT BOS NORTAGO.</p></div>
+      <div style={{textAlign:"center",marginBottom:24}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>PILIH SESUAI SKALA BISNIS</div><h2 style={{fontSize:38,margin:"10px 0"}}>Harga CT BOS yang transparan.</h2><p style={{color:"#8fa9a5"}}>Pilih periode berlangganan. Semua harga dalam Rupiah.</p></div>
+      <div role="group" aria-label="Periode pembayaran CT BOS" style={{display:"flex",justifyContent:"center",gap:8,marginBottom:28,flexWrap:"wrap"}}>
+        <button type="button" aria-pressed={billingCycle==="MONTHLY"} onClick={()=>setBillingCycle("MONTHLY")} style={{border:"1px solid rgba(103,217,195,.45)",background:billingCycle==="MONTHLY"?"#67d9c3":"rgba(255,255,255,.04)",color:billingCycle==="MONTHLY"?"#04100e":"#fff",borderRadius:999,padding:"10px 18px",fontWeight:800}}>Bulanan</button>
+        <button type="button" aria-pressed={billingCycle==="YEARLY"} onClick={()=>setBillingCycle("YEARLY")} style={{border:"1px solid rgba(103,217,195,.45)",background:billingCycle==="YEARLY"?"#67d9c3":"rgba(255,255,255,.04)",color:billingCycle==="YEARLY"?"#04100e":"#fff",borderRadius:999,padding:"10px 18px",fontWeight:800}}>Tahunan · Hemat 16,7%</button>
+      </div>
       <div className="plans-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
         {plans.map(p=><article key={p.name} style={{border:p.featured?"1px solid rgba(103,217,195,.55)":"1px solid rgba(255,255,255,.09)",borderRadius:20,padding:24,background:p.featured?"linear-gradient(160deg,rgba(20,69,61,.7),rgba(8,23,21,.95))":"rgba(255,255,255,.025)",position:"relative"}}>
           {p.featured&&<div style={{position:"absolute",right:18,top:18,fontSize:9,fontWeight:900,letterSpacing:1,color:"#06100f",background:"#67d9c3",padding:"6px 9px",borderRadius:999}}>REKOMENDASI</div>}
-          <div style={{fontSize:11,fontWeight:900,letterSpacing:1.4,color:"#67d9c3"}}>{p.name}</div><div style={{fontSize:34,fontWeight:900,marginTop:13}}>{p.price}<span style={{fontSize:12,color:"#78918d",fontWeight:500}}>{p.period}</span></div>
+          <div style={{fontSize:11,fontWeight:900,letterSpacing:1.4,color:"#67d9c3"}}>{p.name}</div>
+          <div style={{fontSize:32,fontWeight:900,marginTop:13}}>{money(billingCycle==="MONTHLY"?p.monthly:p.annual)}<span style={{fontSize:12,color:"#78918d",fontWeight:500}}>{billingCycle==="MONTHLY"?"/bulan":"/tahun"}</span></div>
+          {billingCycle==="YEARLY"&&<div style={{fontSize:11,color:"#67d9c3",marginTop:5}}>Setara {money(p.monthly*10/12)}/bulan · Hemat 2 bulan</div>}
           <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.6,minHeight:42}}>{p.desc}</p>
           <div style={{display:"grid",gap:9,margin:"18px 0 24px"}}>{p.items.map(it=><div key={it} style={{fontSize:12,color:"#b6cbc7"}}>✓ {it}</div>)}</div>
           <button onClick={()=>router.push("/login")} style={{width:"100%",border:p.featured?"0":"1px solid rgba(255,255,255,.14)",background:p.featured?"#67d9c3":"rgba(255,255,255,.04)",color:p.featured?"#04100e":"#fff",borderRadius:10,padding:"12px",fontWeight:900}}>Pilih {p.name} →</button>
         </article>)}
       </div>
-      <div style={{textAlign:"center",marginTop:20,color:"#657d79",fontSize:11}}>Implementasi tersedia terpisah sesuai kebutuhan bisnis.</div>
+      <div style={{textAlign:"center",marginTop:20,color:"#8fa9a5",fontSize:12,lineHeight:1.7}}>Biaya implementasi dan onboarding ditawarkan terpisah setelah asesmen kebutuhan bisnis. Langganan CT BOS tersedia bulanan atau tahunan.</div>
+      <article style={{margin:"34px auto 0",maxWidth:760,border:"1px solid rgba(103,217,195,.25)",borderRadius:18,padding:22,background:"rgba(103,217,195,.045)",textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#67d9c3",fontWeight:900,letterSpacing:1.4}}>PRODUK MANDIRI · NORTAGO ORDER</div>
+        <h3 style={{fontSize:23,margin:"8px 0"}}>Sistem Pemesanan Digital Terintegrasi</h3>
+        <div style={{fontSize:25,fontWeight:900}}>Rp50.000 <span style={{fontSize:12,color:"#8fa9a5",fontWeight:500}}>/ outlet / bulan</span></div>
+        <div style={{fontSize:14,color:"#b6cbc7",marginTop:6}}>Rp500.000 / outlet / tahun · Hemat Rp100.000 (16,7%)</div>
+        <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.6}}>Ditagihkan per outlet, terpisah dari paket CT BOS. Setiap outlet memiliki invoice dan masa aktif sendiri.</p>
+        <button onClick={()=>router.push("/otc/subscribe")} style={{border:"1px solid rgba(103,217,195,.45)",background:"transparent",color:"#fff",borderRadius:10,padding:"11px 18px",fontWeight:800}}>Lihat NORTAGO Order →</button>
+      </article>
     </section>
 
     <section style={{borderTop:"1px solid rgba(255,255,255,.07)",borderBottom:"1px solid rgba(255,255,255,.07)",background:"rgba(255,255,255,.018)"}}>
