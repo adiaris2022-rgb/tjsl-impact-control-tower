@@ -30,7 +30,7 @@ jobs:
   database-migrations:
     name: PostgreSQL migrations and BOS security smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16
@@ -45,5 +45,97 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      ${steps.join("
-      ")}
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Create minimal existing TJSL schema contracts
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 <<'SQL'
+          create extension if not exists pgcrypto;
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin;
+          create table public.businesses (id uuid primary key default gen_random_uuid());
+          create table public.tjsl_partners (id uuid primary key default gen_random_uuid());
+          create function public.has_business_role(p_business_id uuid, p_roles text[])
+          returns boolean language sql stable as $$ select false $$;
+          SQL
+      - name: Apply OTC commerce schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20260928_otc_commerce_core_v1.sql
+      - name: Apply subscription schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_engine_v1.sql
+      - name: Apply billing schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_billing_v1.sql
+      - name: Apply secure checkout schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_customer_checkout_secure_v1.sql
+      - name: Apply reservation schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_customer_reservation_v1.sql
+      - name: Apply reservation management schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_reservation_management_v1.sql
+      - name: Apply Order and BOS entitlement migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
+      - name: Reapply entitlement migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
+      - name: Billing security smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_billing_smoke.sql
+      - name: Subscription schema and RPC smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_schema_smoke.sql
+      - name: Apply BOS table management migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_table_management_v1.sql
+      - name: Reapply table migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_table_management_v1.sql
+      - name: BOS tables smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_bos_tables_smoke.sql
+      - name: Apply Walk-In and Queue migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_walkin_queue_v1.sql
+      - name: Reapply queue migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_walkin_queue_v1.sql
+      - name: Walk-In and Queue smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_bos_walkin_queue_smoke.sql
+      - name: Apply Dine-In sessions migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_dinein_sessions_v1.sql
+      - name: Reapply sessions migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_dinein_sessions_v1.sql
+      - name: Dine-In sessions smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_bos_dinein_sessions_smoke.sql
