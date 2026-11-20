@@ -61,7 +61,7 @@ begin
   v_yearly_b := public.nortago_prepare_subscription_invoice(v_business_b,v_outlet_b,'NORTAGO_OUTLET_YEARLY');
   if v_yearly_b->>'amount_idr' <> '500000'
     or v_yearly_b->>'outlet_id' <> v_outlet_b::text
-    or v_yearly_b->>'subscription_id' is distinct from v_monthly->>'subscription_id' then
+    or v_yearly_b->>'subscription_id' is not distinct from v_monthly->>'subscription_id' then
     raise exception 'Outlet B must receive a separate yearly subscription and invoice';
   end if;
 
