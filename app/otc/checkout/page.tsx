@@ -11,14 +11,37 @@ function CheckoutContent(){const q=useSearchParams();const rawMode=q.get("mode")
   if(!cart.length||!outletId)return;
   setSaving(true);setError("");
   try{
-   const supabase=await getSupabase();
    const scheduledAt=mode==="PRE_ORDER"&&date&&time?new Date(date+"T"+time+":00").toISOString():null;
-   const {data,error:rpcError}=await supabase.rpc("nortago_create_customer_order",{
+   const checkoutItems=cart.map(item=>({product_id:item.product.id,quantity:item.qty}));
+   const checkoutPayload=JSON.stringify({
+    outlet_id:outletId,
+    customer_name:name.trim(),
+    customer_whatsapp:wa.trim(),
+    fulfillment_type:mode,
+    items:checkoutItems,
+    payment_method:payment,
+    scheduled_at:scheduledAt,
+    delivery_address:mode==="DELIVERY"?address:null,
+    delivery_note:mode==="DELIVERY"?note:null
+   });
+   const payloadStorageKey="otc_checkout_idempotency_payload";
+   const keyStorageKey="otc_checkout_idempotency_key";
+   let idempotencyKey=sessionStorage.getItem(keyStorageKey);
+   if(!idempotencyKey||sessionStorage.getItem(payloadStorageKey)!==checkoutPayload){
+    const cryptoApi=globalThis.crypto;
+    if(!cryptoApi?.randomUUID)throw new Error("Browser tidak mendukung secure checkout idempotency key.");
+    idempotencyKey=cryptoApi.randomUUID();
+   }
+   sessionStorage.setItem(keyStorageKey,idempotencyKey);
+   sessionStorage.setItem(payloadStorageKey,checkoutPayload);
+   const supabase=await getSupabase();
+   const {data,error:rpcError}=await supabase.rpc("nortago_create_customer_order_idempotent",{
     p_outlet_id:outletId,
+    p_idempotency_key:idempotencyKey,
     p_customer_name:name,
     p_customer_whatsapp:wa,
     p_fulfillment_type:mode,
-    p_items:cart.map(item=>({product_id:item.product.id,quantity:item.qty})),
+    p_items:checkoutItems,
     p_payment_method:payment,
     p_scheduled_at:scheduledAt,
     p_delivery_address:mode==="DELIVERY"?address:null,
@@ -27,7 +50,7 @@ function CheckoutContent(){const q=useSearchParams();const rawMode=q.get("mode")
    if(rpcError)throw rpcError;
    if(!data?.order_no||!data?.receipt_token)throw new Error("Respons checkout tidak lengkap.");
    setOrderNo(data.order_no);setReceiptToken(data.receipt_token);setConfirmedTotal(Number(data.total));setOutletName(outletName||"Outlet");setDone(true);
-   sessionStorage.removeItem("otc_cart");sessionStorage.removeItem("otc_outlet_id");
+   sessionStorage.removeItem("otc_cart");sessionStorage.removeItem("otc_outlet_id");sessionStorage.removeItem("otc_checkout_idempotency_key");sessionStorage.removeItem("otc_checkout_idempotency_payload");
   }catch(e:any){setError(e.message||"Gagal membuat order.");}
   finally{setSaving(false);}
  }
