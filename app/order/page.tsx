@@ -99,6 +99,15 @@ export default function OrderLandingPage() {
           </div>
         </section>
       </div>
+      <section className="nl-section" id="jenis-order"><div className="nl-wrap">
+        <div className="nl-sectionhead"><span className="nl-eyebrow">PILIH SESUAI KEBUTUHAN</span><h2>PO, Takeaway, atau Delivery.<br/>Pelanggan pesan dari satu link.</h2><p>Harga produk ditentukan oleh bisnis Anda. Jenis pesanan tidak mengubah biaya langganan NORTAGO ORDER. Biaya pengiriman dapat berbeda mengikuti layanan delivery.</p></div>
+        <div className="nl-grid4">
+          <article className="nl-card"><span className="nl-cardnum">📅 PO / PRE-ORDER</span><h3>Pesan untuk waktu tertentu</h3><p>Pelanggan dapat menentukan tanggal dan waktu pesanan dibutuhkan—untuk diambil atau dijadwalkan diantar.</p></article>
+          <article className="nl-card"><span className="nl-cardnum">🛍️ TAKEAWAY</span><h3>Pesan dulu, ambil sendiri</h3><p>Pelanggan memilih menu dan membayar, lalu datang mengambil pesanan sesuai waktu yang disepakati.</p></article>
+          <article className="nl-card"><span className="nl-cardnum">🛵 DELIVERY</span><h3>Pesan, bayar, lalu diantar</h3><p>Pesanan dikirim ke alamat pelanggan. Pengantaran dapat menggunakan jasa kurir pihak ketiga.</p></article>
+          <article className="nl-card"><span className="nl-cardnum">🏢 MULTI-OUTLET</span><h3>Untuk bisnis berbagai skala</h3><p>Mulai UMKM, usaha menengah, perusahaan besar, hingga bisnis yang memiliki beberapa outlet.</p></article>
+        </div>
+      </div></section>
       <section className="nl-section tint" id="fitur"><div className="nl-wrap">
         <div className="nl-sectionhead"><span className="nl-eyebrow">SATU LINK UNTUK PROMOSI DAN TRANSAKSI</span><h2>Promosi Anda mengundang pelanggan.<br/>Link NORTAGO ORDER memudahkan transaksi.</h2><p>Tidak perlu mengarahkan pelanggan ke percakapan panjang untuk menanyakan menu, harga, atau mengulang pesanan. Menu dan alur order tersedia dalam satu link.</p></div>
         <div className="nl-grid4">{features.map(f=><article className="nl-card" key={f.number}><span className="nl-cardnum">{f.number}</span><h3>{f.title}</h3><p>{f.text}</p></article>)}</div>
