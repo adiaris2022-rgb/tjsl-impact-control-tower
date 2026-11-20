@@ -179,6 +179,13 @@ begin
   insert into public.businesses(id) values (v_business);
   insert into public.otc_outlets(id, business_id, name, is_active)
   values (v_outlet, v_business, 'CI Test Outlet', true);
+
+  -- Reservation smoke now requires an active BOS plan.
+  insert into public.outlet_subscriptions
+    (business_id, outlet_id, plan_id, status, current_period_start, current_period_end, next_due_at)
+  select v_business, v_outlet, p.id, 'ACTIVE', now(), now() + interval '1 month', now() + interval '1 month'
+  from public.subscription_plans p
+  where p.plan_code='NORTAGO_BOS_MONTHLY' and p.is_active=true;
   insert into public.otc_products(id, business_id, name, base_price, is_active)
   values (v_product, v_business, 'CI Test Product', 100, true);
   insert into public.otc_outlet_products(outlet_id, product_id, price, is_available)
