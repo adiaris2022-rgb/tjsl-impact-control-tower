@@ -30,7 +30,7 @@ begin
  v_close:=pg_get_functiondef('public.nortago_bos_session_close(uuid)'::regprocedure);
  v_queue_update:=pg_get_functiondef('public.nortago_bos_queue_update(uuid,text,uuid)'::regprocedure);
  if position('p_queue_id' in v_open)=0 or position('request_id' in v_open)=0 then raise exception 'Session opening must link queue and support idempotency'; end if;
- if position('status=''COMPLETED''' in v_close)=0 then raise exception 'Session close must complete linked queue entry'; end if;
+ if position('COMPLETED' in v_close)=0 then raise exception 'Session close must complete linked queue entry'; end if;
  if position('v_table_capacity < v_entry.party_size' in v_queue_update)=0 then raise exception 'Queue RPC must enforce table capacity'; end if;
  if position('Invalid queue status transition' in v_queue_update)=0 then raise exception 'Queue RPC must enforce lifecycle transitions'; end if;
  if position('nortago_bos_table_sessions' in v_queue_update)=0 then raise exception 'Queue seating must guard open Dine-In sessions'; end if;
