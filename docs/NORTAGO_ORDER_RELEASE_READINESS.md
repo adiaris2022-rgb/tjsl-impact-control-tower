@@ -11,16 +11,17 @@ Excluded from this release: Dine-In, Walk-In/POS, reservations, queues, tables/s
 All assertions below are from disposable PostgreSQL/Next.js CI, not a live Supabase or production system.
 
 - PR #1, #12–#17: latest heads were refreshed; their Order CI runs were completed successfully at the time of this audit.
-- PR #18 lifecycle foundation: a prior CI run (run 44754809702, commit 43eff1891943e6b8c50b33793e4de53dca59bd35) passed migration replay, lifecycle security smoke, and production build.
+- PR #18 lifecycle foundation: current code CI run [44756583185](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44756583185) passed on commit `ec5cb4aa382c4e6058e2e769b577263273582f6c` (production build + migration replay + smoke suite).
 - Lifecycle smoke now covers allowed Takeaway, Pre-Order, and Delivery transitions; wrong fulfillment transitions; role denial; outlet/business mismatch; audit actor/note; and payment state separation.
 - Checkout-to-receipt functional smoke in `nortago_subscription_schema_smoke.sql` covers server-priced checkout, malformed input rejection, receipt capability lookup, and item data in the receipt.
 - Per-outlet subscription functional smoke covers monthly/yearly invoice snapshots, same-invoice reuse, per-outlet isolation, staged plan switching, pending status, and no settlement/webhook.
-- Checkout tenant-isolation smoke was added to verify business A products cannot be ordered through business B's outlet (including a deliberately cross-linked outlet-product row), and rejected attempts create no orders. This new test is pending the latest CI run.
+- Checkout tenant-isolation smoke passed: business A products are rejected through business B's outlet even with a cross-linked outlet-product row, and rejected attempts create no order.
+- Per-outlet subscription functional smoke passed: monthly/yearly invoices are isolated, retries reuse the open invoice, plan switches remain staged, and no payment/webhook settlement occurs.
 
 ## Current blockers / gates
 
-- **Latest CI:** must pass on the current PR #18 head before this draft is considered review-ready.
-- **Preview/staging:** Vercel preview build quota has returned `build-rate-limit` on the lifecycle branch. A prior PR #20 preview status was Ready, but the preview page could not be independently opened during this audit. This is not staging UAT evidence.
+- **CI evidence:** current code head passed run 44756583185. A subsequent documentation-only commit requires a fresh CI run on its new head before review readiness.
+- **Preview/staging:** Vercel preview build quota has returned `build-rate-limit` on the lifecycle branch. PR #20's Vercel status was Ready for commit `e976e3a1ea1407d1a36041700d97d0101dd9d01a`, with preview link [nortago-order-staging-git-feature-nortago-order-79af95-nortago.vercel.app](https://nortago-order-staging-git-feature-nortago-order-79af95-nortago.vercel.app). The preview could not be independently opened during this audit, so this is not staging UAT evidence.
 - **Supabase staging:** no migration was applied during this run. The approved disposable CI database validates migration replay only.
 - **Real auth/tenant UAT:** verify owner/program-manager/partner/staff role boundaries with real Supabase identities and multiple businesses/outlets.
 - **Checkout UAT:** complete a real preview checkout, confirm order creation, and open the private receipt link. Test retries and wrong/expired receipt tokens.
