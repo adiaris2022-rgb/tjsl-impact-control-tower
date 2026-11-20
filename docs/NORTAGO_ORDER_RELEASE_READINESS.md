@@ -19,12 +19,27 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | #15 | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | Run #140 PASS |
 | #16 | `chore/nortago-order-scope-smoke-dedupe` | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | Run #141 PASS |
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
-| #18 | `feature/nortago-order-lifecycle-rpc` | `205315630ed66b0258e0537fcd6bf64333dbe269` | `feature/nortago-order-owner-inbox` | Run #168 PASS |
+| #18 | `feature/nortago-order-lifecycle-rpc` | `489693a5361f0216792c7a3bff6cb94f69292cfd` | `feature/nortago-order-owner-inbox` | Run #171 PASS |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
-- [CI Run #168](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44760995191) passed on PR #18 head `205315630ed66b0258e0537fcd6bf64333dbe269`: production build and PostgreSQL migrations/smoke tests.
+- [CI Run #171](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44761465231) passed on current PR #18 head `489693a5361f0216792c7a3bff6cb94f69292cfd`: production build, migrations/replay, lifecycle membership/tenant tests, and audit RLS test.
 - PR #16 and #17 current heads were rechecked: CI runs #141 and #143 respectively, both PASS.
 - Vercel preview for the latest PR #18 head reports **failure: build-rate-limit**. The preview page could not be independently inspected. CI PASS is not deployed-preview or staging UAT.
+
+### Preview status refreshed for PR #1/#12–#18
+
+| PR | Vercel status | Evidence |
+|---|---|---|
+| #1 | Success | Preview status returned by GitHub |
+| #12 | Failure | Build-rate-limit |
+| #13 | Success | Preview status returned by GitHub |
+| #14 | Failure | Build-rate-limit |
+| #15 | Failure | Build-rate-limit |
+| #16 | Success | Preview status returned by GitHub |
+| #17 | Success | Preview status returned by GitHub |
+| #18 | Failure | Build-rate-limit |
+
+A successful Vercel check is deployment evidence only; preview pages were not independently browser-verified.
 
 ## Order lifecycle implementation and security test evidence
 
@@ -35,7 +50,8 @@ The CI fixture was strengthened to model `business_users` membership rather than
 - membership in Business A → allowed for Business A;
 - Business A member → denied for Business B order;
 - authorized Business A order referencing Business B outlet → rejected by outlet/business consistency guard;
-- denied actions do not change status or create audit records.
+- denied actions do not change status or create audit records;
+- authenticated audit RLS test confirms Business A can read its event but cannot read Business B's event; direct audit INSERT is denied.
 
 **Limit:** CI uses a test `has_business_role` fixture, not the actual Supabase production function/identity. Repository migrations do not define the production `has_business_role` implementation. Real Supabase role/RLS verification remains mandatory. The current authorization model is business-level membership; it does not implement per-outlet staff membership/permission boundaries.
 
@@ -45,6 +61,7 @@ The CI fixture was strengthened to model `business_users` membership rather than
 - **Checkout idempotency:** retry returns the same order/receipt, conflicting payload re-use rejected, no duplicate order/items.
 - **Tenant isolation:** cross-business product rejected, cross-linked product/outlet rejected, failed checkout creates no order, invalid receipt token returns no data.
 - **Lifecycle RPC:** fulfillment-specific transitions, forbidden transitions, role denial, business membership boundary, outlet/business mismatch, audit actor/note, payment-state separation.
+- **Audit RLS:** authenticated Business A membership sees only Business A audit rows; Business B rows are filtered; direct authenticated INSERT privilege is absent.
 - **Per-outlet subscriptions:** monthly/yearly plan snapshot, invoice/payment reuse on retry, plan change staged as pending, separate outlet subscriptions, no settlement or webhook.
 - **Order scope:** Dine-In/Walk-In/reservation actions remain excluded/blocked in the Order release scope.
 
@@ -115,7 +132,7 @@ All automated assertions above ran against the disposable CI database and do **n
 
 ## Release checklist
 
-- [x] Latest PR #18 head CI run #168 green (build + disposable database).
+- [x] Latest PR #18 head CI run #171 green (build + disposable database + audit RLS).
 - [ ] PR review and scope confirmation.
 - [ ] Preview/staging access restored for current head.
 - [ ] Approved migration applied to disposable staging.
