@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Run Owner Inbox cursor pagination unit tests
+        run: node --test app/otc/owner/inbox-pagination.test.mjs
       - name: Production build
         run: npm run build
 
