@@ -47,6 +47,19 @@ begin
     (v_order_cross_tenant,v_business_b,v_outlet_b,'SMOKE-CROSS-TENANT','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING'),
     (v_order_mismatch,v_business_a,v_outlet_b,'SMOKE-MISMATCH','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING');
 
+  -- Missing auth.uid() must be rejected before membership or order mutation.
+  create or replace function auth.uid() returns uuid language sql stable as $unauth$ select null::uuid $unauth$;
+  begin
+    perform public.nortago_update_order_status(v_order_takeaway,'PROCESSING',null);
+    raise exception 'Expected auth-required denial but RPC unexpectedly succeeded';
+  exception when others then
+    v_error := sqlerrm;
+    if v_error not like '%NORTAGO_ORDER_AUTH_REQUIRED%' then
+      raise exception 'Expected NORTAGO_ORDER_AUTH_REQUIRED, got: %',v_error;
+    end if;
+  end;
+  create or replace function auth.uid() returns uuid language sql stable as $authenticated$ select '00000000-00000000-0000-000000000001'::uuid $authenticated$;
+
   -- Deny non-members before exercising successful actions.
   begin
     perform public.nortago_update_order_status(v_order_takeaway,'PROCESSING',null);
@@ -64,6 +77,34 @@ begin
   -- Create an owner membership only for Business A. CI auth.uid() is fixed to v_actor.
   insert into public.business_users(business_id,user_id,role)
   values (v_business_a,v_actor,'OWNER');
+
+  -- Invalid status values and oversized notes must be rejected without audit side effects.
+  begin
+    perform public.nortago_update_order_status(v_order_preorder,'NOT_A_STATUS',null);
+    raise exception 'Expected invalid status rejection';
+  exception when others then
+    v_error := sqlerrm;
+    if v_error not like '%NORTAGO_ORDER_STATUS_INVALID%' then
+      raise exception 'Expected NORTAGO_ORDER_STATUS_INVALID, got: %',v_error;
+    end if;
+  end;
+  if (select status from public.otc_orders where id=v_order_preorder) <> 'NEW'
+    or exists (select 1 from public.nortago_order_status_audit where order_id=v_order_preorder) then
+    raise exception 'Invalid status request must not mutate order or audit';
+  end if;
+  begin
+    perform public.nortago_update_order_status(v_order_delivery,'PROCESSING',repeat('x',501));
+    raise exception 'Expected oversized note rejection';
+  exception when others then
+    v_error := sqlerrm;
+    if v_error not like '%NORTAGO_ORDER_NOTE_TOO_LONG%' then
+      raise exception 'Expected NORTAGO_ORDER_NOTE_TOO_LONG, got: %',v_error;
+    end if;
+  end;
+  if (select status from public.otc_orders where id=v_order_delivery) <> 'NEW'
+    or exists (select 1 from public.nortago_order_status_audit where order_id=v_order_delivery) then
+    raise exception 'Oversized note must not mutate order or audit';
+  end if;
 
   -- Takeaway must follow pickup handoff states; delivery handoff is rejected.
   perform public.nortago_update_order_status(v_order_takeaway,'PROCESSING','  started  ');
