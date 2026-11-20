@@ -61,7 +61,7 @@ begin
   end if;
 
 
-  if to_regprocedure('public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)') is null then
+  if to_regprocedure('public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)') is null then
     raise exception 'Missing atomic server-priced customer checkout RPC';
   end if;
 
@@ -88,14 +88,19 @@ begin
 
   if not exists (
     select 1 from pg_proc
-    where oid = 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
+    where oid = 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
       and prosecdef = true
   ) then
     raise exception 'Customer checkout RPC must be SECURITY DEFINER';
   end if;
 
-  if not has_function_privilege('anon', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
-    raise exception 'Anonymous customer checkout RPC is not executable';
+  if not has_function_privilege('anon', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
+    raise exception 'Idempotent customer checkout RPC is not executable';
+  end if;
+  if has_function_privilege('anon', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
+    raise exception 'Legacy customer checkout RPC must be disabled';
   end if;
 
   if not has_function_privilege('anon', 'public.nortago_get_customer_receipt(uuid)', 'EXECUTE') then
@@ -126,7 +131,7 @@ begin
 
   if not exists (
     select 1 from pg_proc
-    where oid = 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
+    where oid = 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
       and coalesce(array_to_string(proconfig, ','), '') like '%search_path=pg_catalog, public, pg_temp%'
   ) then
     raise exception 'Customer checkout RPC search_path is not hardened';
@@ -177,8 +182,8 @@ begin
   insert into public.otc_outlet_products(outlet_id, product_id, price, is_available)
   values (v_outlet, v_product, 125, true);
 
-  v_checkout := public.nortago_create_customer_order(
-    v_outlet, 'CI Customer', '081234567890', 'TAKE_AWAY',
+  v_checkout := public.nortago_create_customer_order_idempotent(
+    v_outlet, gen_random_uuid(), 'CI Customer', '081234567890', 'TAKE_AWAY',
     jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 2)),
     'QRIS', null, null, null
   );
@@ -189,8 +194,8 @@ begin
 
   -- Reject malformed public checkout inputs before any order is created.
   begin
-    perform public.nortago_create_customer_order(
-      v_outlet, '  ', '081234567890', 'TAKE_AWAY',
+    perform public.nortago_create_customer_order_idempotent(
+      v_outlet, gen_random_uuid(), '  ', '081234567890', 'TAKE_AWAY',
       jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
       'QRIS', null, null, null
     );
@@ -200,8 +205,8 @@ begin
   end;
 
   begin
-    perform public.nortago_create_customer_order(
-      v_outlet, 'CI Customer', '081234567890', 'TAKE_AWAY',
+    perform public.nortago_create_customer_order_idempotent(
+      v_outlet, gen_random_uuid(), 'CI Customer', '081234567890', 'TAKE_AWAY',
       null, 'QRIS', null, null, null
     );
     raise exception 'Expected null items to be rejected';
@@ -210,8 +215,8 @@ begin
   end;
 
   begin
-    perform public.nortago_create_customer_order(
-      v_outlet, 'CI Customer', '081234567890', null,
+    perform public.nortago_create_customer_order_idempotent(
+      v_outlet, gen_random_uuid(), 'CI Customer', '081234567890', null,
       jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
       'QRIS', null, null, null
     );
@@ -221,8 +226,8 @@ begin
   end;
 
   begin
-    perform public.nortago_create_customer_order(
-      v_outlet, 'CI Customer', '081234567890', 'PRE_ORDER',
+    perform public.nortago_create_customer_order_idempotent(
+      v_outlet, gen_random_uuid(), 'CI Customer', '081234567890', 'PRE_ORDER',
       jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
       'QRIS', now() - interval '1 day', null, null
     );
