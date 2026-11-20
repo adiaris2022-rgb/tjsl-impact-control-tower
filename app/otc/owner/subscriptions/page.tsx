@@ -183,11 +183,16 @@ export default function OwnerSubscriptionsPage() {
         <section className="data-panel">
           <div className="section-toolbar"><div><span className="eyebrow">OFFICIAL PRICE LIST</span><h2>Harga per outlet</h2></div></div>
           <div className="metric-grid otc-metrics">
-            {plans.map((plan) => <article key={plan.id}>
-              <small>{plan.billing_interval === "MONTHLY" ? "Paket bulanan" : "Paket tahunan"}</small>
-              <strong>{money(plan.amount_idr)}</strong>
-              <small>per outlet / {plan.billing_interval === "MONTHLY" ? "bulan" : "tahun"}</small>
-            </article>)}
+            {plans.map((plan) => {
+              const isBos = plan.plan_code.startsWith("NORTAGO_BOS");
+              const isYearly = plan.billing_interval === "YEARLY";
+              return <article key={plan.id}>
+                <small>{isBos ? "NORTAGO BOS" : "NORTAGO Order"} · {isYearly ? "Tahunan" : "Bulanan"}</small>
+                <strong>{money(plan.amount_idr)}</strong>
+                <small>per outlet / {isYearly ? "tahun" : "bulan"}</small>
+                {isYearly ? <small>Hemat 2 bulan dibanding pembayaran bulanan</small> : null}
+              </article>;
+            })}
           </div>
           <p className="muted">Dashboard ini masih bersifat pemantauan. Perubahan paket, penerbitan invoice, dan pembayaran belum diaktifkan.</p>
         </section>
