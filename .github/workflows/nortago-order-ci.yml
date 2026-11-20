@@ -47,6 +47,10 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
+      - name: Checkout repository files for migration validation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify required migration and smoke files
         run: |
           test -f supabase/migrations/20260928_otc_commerce_core_v1.sql
