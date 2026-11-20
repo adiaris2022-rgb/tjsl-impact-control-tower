@@ -72,6 +72,6 @@ begin
   v_receipt_missing := public.nortago_get_customer_receipt(gen_random_uuid());
   if v_receipt_missing is not null then
     raise exception 'Unknown receipt token must not return customer data';
-  end;
+  end if;
 end $$;
 rollback;
