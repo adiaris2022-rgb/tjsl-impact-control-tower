@@ -147,3 +147,13 @@ All automated assertions above ran against the disposable CI database. Successfu
 ## Release decision
 
 **NOT READY for production** until preview/staging, real-tenant UAT, delivery, and payment gates are resolved. PR #18 remains draft. No merge, production deployment, Supabase staging/live migration, payment activation, secrets/environment change, or webhook enablement is performed without explicit approval.
+
+
+## Latest automation refresh — 21 Nov 2026
+
+- PR #18 current head: `1a70bbca1d929118fe4c023cc635ccdbfc14726c`; base remains `feature/nortago-order-owner-inbox` at `7516e1b22d5cd340b872db4bc516471a81ef74d4`. Draft, open, unmerged.
+- [CI Run #178](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44790097632) **PASS** on that head: production build and disposable PostgreSQL migrations/replay plus lifecycle, audit RLS, checkout/receipt, tenant isolation, subscription, and scope smoke tests.
+- New lifecycle edge-path smoke test covers scheduled → fulfillment check → issue → recovery, check → ready, terminal-state rejection, audit counts/note, and payment-state separation.
+- PR #1 and #12–#17 head/base refs and their latest CI runs were refreshed on this review; PR #16 Run #141 and #17 Run #143 remain PASS.
+- Vercel commit status for PR #18 head `1a70bbca1d929118fe4c023cc635ccdbfc14726c` is **success**, but the deployment/status target cannot be independently opened by the verification browser. Current-head browser UAT is still unverified.
+- No staging/live migration, merge, production deployment, payment activation, webhook activation, or environment/secrets changes.
