@@ -7,6 +7,7 @@ create table if not exists public.nortago_bos_table_sessions (
   outlet_id uuid not null references public.otc_outlets(id) on delete cascade,
   table_id uuid not null,
   queue_entry_id uuid,
+  request_id uuid,
   guest_name text,
   party_size integer not null check (party_size between 1 and 50),
   status text not null default 'OPEN' check (status in ('OPEN','CLOSED')),
@@ -18,10 +19,13 @@ create table if not exists public.nortago_bos_table_sessions (
   check ((status='OPEN' and closed_at is null) or (status='CLOSED' and closed_at is not null))
 );
 alter table public.nortago_bos_table_sessions add column if not exists queue_entry_id uuid;
+alter table public.nortago_bos_table_sessions add column if not exists request_id uuid;
 create unique index if not exists nortago_bos_table_sessions_one_open_per_table
   on public.nortago_bos_table_sessions(table_id) where status='OPEN';
 create unique index if not exists nortago_bos_table_sessions_one_queue_link
   on public.nortago_bos_table_sessions(queue_entry_id) where queue_entry_id is not null;
+create unique index if not exists nortago_bos_table_sessions_request_unique
+  on public.nortago_bos_table_sessions(outlet_id,request_id) where request_id is not null;
 create index if not exists nortago_bos_table_sessions_outlet_status_idx
   on public.nortago_bos_table_sessions(outlet_id,status,opened_at desc);
 -- Composite outlet keys prevent accidental cross-outlet table/queue references.
@@ -70,7 +74,8 @@ create or replace function public.nortago_bos_session_open(
   p_guest_name text default null,
   p_party_size integer default 1,
   p_note text default null,
-  p_queue_id uuid default null
+  p_queue_id uuid default null,
+  p_request_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -81,6 +86,7 @@ declare
   v_outlet public.otc_outlets%rowtype;
   v_table public.nortago_bos_tables%rowtype;
   v_queue public.nortago_bos_queue_entries%rowtype;
+  v_existing public.nortago_bos_table_sessions%rowtype;
   v_session public.nortago_bos_table_sessions%rowtype;
 begin
   if not public.nortago_outlet_has_bos(p_outlet_id) then raise exception 'FEATURE_REQUIRES_NORTAGO_BOS'; end if;
@@ -89,9 +95,17 @@ begin
   if not found then raise exception 'Outlet not found or not authorized'; end if;
   if p_party_size is null or p_party_size not between 1 and 50 then raise exception 'Jumlah tamu harus 1-50'; end if;
   if p_guest_name is not null and length(trim(p_guest_name)) not between 2 and 120 then raise exception 'Nama tamu harus 2-120 karakter'; end if;
+  if p_request_id is not null then
+    select * into v_existing from public.nortago_bos_table_sessions s where s.outlet_id=p_outlet_id and s.request_id=p_request_id;
+    if found then return to_jsonb(v_existing); end if;
+  end if;
   -- Lock table first, matching queue seating RPC order, to serialize occupancy changes.
   select * into v_table from public.nortago_bos_tables t where t.id=p_table_id and t.outlet_id=p_outlet_id and t.is_active=true for update;
   if not found then raise exception 'Meja tidak ditemukan atau tidak aktif'; end if;
+  if p_request_id is not null then
+    select * into v_existing from public.nortago_bos_table_sessions s where s.outlet_id=p_outlet_id and s.request_id=p_request_id;
+    if found then return to_jsonb(v_existing); end if;
+  end if;
   if v_table.capacity < p_party_size then raise exception 'Kapasitas meja tidak cukup untuk jumlah tamu'; end if;
   if exists(select 1 from public.nortago_bos_table_sessions s where s.table_id=p_table_id and s.status='OPEN') then raise exception 'Meja masih memiliki sesi aktif'; end if;
   if p_queue_id is not null then
@@ -106,12 +120,17 @@ begin
       raise exception 'Meja sedang digunakan oleh tamu antrean Walk-In';
     end if;
   end if;
-  insert into public.nortago_bos_table_sessions(business_id,outlet_id,table_id,queue_entry_id,guest_name,party_size,note)
-    values(v_outlet.business_id,p_outlet_id,p_table_id,p_queue_id,nullif(trim(coalesce(p_guest_name,'')),''),p_party_size,nullif(trim(coalesce(p_note,'')),'')) returning * into v_session;
+  insert into public.nortago_bos_table_sessions(business_id,outlet_id,table_id,queue_entry_id,request_id,guest_name,party_size,note)
+    values(v_outlet.business_id,p_outlet_id,p_table_id,p_queue_id,p_request_id,nullif(trim(coalesce(p_guest_name,'')),''),p_party_size,nullif(trim(coalesce(p_note,'')),''))
+    on conflict (outlet_id,request_id) where request_id is not null do nothing returning * into v_session;
+  if not found and p_request_id is not null then
+    select * into v_session from public.nortago_bos_table_sessions where outlet_id=p_outlet_id and request_id=p_request_id;
+  end if;
+  if not found then raise exception 'Dine-In session creation failed'; end if;
   return to_jsonb(v_session);
 end;
 $$;
-revoke all on function public.nortago_bos_session_open(uuid,uuid,text,integer,text,uuid) from public,anon;
+revoke all on function public.nortago_bos_session_open(uuid,uuid,text,integer,text,uuid,uuid) from public,anon;
 grant execute on function public.nortago_bos_session_open(uuid,uuid,text,integer,text,uuid) to authenticated;
 
 create or replace function public.nortago_bos_session_close(p_session_id uuid)
