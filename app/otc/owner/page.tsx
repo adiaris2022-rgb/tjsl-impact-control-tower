@@ -100,7 +100,7 @@ export default function Owner() {
         const start = new Date(); start.setHours(0, 0, 0, 0);
         const [{ data: orders, error: orderError }, { data: inbox, error: inboxError }, { data: outlets, error: outletError }] = await Promise.all([
           supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()),
-          supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).range(inboxOffset, inboxOffset + INBOX_PAGE_SIZE - 1),
+          supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).range(inboxOffset, inboxOffset + INBOX_PAGE_SIZE - 1),
           supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
         ]);
         if (orderError) throw orderError;
