@@ -21,7 +21,7 @@ All assertions below are from disposable PostgreSQL/Next.js CI, not a live Supab
 ## Current blockers / gates
 
 - **CI evidence:** current code head passed run 44756583185. A subsequent documentation-only commit requires a fresh CI run on its new head before review readiness.
-- **Preview/staging:** Vercel preview build quota has returned `build-rate-limit` on the lifecycle branch. PR #20's Vercel status was Ready for commit `e976e3a1ea1407d1a36041700d97d0101dd9d01a`, with preview link [nortago-order-staging-git-feature-nortago-order-79af95-nortago.vercel.app](https://nortago-order-staging-git-feature-nortago-order-79af95-nortago.vercel.app). The preview could not be independently opened during this audit, so this is not staging UAT evidence.
+- **Preview/staging:** Vercel status is **success/Ready** on current PR #18 head `a1b9a4578dd9b717ad22df0e0e6049015099edfd`; an earlier lifecycle commit hit `build-rate-limit`. The direct preview URL for the current head was not exposed by the status payload, and the preview page could not be independently opened. PR #20 also has a Ready preview [link](https://nortago-order-staging-git-feature-nortago-order-79af95-nortago.vercel.app), but that page was not independently inspected. Preview readiness is not staging UAT evidence.
 - **Supabase staging:** no migration was applied during this run. The approved disposable CI database validates migration replay only.
 - **Real auth/tenant UAT:** verify owner/program-manager/partner/staff role boundaries with real Supabase identities and multiple businesses/outlets.
 - **Checkout UAT:** complete a real preview checkout, confirm order creation, and open the private receipt link. Test retries and wrong/expired receipt tokens.
