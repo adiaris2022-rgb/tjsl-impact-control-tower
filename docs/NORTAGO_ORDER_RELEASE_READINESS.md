@@ -185,3 +185,13 @@ PR #18 Run #179 jobs (production build and PostgreSQL migration/replay + lifecyc
 - New commits: test `43aa931cc0ac40ea97f2a9f6903eedd9a75e70e4`; CI workflow `f859152210c6765b247693818098140b63b94326`.
 - CI for these new commits was pending at the time this section was appended; Run #179 does not include the new test.
 
+
+
+## Paid-order lifecycle CI result refresh — 21 Nov 2026
+
+- Latest branch head before this documentation refresh: `96ef58f399c17d966cb86010d8147cab4150af8b` (base remains Owner Inbox head `7516e1b22d5cd340b872db4bc516471a81ef74d4`).
+- [CI Run #181](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44801065841) **PASS** on the paid-order lifecycle test + workflow head. Both jobs completed successfully: production build and PostgreSQL migration/replay/smoke validation. The new `Run paid-order lifecycle smoke checks` step completed successfully.
+- New test `supabase/tests/nortago_order_lifecycle_paid_order_smoke.sql` verifies a seeded paid Takeaway order can complete fulfillment without changing `payment_status=PAID`, and confirms the ordered five-event audit trail and actor attribution. This uses disposable CI fixtures only; no payment provider is called.
+- Current Vercel status check for this branch head is **success**; the deployment page remains inaccessible to independent browser inspection. Current-head customer UAT remains unverified.
+- PR #12 exact head `31e517eed0c280ed25e57c144405bbd2fcb0178b` still has no PR workflow run returned by exact-commit lookup; its CI remains unverified (not promoted from historical Run #131). Vercel check is failure due to build-rate-limit.
+- Outlet-specific staff assignment remains a schema/authorization design blocker if the release requires per-outlet restriction. Current lifecycle authorization is business membership with a business/outlet consistency guard; do not claim outlet-level staff isolation.
