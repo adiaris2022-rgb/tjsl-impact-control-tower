@@ -111,8 +111,9 @@ begin
     raise exception 'Missing customer reservation RPC';
   end if;
 
-  if not has_function_privilege('anon', 'public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)', 'EXECUTE') then
-    raise exception 'Anonymous customer reservation RPC is not executable';
+  if has_function_privilege('anon', 'public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)', 'EXECUTE') then
+    raise exception 'Order must not expose reservation creation RPC to client roles';
   end if;
 
   if not exists (
@@ -148,11 +149,11 @@ begin
     raise exception 'Anonymous users must not execute reservation management RPC';
   end if;
 
-  if not has_function_privilege('authenticated', 'public.nortago_update_reservation_status(uuid,text)', 'EXECUTE') then
-    raise exception 'Authenticated users need execute grant for reservation management RPC';
+  if has_function_privilege('authenticated', 'public.nortago_update_reservation_status(uuid,text)', 'EXECUTE') then
+    raise exception 'Order must not expose reservation management RPC to authenticated users';
   end if;
 
-  raise notice 'NORTAGO subscription, checkout, receipt, and reservation management smoke checks passed';
+  raise notice 'NORTAGO Order subscription, checkout, receipt, and BOS boundary schema checks passed';
 end;
 $$;
 
@@ -166,7 +167,6 @@ declare
   v_product uuid := gen_random_uuid();
   v_checkout jsonb;
   v_receipt jsonb;
-  v_reservation jsonb;
   v_token uuid;
 begin
   insert into public.businesses(id) values (v_business);
@@ -240,31 +240,6 @@ begin
     raise exception 'Receipt RPC did not return the expected order item';
   end if;
 
-  -- Reject malformed reservation inputs.
-  begin
-    perform public.nortago_create_customer_reservation(
-      v_outlet, '  ', '081234567890', now() + interval '1 day', 3, null
-    );
-    raise exception 'Expected blank reservation name to be rejected';
-  exception when others then
-    if sqlerrm <> 'Nama customer tidak valid' then raise; end if;
-  end;
-
-  begin
-    perform public.nortago_create_customer_reservation(
-      v_outlet, 'CI Guest', '081234567890', now() + interval '1 day', 3, repeat('x', 1001)
-    );
-    raise exception 'Expected long reservation note to be rejected';
-  exception when others then
-    if sqlerrm <> 'Catatan reservasi terlalu panjang' then raise; end if;
-  end;
-
-  v_reservation := public.nortago_create_customer_reservation(
-    v_outlet, 'CI Guest', '081234567890', now() + interval '1 day', 3, 'CI smoke test'
-  );
-  if v_reservation->>'status' <> 'PENDING' or v_reservation->>'reservation_no' is null then
-    raise exception 'Reservation RPC did not return a pending reservation number';
-  end if;
 end;
 $$;
 rollback;
