@@ -55,6 +55,8 @@ jobs:
         run: |
           test -f supabase/migrations/20260928_otc_commerce_core_v1.sql
           test -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
+          test -f supabase/migrations/20261120_nortago_bos_table_management_v1.sql
+          test -f supabase/tests/nortago_bos_tables_smoke.sql
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -113,3 +115,15 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_schema_smoke.sql
+      - name: Apply BOS table management migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_table_management_v1.sql
+      - name: Reapply table migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_table_management_v1.sql
+      - name: BOS tables smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_bos_tables_smoke.sql
