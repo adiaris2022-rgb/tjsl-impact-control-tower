@@ -1,5 +1,6 @@
 -- NORTAGO Order: authenticated, tenant-scoped lifecycle updates with audit trail.
--- This migration is branch-only until reviewed and applied to disposable staging.
+-- Branch-only until reviewed and applied to disposable staging.
+-- Order lifecycle is separate from payment verification and never mutates payment_status.
 
 create table if not exists public.nortago_order_status_audit (
   id bigint generated always as identity primary key,
@@ -15,7 +16,12 @@ create table if not exists public.nortago_order_status_audit (
 
 create index if not exists nortago_order_status_audit_order_created_idx
   on public.nortago_order_status_audit(order_id, created_at desc);
+create index if not exists nortago_order_status_audit_business_outlet_created_idx
+  on public.nortago_order_status_audit(business_id, outlet_id, created_at desc);
+
 alter table public.nortago_order_status_audit enable row level security;
+revoke all on table public.nortago_order_status_audit from public, anon, authenticated;
+grant select on table public.nortago_order_status_audit to authenticated;
 
 drop policy if exists nortago_order_status_audit_manager_read on public.nortago_order_status_audit;
 create policy nortago_order_status_audit_manager_read on public.nortago_order_status_audit
@@ -35,6 +41,7 @@ as $$
 declare
   v_order public.otc_orders%rowtype;
   v_actor uuid;
+  v_outlet_business_id uuid;
   v_allowed boolean := false;
 begin
   v_actor := auth.uid();
@@ -62,6 +69,15 @@ begin
     raise exception 'NORTAGO_ORDER_FORBIDDEN';
   end if;
 
+  -- Explicitly guard the business/outlet relationship before writing status or audit data.
+  select o.business_id into v_outlet_business_id
+  from public.otc_outlets o
+  where o.id = v_order.outlet_id;
+  if not found then raise exception 'NORTAGO_ORDER_OUTLET_NOT_FOUND'; end if;
+  if v_outlet_business_id is distinct from v_order.business_id then
+    raise exception 'NORTAGO_ORDER_OUTLET_BUSINESS_MISMATCH';
+  end if;
+
   v_allowed := case v_order.status
     when 'NEW' then p_next_status in ('SCHEDULED','PROCESSING','FULFILLMENT_CHECK')
     when 'PAID' then p_next_status in ('SCHEDULED','PROCESSING','FULFILLMENT_CHECK')
@@ -69,14 +85,25 @@ begin
     when 'PROCESSING' then p_next_status in ('FULFILLMENT_CHECK','FULFILLMENT_ISSUE','READY')
     when 'FULFILLMENT_CHECK' then p_next_status in ('FULFILLMENT_ISSUE','READY')
     when 'FULFILLMENT_ISSUE' then p_next_status = 'PROCESSING'
-    when 'READY' then p_next_status in ('WAITING_PICKUP','HANDED_OVER_TO_DELIVERY','SUCCESS')
-    when 'WAITING_PICKUP' then p_next_status = 'PICKUP_VERIFIED'
-    when 'PICKUP_VERIFIED' then p_next_status = 'SUCCESS'
-    when 'HANDED_OVER_TO_DELIVERY' then p_next_status = 'SUCCESS'
-    when 'SUCCESS' then p_next_status = 'PO_SUCCESS'
+    when 'READY' then case v_order.fulfillment_type
+      when 'TAKE_AWAY' then p_next_status = 'WAITING_PICKUP'
+      when 'PRE_ORDER' then p_next_status = 'WAITING_PICKUP'
+      when 'DELIVERY' then p_next_status = 'HANDED_OVER_TO_DELIVERY'
+      else false
+    end
+    when 'WAITING_PICKUP' then
+      v_order.fulfillment_type in ('TAKE_AWAY','PRE_ORDER') and p_next_status = 'PICKUP_VERIFIED'
+    when 'PICKUP_VERIFIED' then
+      v_order.fulfillment_type in ('TAKE_AWAY','PRE_ORDER') and p_next_status = 'SUCCESS'
+    when 'HANDED_OVER_TO_DELIVERY' then
+      v_order.fulfillment_type = 'DELIVERY' and p_next_status = 'SUCCESS'
+    when 'SUCCESS' then
+      v_order.fulfillment_type = 'PRE_ORDER' and p_next_status = 'PO_SUCCESS'
     else false
   end;
-  if not v_allowed then raise exception 'NORTAGO_ORDER_TRANSITION_INVALID: % -> %', v_order.status, p_next_status; end if;
+  if not v_allowed then
+    raise exception 'NORTAGO_ORDER_TRANSITION_INVALID: % -> % for %', v_order.status, p_next_status, v_order.fulfillment_type;
+  end if;
 
   update public.otc_orders
   set status = p_next_status, updated_at = now()
