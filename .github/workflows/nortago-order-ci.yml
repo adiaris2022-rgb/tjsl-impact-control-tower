@@ -89,6 +89,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_reservation_management_v1.sql
+      - name: Apply NORTAGO Order-only scope lock
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_only_scope_lock_v1.sql
+      - name: Replay NORTAGO Order-only scope lock (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_only_scope_lock_v1.sql
       - name: Run subscription billing security smoke checks
         env:
           PGPASSWORD: postgres
@@ -97,3 +105,7 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_schema_smoke.sql
+      - name: Run Order-only scope smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_scope_smoke.sql
