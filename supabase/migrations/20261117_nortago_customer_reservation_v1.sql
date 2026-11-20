@@ -45,7 +45,7 @@ declare
   v_outlet public.otc_outlets%rowtype;
   v_reservation_no text;
 begin
-  if p_customer_name is null or length(trim(p_customer_name)) < 2 or length(p_customer_name) > 120 then
+  if p_customer_name is null or length(trim(p_customer_name)) < 2 or length(trim(p_customer_name)) > 120 then
     raise exception 'Nama customer tidak valid';
   end if;
   if p_customer_whatsapp is null or p_customer_whatsapp !~ '^[0-9+(). -]{8,24}$' then
@@ -56,6 +56,9 @@ begin
   end if;
   if p_party_size is null or p_party_size not between 1 and 30 then
     raise exception 'Jumlah tamu harus antara 1 sampai 30';
+  end if;
+  if p_note is not null and length(p_note) > 1000 then
+    raise exception 'Catatan reservasi terlalu panjang';
   end if;
 
   select * into v_outlet
