@@ -9,6 +9,9 @@ create table if not exists public.subscription_webhook_deliveries (
 );
 
 alter table public.subscription_webhook_deliveries enable row level security;
+-- Preserve the currently active plan while a new invoice is pending.
+alter table public.outlet_subscriptions add column if not exists pending_plan_id uuid references public.subscription_plans(id) on delete restrict;
+alter table public.subscription_invoices add column if not exists plan_id uuid references public.subscription_plans(id) on delete restrict;
 revoke all on public.subscription_webhook_deliveries from public, anon, authenticated;
 
 create or replace function public.nortago_prepare_subscription_invoice(
@@ -59,14 +62,14 @@ begin
     returning * into v_subscription;
   else
     update public.outlet_subscriptions
-      set plan_id = v_plan.id, updated_at = now()
+      set pending_plan_id = v_plan.id, updated_at = now()
       where id = v_subscription.id
       returning * into v_subscription;
   end if;
 
   select * into v_invoice from public.subscription_invoices
   where outlet_id=p_outlet_id and subscription_id=v_subscription.id
-    and amount_idr=v_plan.amount_idr and status='OPEN'
+    and plan_id=v_plan.id and amount_idr=v_plan.amount_idr and status='OPEN'
   order by created_at desc limit 1 for update;
   if found then
     select id into v_payment_id from public.subscription_payments
@@ -87,9 +90,9 @@ begin
   v_idempotency := v_invoice_no;
 
   insert into public.subscription_invoices
-    (business_id,outlet_id,subscription_id,invoice_no,amount_idr,currency,status,due_at)
+    (business_id,outlet_id,subscription_id,plan_id,invoice_no,amount_idr,currency,status,due_at)
   values
-    (p_business_id,p_outlet_id,v_subscription.id,v_invoice_no,v_plan.amount_idr,'IDR','OPEN',now()+interval '1 day')
+    (p_business_id,p_outlet_id,v_subscription.id,v_plan.id,v_invoice_no,v_plan.amount_idr,'IDR','OPEN',now()+interval '1 day')
   returning id into v_invoice_id;
 
   insert into public.subscription_payments
@@ -174,7 +177,7 @@ begin
     select * into v_subscription from public.outlet_subscriptions
     where id = v_invoice.subscription_id for update;
     select * into v_plan from public.subscription_plans
-    where id = v_subscription.plan_id;
+    where id = coalesce(v_invoice.plan_id, v_subscription.pending_plan_id, v_subscription.plan_id);
 
     v_period_start := case
       when v_subscription.current_period_end is not null
@@ -193,7 +196,7 @@ begin
           verified_at=v_now, provider_payload=coalesce(p_provider_payload,'{}'::jsonb)
       where id=v_payment.id;
     update public.outlet_subscriptions
-      set status='ACTIVE', current_period_start=v_period_start,
+      set status='ACTIVE', plan_id=v_plan.id, pending_plan_id=null, current_period_start=v_period_start,
           current_period_end=v_period_end, next_due_at=v_period_end,
           auto_renew=false, updated_at=v_now
       where id=v_subscription.id;
