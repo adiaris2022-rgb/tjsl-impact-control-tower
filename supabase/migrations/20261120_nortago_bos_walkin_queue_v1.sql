@@ -4,7 +4,7 @@
 create table if not exists public.nortago_bos_queue_counters (
   outlet_id uuid not null references public.otc_outlets(id) on delete cascade,
   queue_date date not null,
-  last_number integer not null check (last_number >= 0),
+  last_number integer not null check (last_number > 0),
   primary key (outlet_id, queue_date)
 );
 create table if not exists public.nortago_bos_queue_entries (
@@ -92,18 +92,17 @@ begin
   if p_guest_name is null or length(trim(p_guest_name)) not between 2 and 120 then raise exception 'Nama tamu harus 2-120 karakter'; end if;
   if p_party_size is null or p_party_size not between 1 and 50 then raise exception 'Jumlah tamu harus 1-50 orang'; end if;
 
-  -- Serialize request deduplication and number allocation per outlet/day.
-  insert into public.nortago_bos_queue_counters(outlet_id,queue_date,last_number)
-    values(p_outlet_id,v_day,0) on conflict(outlet_id,queue_date) do nothing;
-  select last_number into v_num from public.nortago_bos_queue_counters
-    where outlet_id=p_outlet_id and queue_date=v_day for update;
+  -- Idempotency key check before allocating a number. The counter upsert is atomic.
   if p_request_id is not null then
     select * into v_entry from public.nortago_bos_queue_entries
       where outlet_id=p_outlet_id and request_id=p_request_id;
     if found then return to_jsonb(v_entry); end if;
   end if;
-  update public.nortago_bos_queue_counters set last_number=last_number+1
-    where outlet_id=p_outlet_id and queue_date=v_day returning last_number into v_num;
+  insert into public.nortago_bos_queue_counters(outlet_id,queue_date,last_number)
+    values(p_outlet_id,v_day,1)
+    on conflict(outlet_id,queue_date) do update
+      set last_number=public.nortago_bos_queue_counters.last_number+1
+    returning last_number into v_num;
   v_queue_no := 'W-' || to_char(v_day,'YYYYMMDD') || '-' || lpad(v_num::text,4,'0');
   insert into public.nortago_bos_queue_entries(business_id,outlet_id,request_id,queue_no,guest_name,party_size,note)
   values(v_outlet.business_id,p_outlet_id,p_request_id,v_queue_no,trim(p_guest_name),p_party_size,nullif(trim(coalesce(p_note,'')),'')) 
