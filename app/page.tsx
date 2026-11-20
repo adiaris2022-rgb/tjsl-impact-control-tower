@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 const PUBLIC_APP_URL = "https://nortago-ct-bos-production.up.railway.app";
-function Logo(){return <svg viewBox="0 0 120 110" width="42" height="39" aria-label="NORTAGO" role="img"><defs><linearGradient id="logoA" x1="18" y1="96" x2="66" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#18b99e"/><stop offset="1" stopColor="#1689d8"/></linearGradient><linearGradient id="logoB" x1="60" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#1689d8"/><stop offset="1" stopColor="#315bd8"/></linearGradient></defs><path d="M24 91 L64 22" fill="none" stroke="url(#logoA)" strokeWidth="30" strokeLinecap="round"/><path d="M62 22 L103 91" fill="none" stroke="url(#logoB)" strokeWidth="30" strokeLinecap="round"/></svg>}
+function Logo(){const uid=useId().replace(/:/g,"");return <svg viewBox="0 0 120 110" width="42" height="39" aria-label="NORTAGO" role="img"><defs><linearGradient id={`logoA-${uid}`} x1="18" y1="96" x2="66" y2="18" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#18b99e"/><stop offset="1" stopColor="#1689d8"/></linearGradient><linearGradient id={`logoB-${uid}`} x1="60" y1="18" x2="105" y2="96" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#1689d8"/><stop offset="1" stopColor="#315bd8"/></linearGradient></defs><path d="M24 91 L64 22" fill="none" stroke={`url(#logoA-${uid})`} strokeWidth="30" strokeLinecap="round"/><path d="M62 22 L103 91" fill="none" stroke={`url(#logoB-${uid})`} strokeWidth="30" strokeLinecap="round"/></svg>}
 const modules=[["01","Sales","Order, transaksi, dan performa penjualan.","↗"],["02","Procurement","Persediaan, pembelian, dan purchase order.","▤"],["03","Finance","Arus keuangan, biaya, profit, dan pajak.","◫"],["04","HR & Operations","Tim, aktivitas, dan proses operasional.","◎"],["05","Control Tower","Kontrol, insight, risiko, dan keputusan owner.","⌘"]];
 export default function LandingPage(){
  const router=useRouter(); const[email,setEmail]=useState("");const[busy,setBusy]=useState(false);const[sent,setSent]=useState(false);const[error,setError]=useState("");const[quoteCycle,setQuoteCycle]=useState<"MONTHLY"|"YEARLY">("MONTHLY");
