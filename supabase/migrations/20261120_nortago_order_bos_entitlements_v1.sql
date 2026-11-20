@@ -27,7 +27,7 @@ language sql
 stable
 security definer
 set search_path = pg_catalog, public, pg_temp
-as $
+as $nortago_bos$
   select exists (
     select 1
     from public.outlet_subscriptions s
@@ -38,7 +38,7 @@ as $
       and p.is_active=true
       and p.entitlements->>'tier'='BOS'
   );
-$$;
+$nortago_bos$;
 revoke all on function public.nortago_outlet_has_bos(uuid) from public, anon, authenticated;
 
 -- Public reservation creation is retained as a BOS feature, but is now blocked
