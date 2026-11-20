@@ -26,8 +26,8 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = pg_catalog, public
-as $$
+set search_path = pg_catalog, public, pg_temp
+as $
   select exists (
     select 1
     from public.outlet_subscriptions s
@@ -104,13 +104,13 @@ create or replace function public.nortago_update_reservation_status(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
-as $$
+set search_path = pg_catalog, public, pg_temp
+as $
 declare
   v_reservation public.otc_reservations%rowtype;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
-  if p_status not in ('CONFIRMED','CANCELLED','CHECKED_IN','NO_SHOW','COMPLETED') then
+  if p_status is null or p_status not in ('CONFIRMED','CANCELLED','CHECKED_IN','NO_SHOW','COMPLETED') then
     raise exception 'Unsupported reservation status';
   end if;
   select * into v_reservation from public.otc_reservations where id=p_reservation_id for update;
