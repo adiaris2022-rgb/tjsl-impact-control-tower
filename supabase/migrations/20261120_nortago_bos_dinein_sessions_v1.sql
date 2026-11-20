@@ -131,7 +131,7 @@ begin
 end;
 $$;
 revoke all on function public.nortago_bos_session_open(uuid,uuid,text,integer,text,uuid,uuid) from public,anon;
-grant execute on function public.nortago_bos_session_open(uuid,uuid,text,integer,text,uuid) to authenticated;
+grant execute on function public.nortago_bos_session_open(uuid,uuid,text,integer,text,uuid,uuid) to authenticated;
 
 create or replace function public.nortago_bos_session_close(p_session_id uuid)
 returns jsonb
