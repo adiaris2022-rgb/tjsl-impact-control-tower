@@ -62,6 +62,7 @@ as $$
 declare
   v_outlet public.otc_outlets%rowtype;
   v_saved public.nortago_bos_tables%rowtype;
+  v_occupied boolean := false;
 begin
   if not public.nortago_outlet_has_bos(p_outlet_id) then
     raise exception 'FEATURE_REQUIRES_NORTAGO_BOS';
