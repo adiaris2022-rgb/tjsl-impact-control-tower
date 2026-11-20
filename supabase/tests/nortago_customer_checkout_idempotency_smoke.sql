@@ -13,6 +13,15 @@ declare
   v_order_count integer;
   v_item_count integer;
 begin
+  if not has_function_privilege('anon', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
+    raise exception 'Idempotent customer checkout must be callable by public checkout roles';
+  end if;
+  if has_function_privilege('anon', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
+    raise exception 'Legacy customer checkout RPC must be disabled for client roles';
+  end if;
+
   insert into public.businesses(id) values (v_business_id);
   insert into public.otc_outlets(id,business_id,name,is_active)
     values (v_outlet_id,v_business_id,'Idempotency Smoke Outlet',true);
