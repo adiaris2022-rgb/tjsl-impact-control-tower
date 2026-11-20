@@ -51,16 +51,19 @@ export default function Owner() {
       try {
         const supabase = await getSupabase();
         const start = new Date(); start.setHours(0, 0, 0, 0);
-        const [{ data: orders, error: orderError }, { data: outlets, error: outletError }] = await Promise.all([
+        const [{ data: orders, error: orderError }, { data: inbox, error: inboxError }, { data: outlets, error: outletError }] = await Promise.all([
+          supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()),
           supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).limit(100),
           supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
         ]);
         if (orderError) throw orderError;
+        if (inboxError) throw inboxError;
         if (outletError) throw outletError;
         if (!alive) return;
         const outletRows = (outlets || []) as Outlet[];
         const names = new Map(outletRows.map((outlet) => [outlet.id, outlet.name]));
         const orderRows = (orders || []) as Order[];
+        const inboxRows = (inbox || []) as Order[];
         const grouped = [...new Set(orderRows.map((order) => order.outlet_id))].map((id) => {
           const matching = orderRows.filter((order) => order.outlet_id === id);
           return { outlet: names.get(id) || id, transactions: matching.length,
@@ -70,7 +73,7 @@ export default function Owner() {
         }).sort((a, b) => b.nominal - a.nominal);
         setRows(grouped);
         setMetrics({ count: orderRows.length, total: orderRows.filter((order) => order.payment_status === "PAID").reduce((sum, order) => sum + Number(order.total || 0), 0), outlets: outletRows.length });
-        setInboxOrders(orderRows.map((order) => ({ ...order, outlet_name: names.get(order.outlet_id) || order.outlet_id })));
+        setInboxOrders(inboxRows.map((order) => ({ ...order, outlet_name: names.get(order.outlet_id) || order.outlet_id })));
       } catch (cause) {
         if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat Owner Dashboard.");
       } finally { if (alive) setLoading(false); }
