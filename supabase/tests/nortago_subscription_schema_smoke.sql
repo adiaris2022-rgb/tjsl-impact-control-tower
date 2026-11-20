@@ -30,6 +30,26 @@ begin
   if not exists (select 1 from public.subscription_plans where plan_code='NORTAGO_BOS_YEARLY' and amount_idr=1000000 and entitlements->>'tier'='BOS' and is_active=true) then
     raise exception 'Missing BOS yearly plan or BOS entitlement';
   end if;
+  if to_regprocedure('public.nortago_outlet_has_bos(uuid)') is null then
+    raise exception 'Missing centralized BOS entitlement helper';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc
+    where oid='public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)'::regprocedure
+      and pg_get_functiondef(oid) like '%RESERVATION_REQUIRES_NORTAGO_BOS%'
+  ) then
+    raise exception 'Customer reservation RPC is missing the BOS entitlement gate';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc
+    where oid='public.nortago_update_reservation_status(uuid,text)'::regprocedure
+      and pg_get_functiondef(oid) like '%RESERVATION_REQUIRES_NORTAGO_BOS%'
+  ) then
+    raise exception 'Reservation management RPC is missing the BOS entitlement gate';
+  end if;
+
 
   select relrowsecurity into v_rls
   from pg_class
@@ -180,7 +200,11 @@ begin
   insert into public.otc_outlets(id, business_id, name, is_active)
   values (v_outlet, v_business, 'CI Test Outlet', true);
 
-  -- Reservation smoke now requires an active BOS plan.
+  -- Verify no BOS access by default, then provision a test BOS subscription.
+  if public.nortago_outlet_has_bos(v_outlet) then
+    raise exception 'Outlet must not have BOS entitlement before subscription';
+  end if;
+
   insert into public.outlet_subscriptions
     (business_id, outlet_id, plan_id, status, current_period_start, current_period_end, next_due_at)
   select v_business, v_outlet, p.id, 'ACTIVE', now(), now() + interval '1 month', now() + interval '1 month'
