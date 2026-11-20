@@ -105,3 +105,8 @@ Automated disposable-CI test: `supabase/tests/nortago_order_lifecycle_edge_trans
 ## Exit criteria
 
 Commercial release review may proceed only after all critical checkout/receipt, tenant authorization, lifecycle, subscription, fulfillment, and current-head preview tests pass; delivery/payment limitations are explicitly resolved or excluded from the offered release; and the owner approves the release checklist. CI green alone is not staging UAT.
+
+
+## Paid-order fulfillment regression (CI fixture)
+
+The release-first CI now includes `supabase/tests/nortago_order_lifecycle_paid_order_smoke.sql`. It seeds a disposable order with `status=PAID` and `payment_status=PAID` (no provider call or real payment), then advances Takeaway fulfillment through PROCESSING → READY → WAITING_PICKUP → PICKUP_VERIFIED → SUCCESS. It asserts the payment state remains PAID, the five audit transitions are ordered and actor-attributed. This is automated CI coverage only; do not use a live payment to reproduce it in staging.
