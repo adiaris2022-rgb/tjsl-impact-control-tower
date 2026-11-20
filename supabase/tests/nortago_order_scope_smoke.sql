@@ -40,3 +40,53 @@ begin
   raise notice 'NORTAGO Order-only scope and client RPC privileges verified';
 end;
 $$;
+
+
+-- Database-level Order scope: Dine-In and Walk-In are blocked even for staff table writes.
+begin;
+do $$
+declare
+  v_business_id uuid := gen_random_uuid();
+  v_outlet_id uuid := gen_random_uuid();
+  v_dine_in_blocked boolean := false;
+  v_walk_in_blocked boolean := false;
+  v_allowed_order_id uuid;
+begin
+  if not exists (
+    select 1 from pg_trigger
+    where tgrelid = 'public.otc_orders'::regclass
+      and tgname = 'otc_orders_order_only_scope_guard'
+      and not tgisinternal
+  ) then
+    raise exception 'Order-only Dine-In/Walk-In guard trigger is missing';
+  end if;
+
+  insert into public.businesses(id) values (v_business_id);
+  insert into public.otc_outlets(id,business_id,name,is_active)
+    values (v_outlet_id,v_business_id,'Scope Smoke Outlet',true);
+
+  begin
+    insert into public.otc_orders(business_id,outlet_id,order_no,order_source,fulfillment_type)
+      values (v_business_id,v_outlet_id,'SCOPE-DINEIN-'||replace(v_business_id::text,'-',''),'CUSTOMER_SELF_ORDER','DINE_IN');
+  exception when others then
+    if sqlerrm = 'ORDER_ONLY_DINE_IN_DISABLED' then v_dine_in_blocked := true; else raise; end if;
+  end;
+
+  begin
+    insert into public.otc_orders(business_id,outlet_id,order_no,order_source,fulfillment_type)
+      values (v_business_id,v_outlet_id,'SCOPE-WALKIN-'||replace(v_business_id::text,'-',''),'STAFF_WALK_IN','TAKE_AWAY');
+  exception when others then
+    if sqlerrm = 'ORDER_ONLY_WALK_IN_DISABLED' then v_walk_in_blocked := true; else raise; end if;
+  end;
+
+  if not v_dine_in_blocked or not v_walk_in_blocked then
+    raise exception 'Order-only guard did not block Dine-In and Walk-In';
+  end if;
+
+  insert into public.otc_orders(business_id,outlet_id,order_no,order_source,fulfillment_type)
+    values (v_business_id,v_outlet_id,'SCOPE-TAKEAWAY-'||replace(v_business_id::text,'-',''),'CUSTOMER_SELF_ORDER','TAKE_AWAY')
+    returning id into v_allowed_order_id;
+  if v_allowed_order_id is null then raise exception 'Valid online Take Away order was not accepted'; end if;
+end;
+$$;
+rollback;
