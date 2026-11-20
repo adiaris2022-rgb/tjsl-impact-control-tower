@@ -10,19 +10,46 @@ declare
 begin
   select amount_idr into v_monthly
   from public.subscription_plans
-  where plan_code = 'NORTAGO_OUTLET_MONTHLY' and is_active = true;
+  where plan_code = 'NORTAGO_ORDER_MONTHLY' and is_active = true;
 
   select amount_idr into v_yearly
   from public.subscription_plans
-  where plan_code = 'NORTAGO_OUTLET_YEARLY' and is_active = true;
+  where plan_code = 'NORTAGO_ORDER_YEARLY' and is_active = true;
 
   if v_monthly is distinct from 50000 then
-    raise exception 'Expected monthly outlet plan price 50000 IDR; got %', v_monthly;
+    raise exception 'Expected NORTAGO Order monthly price 50000 IDR; got %', v_monthly;
   end if;
 
   if v_yearly is distinct from 500000 then
-    raise exception 'Expected yearly outlet plan price 500000 IDR; got %', v_yearly;
+    raise exception 'Expected NORTAGO Order yearly price 500000 IDR; got %', v_yearly;
   end if;
+
+  if not exists (select 1 from public.subscription_plans where plan_code='NORTAGO_BOS_MONTHLY' and amount_idr=100000 and entitlements->>'tier'='BOS' and is_active=true) then
+    raise exception 'Missing BOS monthly plan or BOS entitlement';
+  end if;
+  if not exists (select 1 from public.subscription_plans where plan_code='NORTAGO_BOS_YEARLY' and amount_idr=1000000 and entitlements->>'tier'='BOS' and is_active=true) then
+    raise exception 'Missing BOS yearly plan or BOS entitlement';
+  end if;
+  if to_regprocedure('public.nortago_outlet_has_bos(uuid)') is null then
+    raise exception 'Missing centralized BOS entitlement helper';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc
+    where oid='public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)'::regprocedure
+      and pg_get_functiondef(oid) like '%RESERVATION_REQUIRES_NORTAGO_BOS%'
+  ) then
+    raise exception 'Customer reservation RPC is missing the BOS entitlement gate';
+  end if;
+
+  if not exists (
+    select 1 from pg_proc
+    where oid='public.nortago_update_reservation_status(uuid,text)'::regprocedure
+      and pg_get_functiondef(oid) like '%RESERVATION_REQUIRES_NORTAGO_BOS%'
+  ) then
+    raise exception 'Reservation management RPC is missing the BOS entitlement gate';
+  end if;
+
 
   select relrowsecurity into v_rls
   from pg_class
@@ -172,6 +199,17 @@ begin
   insert into public.businesses(id) values (v_business);
   insert into public.otc_outlets(id, business_id, name, is_active)
   values (v_outlet, v_business, 'CI Test Outlet', true);
+
+  -- Verify no BOS access by default, then provision a test BOS subscription.
+  if public.nortago_outlet_has_bos(v_outlet) then
+    raise exception 'Outlet must not have BOS entitlement before subscription';
+  end if;
+
+  insert into public.outlet_subscriptions
+    (business_id, outlet_id, plan_id, status, current_period_start, current_period_end, next_due_at)
+  select v_business, v_outlet, p.id, 'ACTIVE', now(), now() + interval '1 month', now() + interval '1 month'
+  from public.subscription_plans p
+  where p.plan_code='NORTAGO_BOS_MONTHLY' and p.is_active=true;
   insert into public.otc_products(id, business_id, name, base_price, is_active)
   values (v_product, v_business, 'CI Test Product', 100, true);
   insert into public.otc_outlet_products(outlet_id, product_id, price, is_available)

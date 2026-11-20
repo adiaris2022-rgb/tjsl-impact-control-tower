@@ -2,13 +2,12 @@ name: NORTAGO Order CI
 
 on:
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: nortago-order-ci-${{ github.ref }}
+  group: nortago-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,9 +30,9 @@ jobs:
         run: npm run build
 
   database-migrations:
-    name: Validate PostgreSQL migrations and smoke tests
+    name: PostgreSQL migrations and BOS security smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16
@@ -46,8 +47,14 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - name: Checkout
+      - name: Checkout repository files for migration validation
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify required migration and smoke files
+        run: |
+          test -f supabase/migrations/20260928_otc_commerce_core_v1.sql
+          test -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -66,23 +73,23 @@ jobs:
           create function public.has_business_role(p_business_id uuid, p_roles text[])
           returns boolean language sql stable as $$ select false $$;
           SQL
-      - name: Apply existing OTC commerce schema
+      - name: Apply OTC commerce schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20260928_otc_commerce_core_v1.sql
-      - name: Apply NORTAGO subscription schema
+      - name: Apply subscription schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_engine_v1.sql
-      - name: Apply subscription billing schema
+      - name: Apply billing schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_billing_v1.sql
-      - name: Apply secure customer checkout schema
+      - name: Apply secure checkout schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_customer_checkout_secure_v1.sql
-      - name: Apply customer reservation schema
+      - name: Apply reservation schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_customer_reservation_v1.sql
@@ -90,11 +97,19 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_reservation_management_v1.sql
-      - name: Run subscription billing security smoke checks
+      - name: Apply Order and BOS entitlement migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
+      - name: Reapply entitlement migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
+      - name: Billing security smoke
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_billing_smoke.sql
-      - name: Run schema and transactional RPC smoke checks
+      - name: Subscription schema and RPC smoke
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_schema_smoke.sql

@@ -78,8 +78,8 @@ export default function Reservation() {
 
   return (
     <main className="otc-page">
-      <header className="otc-head"><div><b>NORTAGO Order</b><small>Dine-In Reservation</small></div><Link href="/otc/customer-order">← Menu</Link></header>
-      <section className="customer-title"><span>RESERVATION</span><h1>Reservasi meja</h1><p>Permintaan reservasi dicatat dan menunggu konfirmasi outlet.</p></section>
+      <header className="otc-head"><div><b>NORTAGO BOS</b><small>Reservation · Operational Feature</small></div><Link href="/otc/customer-order">← Menu</Link></header>
+      <section className="customer-title"><span>NORTAGO BOS</span><h1>Reservasi meja</h1><p>Fitur reservasi hanya tersedia untuk outlet dengan paket NORTAGO BOS aktif.</p></section>
       {reservationNo ? (
         <section className="success-card">
           <span className="eyebrow">RESERVATION REQUEST RECORDED</span>
@@ -102,7 +102,7 @@ export default function Reservation() {
           <button className="otc-primary full" disabled={saving || !outletId}>{saving ? "Menyimpan…" : "Kirim Permintaan Reservasi →"}</button>
         </form>
       )}
-      <footer>Supported by NORTAGO · NORTAGO Order</footer>
+      <footer>Supported by NORTAGO · BOS Reservation</footer>
     </main>
   );
 }

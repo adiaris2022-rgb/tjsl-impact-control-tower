@@ -41,6 +41,11 @@ export default function OwnerSubscriptionsPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [checkoutPlanCode, setCheckoutPlanCode] = useState("NORTAGO_ORDER_MONTHLY");
+  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutLinks, setCheckoutLinks] = useState<{outlet_id:string;invoice_no:string;amount_idr:number;payment_url:string;expires_at:string|null}[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -82,6 +87,10 @@ export default function OwnerSubscriptionsPage() {
         setPlans((planResult.data || []) as Plan[]);
         setSubscriptions((subscriptionResult.data || []) as Subscription[]);
         setOutlets((outletResult.data || []) as Outlet[]);
+        setSelectedOutletIds((outletResult.data || []).map((outlet: Outlet) => outlet.id));
+        setCheckoutLinks([]);
+        setCheckoutError("");
+        setSelectedOutletIds((outletResult.data || []).map((outlet: Outlet) => outlet.id));
       } catch (cause: unknown) {
         if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat data langganan.");
       } finally {
@@ -119,6 +128,31 @@ export default function OwnerSubscriptionsPage() {
     return () => { alive = false; };
   }, [businessId]);
 
+  async function startCheckout() {
+    setCheckoutBusy(true);
+    setCheckoutError("");
+    setCheckoutLinks([]);
+    try {
+      if (!businessId || selectedOutletIds.length === 0) throw new Error("Pilih minimal satu outlet.");
+      const supabase = await getSupabase();
+      const { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionResult.session?.access_token;
+      if (sessionError || !token) throw new Error("Sesi login tidak tersedia.");
+      const response = await fetch("/api/nortago/subscriptions/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ business_id: businessId, outlet_ids: selectedOutletIds, plan_code: checkoutPlanCode }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok && response.status !== 207) throw new Error(result.error || "Gagal menyiapkan pembayaran.");
+      setCheckoutLinks(result.payments || []);
+      if (result.failures?.length) setCheckoutError(result.failures.map((failure: {outlet_id:string;error:string}) => `${failure.outlet_id.slice(0,8)}: ${failure.error}`).join(" · "));
+      if (!result.payments?.length) throw new Error(result.error || "Tidak ada tautan pembayaran yang berhasil dibuat.");
+    } catch (cause) {
+      setCheckoutError(cause instanceof Error ? cause.message : "Checkout gagal.");
+    } finally { setCheckoutBusy(false); }
+  }
+
   const outletNames = useMemo(() => new Map(outlets.map((outlet) => [outlet.id, outlet.name])), [outlets]);
   const planById = useMemo(() => new Map(plans.map((plan) => [plan.id, plan])), [plans]);
 
@@ -151,7 +185,7 @@ export default function OwnerSubscriptionsPage() {
             <div><span className="eyebrow">SUBSCRIPTION OVERVIEW</span><h2>Status langganan per outlet</h2></div>
             {businessIds.length > 1 ? (
               <label className="business-switcher">Pilih bisnis
-                <select value={businessId} onChange={(event) => setBusinessId(event.target.value)}>
+                <select value={businessId} onChange={(event) => { setBusinessId(event.target.value); setSelectedOutletIds([]); setCheckoutLinks([]); setCheckoutError(""); }}>
                   {businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}
                 </select>
               </label>
@@ -168,7 +202,7 @@ export default function OwnerSubscriptionsPage() {
                     const plan = planById.get(subscription.plan_id);
                     return <tr key={subscription.id}>
                       <td>{outletNames.get(subscription.outlet_id) || "Outlet tidak ditemukan"}</td>
-                      <td>{plan ? `${plan.billing_interval === "MONTHLY" ? "Bulanan" : "Tahunan"} · ${money(plan.amount_idr)}` : "Paket tidak ditemukan"}</td>
+                      <td>{plan ? `${plan.plan_code.startsWith("NORTAGO_BOS") ? "BOS" : "Order"} · ${plan.billing_interval === "MONTHLY" ? "Bulanan" : "Tahunan"} · ${money(plan.amount_idr)}` : "Paket tidak ditemukan"}</td>
                       <td><span className="status-badge">{statusLabel[subscription.status] || subscription.status}</span></td>
                       <td>{date(subscription.current_period_end)}</td>
                       <td>{date(subscription.next_due_at)}</td>
@@ -181,13 +215,42 @@ export default function OwnerSubscriptionsPage() {
         </section>
 
         <section className="data-panel">
+          <div className="section-toolbar"><div><span className="eyebrow">NEW SUBSCRIPTION</span><h2>Mulai langganan</h2></div></div>
+          <div className="form-card">
+            <label>Paket
+              <select value={checkoutPlanCode} onChange={(event) => { setCheckoutPlanCode(event.target.value); setCheckoutLinks([]); }}>
+                <option value="NORTAGO_ORDER_MONTHLY">NORTAGO Order · Rp50.000/bulan</option>
+                <option value="NORTAGO_ORDER_YEARLY">NORTAGO Order · Rp500.000/tahun</option>
+                <option value="NORTAGO_BOS_MONTHLY">NORTAGO BOS · Rp100.000/bulan</option>
+                <option value="NORTAGO_BOS_YEARLY">NORTAGO BOS · Rp1.000.000/tahun</option>
+              </select>
+            </label>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:12}}>
+              {outlets.map((outlet) => <label key={outlet.id} style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input type="checkbox" checked={selectedOutletIds.includes(outlet.id)} onChange={(event) => setSelectedOutletIds((current) => event.target.checked ? [...new Set([...current,outlet.id])] : current.filter((id) => id!==outlet.id))}/>
+                {outlet.name}
+              </label>)}
+            </div>
+            <button className="otc-primary" type="button" disabled={checkoutBusy || !outlets.length || !selectedOutletIds.length} onClick={startCheckout}>{checkoutBusy ? "Menyiapkan invoice…" : "Buat Invoice & Tautan Pembayaran"}</button>
+            {checkoutError ? <div className="info-box">{checkoutError}</div> : null}
+            {checkoutLinks.length ? <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Invoice</th><th>Nominal</th><th>Bayar</th></tr></thead><tbody>{checkoutLinks.map((item) => <tr key={item.invoice_no}><td>{outletNames.get(item.outlet_id)||item.outlet_id}</td><td>{item.invoice_no}</td><td>{money(item.amount_idr)}</td><td><a href={item.payment_url} target="_blank" rel="noreferrer">Buka pembayaran</a></td></tr>)}</tbody></table></div> : null}
+            <p className="muted">Invoice dan tautan pembayaran dibuat hanya jika konfigurasi pembayaran server sudah aktif. Proses ini tidak mengaktifkan paket sebelum pembayaran diverifikasi.</p>
+          </div>
+        </section>
+
+        <section className="data-panel">
           <div className="section-toolbar"><div><span className="eyebrow">OFFICIAL PRICE LIST</span><h2>Harga per outlet</h2></div></div>
           <div className="metric-grid otc-metrics">
-            {plans.map((plan) => <article key={plan.id}>
-              <small>{plan.billing_interval === "MONTHLY" ? "Paket bulanan" : "Paket tahunan"}</small>
-              <strong>{money(plan.amount_idr)}</strong>
-              <small>per outlet / {plan.billing_interval === "MONTHLY" ? "bulan" : "tahun"}</small>
-            </article>)}
+            {plans.map((plan) => {
+              const isBos = plan.plan_code.startsWith("NORTAGO_BOS");
+              const isYearly = plan.billing_interval === "YEARLY";
+              return <article key={plan.id}>
+                <small>{isBos ? "NORTAGO BOS" : "NORTAGO Order"} · {isYearly ? "Tahunan" : "Bulanan"}</small>
+                <strong>{money(plan.amount_idr)}</strong>
+                <small>per outlet / {isYearly ? "tahun" : "bulan"}</small>
+                {isYearly ? <small>Hemat 2 bulan dibanding pembayaran bulanan</small> : null}
+              </article>;
+            })}
           </div>
           <p className="muted">Dashboard ini masih bersifat pemantauan. Perubahan paket, penerbitan invoice, dan pembayaran belum diaktifkan.</p>
         </section>
