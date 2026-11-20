@@ -1,6 +1,6 @@
 -- Disposable fixture test for customer checkout idempotency.
 begin;
-do $$
+do $checkout$
 declare
   v_business_id uuid := gen_random_uuid();
   v_business_b uuid := gen_random_uuid();
@@ -122,5 +122,5 @@ begin
     raise exception 'Unknown receipt token must not return customer data';
   end;
 end;
-$;
+$checkout$;
 rollback;
