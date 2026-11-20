@@ -168,6 +168,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_lifecycle_audit_rls_smoke.sql
+      - name: Run order lifecycle audit append-only privilege smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_audit_append_only_privileges_smoke.sql
       - name: Run order lifecycle edge-transition smoke checks
         env:
           PGPASSWORD: postgres
