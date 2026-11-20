@@ -32,25 +32,28 @@ declare
   v_subtotal numeric(14,2);
   v_count integer;
 begin
-  if p_customer_name is null or length(trim(p_customer_name)) < 2 or length(p_customer_name) > 120 then
+  if p_customer_name is null or length(trim(p_customer_name)) < 2 or length(trim(p_customer_name)) > 120 then
     raise exception 'Nama customer tidak valid';
   end if;
   if p_customer_whatsapp is null or p_customer_whatsapp !~ '^[0-9+(). -]{8,24}$' then
     raise exception 'Nomor WhatsApp tidak valid';
   end if;
-  if p_fulfillment_type not in ('TAKE_AWAY','PRE_ORDER','DELIVERY') then
+  if p_fulfillment_type is null or p_fulfillment_type not in ('TAKE_AWAY','PRE_ORDER','DELIVERY') then
     raise exception 'Jenis fulfillment tidak didukung';
   end if;
-  if p_payment_method not in ('QRIS','Cash','Other') then
+  if p_payment_method is null or p_payment_method not in ('QRIS','Cash','Other') then
     raise exception 'Metode pembayaran tidak valid';
   end if;
-  if p_fulfillment_type = 'PRE_ORDER' and p_scheduled_at is null then
-    raise exception 'Jadwal pre-order wajib diisi';
+  if p_fulfillment_type = 'PRE_ORDER' and (p_scheduled_at is null or p_scheduled_at <= now()) then
+    raise exception 'Jadwal pre-order harus di masa mendatang';
   end if;
-  if p_fulfillment_type = 'DELIVERY' and (p_delivery_address is null or length(trim(p_delivery_address)) < 5) then
-    raise exception 'Alamat delivery wajib diisi';
+  if p_fulfillment_type = 'DELIVERY' and (p_delivery_address is null or length(trim(p_delivery_address)) < 5 or length(trim(p_delivery_address)) > 500) then
+    raise exception 'Alamat delivery tidak valid';
   end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 50 then
+  if p_delivery_note is not null and length(p_delivery_note) > 500 then
+    raise exception 'Catatan delivery terlalu panjang';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 50 then
     raise exception 'Daftar item tidak valid';
   end if;
 
