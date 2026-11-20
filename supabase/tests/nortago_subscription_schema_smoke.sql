@@ -10,18 +10,25 @@ declare
 begin
   select amount_idr into v_monthly
   from public.subscription_plans
-  where plan_code = 'NORTAGO_OUTLET_MONTHLY' and is_active = true;
+  where plan_code = 'NORTAGO_ORDER_MONTHLY' and is_active = true;
 
   select amount_idr into v_yearly
   from public.subscription_plans
-  where plan_code = 'NORTAGO_OUTLET_YEARLY' and is_active = true;
+  where plan_code = 'NORTAGO_ORDER_YEARLY' and is_active = true;
 
   if v_monthly is distinct from 50000 then
-    raise exception 'Expected monthly outlet plan price 50000 IDR; got %', v_monthly;
+    raise exception 'Expected NORTAGO Order monthly price 50000 IDR; got %', v_monthly;
   end if;
 
   if v_yearly is distinct from 500000 then
-    raise exception 'Expected yearly outlet plan price 500000 IDR; got %', v_yearly;
+    raise exception 'Expected NORTAGO Order yearly price 500000 IDR; got %', v_yearly;
+  end if;
+
+  if not exists (select 1 from public.subscription_plans where plan_code='NORTAGO_BOS_MONTHLY' and amount_idr=100000 and entitlements->>'tier'='BOS' and is_active=true) then
+    raise exception 'Missing BOS monthly plan or BOS entitlement';
+  end if;
+  if not exists (select 1 from public.subscription_plans where plan_code='NORTAGO_BOS_YEARLY' and amount_idr=1000000 and entitlements->>'tier'='BOS' and is_active=true) then
+    raise exception 'Missing BOS yearly plan or BOS entitlement';
   end if;
 
   select relrowsecurity into v_rls
