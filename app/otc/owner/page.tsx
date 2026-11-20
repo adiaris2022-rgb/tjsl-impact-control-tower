@@ -14,7 +14,6 @@ async function getSupabase() {
   return createClient(config.url, config.key);
 }
 const money = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
-const INBOX_PAGE_SIZE = 100;
 type LifecycleAction = { label: string; nextStatus: string };
 type AuditEvent = { id: number; from_status: string; to_status: string; note: string | null; created_at: string; actor_user_id: string };
 function lifecycleActions(order: Order): LifecycleAction[] {
