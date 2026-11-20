@@ -201,7 +201,8 @@ begin
           verified_at=v_now, provider_payload=coalesce(p_provider_payload,'{}'::jsonb)
       where id=v_payment.id;
     update public.outlet_subscriptions
-      set status='ACTIVE', plan_id=v_plan.id, pending_plan_id=null,
+      set status='ACTIVE', plan_id=v_plan.id,
+          pending_plan_id=case when pending_plan_id=v_invoice.plan_id then null else pending_plan_id end,
           current_period_start=v_period_start,
           current_period_end=v_period_end, next_due_at=v_period_end,
           auto_renew=false, updated_at=v_now
