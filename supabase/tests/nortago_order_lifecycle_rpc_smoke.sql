@@ -61,7 +61,7 @@ begin
 
   -- CI-only role stub is switched to allow testing server-side transitions.
   create or replace function public.has_business_role(p_business_id uuid, p_roles text[])
-  returns boolean language sql stable as $$ select true $$;
+  returns boolean language sql stable as $stub$ select true $stub$;
 
   -- Takeaway must follow pickup handoff states; delivery handoff is rejected.
   perform public.nortago_update_order_status(v_order_takeaway,'PROCESSING','  started  ');
