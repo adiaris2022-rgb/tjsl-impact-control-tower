@@ -121,6 +121,6 @@ begin
   if v_receipt_missing is not null then
     raise exception 'Unknown receipt token must not return customer data';
   end;
-end;
+end
 $checkout$;
 rollback;
