@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -45,6 +47,14 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
+      - name: Verify required migration and smoke files
+        run: |
+          test -f supabase/migrations/20260928_otc_commerce_core_v1.sql
+          test -f supabase/migrations/20261120_nortago_order_bos_entitlements_v1.sql
+          test -f supabase/migrations/20261120_nortago_bos_table_management_v1.sql
+          test -f supabase/tests/nortago_bos_tables_smoke.sql
+          test -f supabase/migrations/20261120_nortago_bos_walkin_queue_v1.sql
+          test -f supabase/tests/nortago_bos_walkin_queue_smoke.sql
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
