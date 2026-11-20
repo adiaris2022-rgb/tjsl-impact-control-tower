@@ -198,7 +198,7 @@ export default function Owner() {
         {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pembayaran terverifikasi</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="data-panel">
-        <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} pesanan</span></div>
+        <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} cocok · {inboxOrders.length} dimuat</span></div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0"}}>
           <input aria-label="Cari pesanan" placeholder="Cari nomor order, customer, WhatsApp, outlet…" value={inboxSearch} onChange={(e)=>setInboxSearch(e.target.value)} style={{flex:"1 1 240px",padding:12,borderRadius:10,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}} />
           <select aria-label="Filter pesanan" value={inboxFilter} onChange={(e)=>setInboxFilter(e.target.value)} style={{padding:12,borderRadius:10,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}}>
