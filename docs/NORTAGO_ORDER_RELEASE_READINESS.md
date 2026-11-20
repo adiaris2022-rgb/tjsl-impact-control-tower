@@ -10,7 +10,7 @@ Excluded from this release: Dine-In, Walk-In/POS, reservations, queues, tables/s
 
 All PRs listed remain **open, draft, and unmerged**. Head/base references were refreshed during the release-first review.
 
-| PR | Head branch | Head SHA | Base branch | Latest verified CI |
+| PR | Head branch | Head SHA / latest CI-tested code ref | Base branch | Latest verified CI |
 |---|---|---|---|
 | #1 | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` | Run #69 PASS |
 | #12 | `release/nortago-order-only-20261120` | `31e517eed0c280ed25e57c144405bbd2fcb0178b` | `feature/nortago-order-audit-fix` | Run #131 PASS |
@@ -19,12 +19,12 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | #15 | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | Run #140 PASS |
 | #16 | `chore/nortago-order-scope-smoke-dedupe` | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | Run #141 PASS |
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
-| #18 | `feature/nortago-order-lifecycle-rpc` | `8e084c579d40c023ea13aace0d028d55da628c89` | `feature/nortago-order-owner-inbox` | Run #174 PASS |
+| #18 | `feature/nortago-order-lifecycle-rpc` | CI-tested code `8e084c579d40c023ea13aace0d028d55da628c89` (docs follow-up) | `feature/nortago-order-owner-inbox` | Run #174 PASS |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
 - [CI Run #174](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44770912476) passed on PR #18 head `8e084c579d40c023ea13aace0d028d55da628c89`: production build, migrations/replay, lifecycle security tests, checkout-to-receipt assertions, tenant isolation, and per-outlet subscription checks.
 - PR #16 and #17 current heads were rechecked: CI runs #141 and #143 respectively, both PASS.
-- Vercel check for PR #18 latest head `8e084c579d40c023ea13aace0d028d55da628c89` is **success**. The bot comment's Preview alias has a commit prefix `97f4da`, which does not match the current head; the URL could not be independently inspected. CI PASS is not browser UAT or live Supabase staging verification.
+- Vercel check for code-tested commit `8e084c579d40c023ea13aace0d028d55da628c89` is **success**. A documentation-only follow-up advances the branch head; the bot's Preview alias has prefix `97f4da`, which matches neither the code-tested commit nor the current documentation head. The URL could not be independently inspected. CI PASS is not browser UAT or live Supabase staging verification.
 
 ### Preview status refreshed for PR #1/#12–#18
 
@@ -132,7 +132,7 @@ All automated assertions above ran against the disposable CI database. Successfu
 
 ## Release checklist
 
-- [x] Latest PR #18 head CI run #174 green (build + disposable database + checkout-to-receipt + lifecycle security + audit RLS).
+- [x] CI Run #174 green on the code-tested commit `8e084c579d40c023ea13aace0d028d55da628c89` (build + disposable database + checkout-to-receipt + lifecycle security + audit RLS).
 - [ ] PR review and scope confirmation.
 - [ ] Preview/staging access restored for current head.
 - [ ] Approved migration applied to disposable staging.
