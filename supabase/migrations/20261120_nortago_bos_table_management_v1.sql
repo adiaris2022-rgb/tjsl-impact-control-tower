@@ -16,6 +16,8 @@ create table if not exists public.nortago_bos_tables (
 );
 create index if not exists nortago_bos_tables_outlet_idx
   on public.nortago_bos_tables(outlet_id, is_active, table_code);
+create unique index if not exists nortago_bos_tables_id_outlet_unique
+  on public.nortago_bos_tables(id, outlet_id);
 
 alter table public.nortago_bos_tables enable row level security;
 -- No direct client policies: read and writes are via authorization-checked RPCs.
@@ -24,7 +26,7 @@ create or replace function public.nortago_bos_table_list(p_outlet_id uuid)
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 begin
   if not public.nortago_outlet_has_bos(p_outlet_id) then
@@ -55,7 +57,7 @@ create or replace function public.nortago_bos_table_save(
 returns jsonb
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_outlet public.otc_outlets%rowtype;
