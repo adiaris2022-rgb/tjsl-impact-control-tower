@@ -157,3 +157,31 @@ All automated assertions above ran against the disposable CI database. Successfu
 - PR #1 and #12–#17 head/base refs and their latest CI runs were refreshed on this review; PR #16 Run #141 and #17 Run #143 remain PASS.
 - Vercel commit status for PR #18 head `1a70bbca1d929118fe4c023cc635ccdbfc14726c` is **success**, but the deployment/status target cannot be independently opened by the verification browser. Current-head browser UAT is still unverified.
 - No staging/live migration, merge, production deployment, payment activation, webhook activation, or environment/secrets changes.
+
+
+## Exact GitHub refresh — 21 Nov 2026 (automation run)
+
+Metadata was refreshed from GitHub for PRs #1, #12–#18. All remain open, draft, and unmerged.
+
+| PR | Head SHA | Base branch | Base SHA | CI on exact head | Vercel |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` | `545f4953368d0e85d7573c609bf4abf96b041c80` | Run #69 PASS | success |
+| #12 | `31e517eed0c280ed25e57c144405bbd2fcb0178b` | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | **No PR workflow run returned for exact head; CI unverified** | failure (Vercel build-rate-limit) |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` | `31e517eed0c280ed25e57c144405bbd2fcb0178b` | Run #136 PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | Run #138 PASS | failure (Vercel build-rate-limit) |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | `f3a86754461b06b10250b073a38fae906bfd2777` | Run #140 PASS | failure (Vercel build-rate-limit) |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | Run #141 PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | Run #143 PASS | success |
+| #18 | `21fbf56d7a8aba4f1b01beb93642ea945ea7cd75` (refresh baseline) | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | Run #179 PASS | success |
+
+Exact CI runs confirmed by commit lookup: #1 (ID 44665343539), #13 (44721352568), #14 (44725160805), #15 (44725624942), #16 (44740771154), #17 (44741038747), and #18 #179 (44790249044). PR #12's earlier run #131 was not returned for the exact head in this refresh and is therefore not treated as current verified CI.
+
+PR #18 Run #179 jobs (production build and PostgreSQL migration/replay + lifecycle/audit, checkout, tenant-isolation, subscription, and scope smoke steps) completed successfully. Its Vercel check was success, but the deployment target is not independently accessible through the verification browser; browser UAT is still unverified.
+
+### New safe CI coverage added after Run #179
+
+- Added `supabase/tests/nortago_order_lifecycle_paid_order_smoke.sql`: starts from an order with `status=PAID` and `payment_status=PAID`, advances through Takeaway fulfillment, and asserts final `SUCCESS`, unchanged `PAID` payment status, ordered audit transitions, and actor attribution.
+- Added a workflow step to run this test after the lifecycle edge-transition smoke.
+- New commits: test `43aa931cc0ac40ea97f2a9f6903eedd9a75e70e4`; CI workflow `f859152210c6765b247693818098140b63b94326`.
+- CI for these new commits was pending at the time this section was appended; Run #179 does not include the new test.
+
