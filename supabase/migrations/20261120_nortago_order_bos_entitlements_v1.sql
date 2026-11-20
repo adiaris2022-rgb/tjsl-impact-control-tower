@@ -34,6 +34,8 @@ as $$
     join public.subscription_plans p on p.id=s.plan_id
     where s.outlet_id=p_outlet_id
       and s.status='ACTIVE'
+      and s.current_period_start is not null
+      and s.current_period_start <= now()
       and s.current_period_end > now()
       and p.is_active=true
       and p.entitlements->>'tier'='BOS'
