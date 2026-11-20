@@ -85,6 +85,20 @@ begin
     values(v_outlet.business_id,p_outlet_id,upper(trim(p_table_code)),trim(p_table_name),p_capacity,nullif(trim(coalesce(p_zone,'')),''),p_is_active)
     returning * into v_saved;
   else
+    -- Lock the table before checking occupancy so edits cannot race seating/session changes.
+    perform 1 from public.nortago_bos_tables t
+      where t.id=p_table_id and t.outlet_id=p_outlet_id for update;
+    if not found then raise exception 'Table not found for this outlet'; end if;
+    if to_regclass('public.nortago_bos_table_sessions') is not null then
+      execute 'select exists (select 1 from public.nortago_bos_table_sessions s where s.table_id=$1 and s.status=''OPEN'' and ($2=false or s.party_size>$3))'
+        into v_occupied using p_table_id,p_is_active,p_capacity;
+      if v_occupied then raise exception 'Cannot deactivate table or reduce capacity below an active Dine-In party'; end if;
+    end if;
+    if to_regclass('public.nortago_bos_queue_entries') is not null then
+      execute 'select exists (select 1 from public.nortago_bos_queue_entries q where q.table_id=$1 and q.status=''SEATED'' and ($2=false or q.party_size>$3))'
+        into v_occupied using p_table_id,p_is_active,p_capacity;
+      if v_occupied then raise exception 'Cannot deactivate table or reduce capacity below a seated Walk-In party'; end if;
+    end if;
     update public.nortago_bos_tables t
     set table_code=upper(trim(p_table_code)),table_name=trim(p_table_name),capacity=p_capacity,
         zone=nullif(trim(coalesce(p_zone,'')),''),is_active=p_is_active,updated_at=now()
