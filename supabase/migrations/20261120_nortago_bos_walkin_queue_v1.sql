@@ -98,6 +98,7 @@ set search_path = pg_catalog, public
 as $$
 declare
   v_entry public.nortago_bos_queue_entries%rowtype;
+  v_table_capacity integer;
 begin
   select * into v_entry from public.nortago_bos_queue_entries q where q.id=p_queue_id for update;
   if not found then raise exception 'Queue entry not found'; end if;
@@ -109,7 +110,9 @@ begin
     or (v_entry.status='SEATED' and p_status<>'COMPLETED') then raise exception 'Invalid queue status transition'; end if;
   if p_status='SEATED' then
     if p_table_id is null then raise exception 'Select a table before seating guest'; end if;
-    if not exists (select 1 from public.nortago_bos_tables t where t.id=p_table_id and t.outlet_id=v_entry.outlet_id and t.is_active=true) then raise exception 'Table not found or inactive for this outlet'; end if;
+    select t.capacity into v_table_capacity from public.nortago_bos_tables t where t.id=p_table_id and t.outlet_id=v_entry.outlet_id and t.is_active=true for update;
+    if not found then raise exception 'Table not found or inactive for this outlet'; end if;
+    if v_table_capacity < v_entry.party_size then raise exception 'Table capacity is smaller than party size'; end if;
     if exists (select 1 from public.nortago_bos_queue_entries q where q.table_id=p_table_id and q.status='SEATED' and q.id<>v_entry.id) then raise exception 'Table already assigned to another seated queue'; end if;
   end if;
   update public.nortago_bos_queue_entries set status=p_status,table_id=case when p_status='SEATED' then p_table_id else table_id end,updated_at=now()
