@@ -26,6 +26,7 @@ export default function Reservation() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const todayLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
   useEffect(() => {
     let alive = true;
@@ -94,7 +95,7 @@ export default function Reservation() {
           <label>Nama<input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} required /></label>
           <label>WhatsApp<input value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} placeholder="08xxxxxxxxxx" required /></label>
           <div className="two">
-            <label>Tanggal<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label>
+            <label>Tanggal<input type="date" min={todayLocal} value={date} onChange={(event) => setDate(event.target.value)} required /></label>
             <label>Jam<input type="time" value={time} onChange={(event) => setTime(event.target.value)} required /></label>
           </div>
           <label>Jumlah orang<input type="number" min="1" max="30" value={partySize} onChange={(event) => setPartySize(event.target.value)} required /></label>
