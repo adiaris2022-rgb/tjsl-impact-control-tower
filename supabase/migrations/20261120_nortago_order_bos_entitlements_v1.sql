@@ -105,7 +105,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = pg_catalog, public, pg_temp
-as $
+as $nortago_reservation_status$
 declare
   v_reservation public.otc_reservations%rowtype;
 begin
@@ -134,6 +134,6 @@ begin
   update public.otc_reservations set status=p_status,updated_at=now() where id=p_reservation_id;
   return jsonb_build_object('reservation_id',p_reservation_id,'reservation_no',v_reservation.reservation_no,'status',p_status);
 end;
-$$;
+$nortago_reservation_status$;
 revoke all on function public.nortago_update_reservation_status(uuid,text) from public, anon;
 grant execute on function public.nortago_update_reservation_status(uuid,text) to authenticated;
