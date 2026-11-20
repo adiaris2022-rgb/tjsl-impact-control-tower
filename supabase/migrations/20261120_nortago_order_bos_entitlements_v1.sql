@@ -137,3 +137,14 @@ end;
 $nortago_reservation_status$;
 revoke all on function public.nortago_update_reservation_status(uuid,text) from public, anon;
 grant execute on function public.nortago_update_reservation_status(uuid,text) to authenticated;
+
+-- Reservation records are BOS-only for authenticated outlet staff as well as writes.
+-- Expose only the boolean entitlement check needed by the RLS policy to authenticated users.
+grant execute on function public.nortago_outlet_has_bos(uuid) to authenticated;
+drop policy if exists otc_reservations_staff_read on public.otc_reservations;
+create policy otc_reservations_bos_staff_read on public.otc_reservations
+  for select to authenticated
+  using (
+    public.has_business_role(business_id,array['OWNER','PROGRAM_MANAGER','PARTNER','STAFF'])
+    and public.nortago_outlet_has_bos(outlet_id)
+  );
