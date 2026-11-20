@@ -88,6 +88,8 @@ export default function OwnerSubscriptionsPage() {
         setSubscriptions((subscriptionResult.data || []) as Subscription[]);
         setOutlets((outletResult.data || []) as Outlet[]);
         setSelectedOutletIds((outletResult.data || []).map((outlet: Outlet) => outlet.id));
+        setCheckoutLinks([]);
+        setCheckoutError("");
         setSelectedOutletIds((outletResult.data || []).map((outlet: Outlet) => outlet.id));
       } catch (cause: unknown) {
         if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat data langganan.");
@@ -183,7 +185,7 @@ export default function OwnerSubscriptionsPage() {
             <div><span className="eyebrow">SUBSCRIPTION OVERVIEW</span><h2>Status langganan per outlet</h2></div>
             {businessIds.length > 1 ? (
               <label className="business-switcher">Pilih bisnis
-                <select value={businessId} onChange={(event) => setBusinessId(event.target.value)}>
+                <select value={businessId} onChange={(event) => { setBusinessId(event.target.value); setSelectedOutletIds([]); setCheckoutLinks([]); setCheckoutError(""); }}>
                   {businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}
                 </select>
               </label>
