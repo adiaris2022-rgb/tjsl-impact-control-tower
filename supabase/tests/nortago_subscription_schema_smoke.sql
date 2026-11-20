@@ -240,6 +240,25 @@ begin
     raise exception 'Receipt RPC did not return the expected order item';
   end if;
 
+  -- Reject malformed reservation inputs.
+  begin
+    perform public.nortago_create_customer_reservation(
+      v_outlet, '  ', '081234567890', now() + interval '1 day', 3, null
+    );
+    raise exception 'Expected blank reservation name to be rejected';
+  exception when others then
+    if sqlerrm <> 'Nama customer tidak valid' then raise; end if;
+  end;
+
+  begin
+    perform public.nortago_create_customer_reservation(
+      v_outlet, 'CI Guest', '081234567890', now() + interval '1 day', 3, repeat('x', 1001)
+    );
+    raise exception 'Expected long reservation note to be rejected';
+  exception when others then
+    if sqlerrm <> 'Catatan reservasi terlalu panjang' then raise; end if;
+  end;
+
   v_reservation := public.nortago_create_customer_reservation(
     v_outlet, 'CI Guest', '081234567890', now() + interval '1 day', 3, 'CI smoke test'
   );
