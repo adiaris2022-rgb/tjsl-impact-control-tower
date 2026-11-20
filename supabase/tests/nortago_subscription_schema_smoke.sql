@@ -187,6 +187,50 @@ begin
     raise exception 'Checkout must use outlet override price; expected 250, got %', v_checkout->>'total';
   end if;
 
+  -- Reject malformed public checkout inputs before any order is created.
+  begin
+    perform public.nortago_create_customer_order(
+      v_outlet, '  ', '081234567890', 'TAKE_AWAY',
+      jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
+      'QRIS', null, null, null
+    );
+    raise exception 'Expected blank customer name to be rejected';
+  exception when others then
+    if sqlerrm <> 'Nama customer tidak valid' then raise; end if;
+  end;
+
+  begin
+    perform public.nortago_create_customer_order(
+      v_outlet, 'CI Customer', '081234567890', 'TAKE_AWAY',
+      null, 'QRIS', null, null, null
+    );
+    raise exception 'Expected null items to be rejected';
+  exception when others then
+    if sqlerrm <> 'Daftar item tidak valid' then raise; end if;
+  end;
+
+  begin
+    perform public.nortago_create_customer_order(
+      v_outlet, 'CI Customer', '081234567890', null,
+      jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
+      'QRIS', null, null, null
+    );
+    raise exception 'Expected null fulfillment type to be rejected';
+  exception when others then
+    if sqlerrm <> 'Jenis fulfillment tidak didukung' then raise; end if;
+  end;
+
+  begin
+    perform public.nortago_create_customer_order(
+      v_outlet, 'CI Customer', '081234567890', 'PRE_ORDER',
+      jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
+      'QRIS', now() - interval '1 day', null, null
+    );
+    raise exception 'Expected past pre-order schedule to be rejected';
+  exception when others then
+    if sqlerrm <> 'Jadwal pre-order harus di masa mendatang' then raise; end if;
+  end;
+
   v_token := (v_checkout->>'receipt_token')::uuid;
   v_receipt := public.nortago_get_customer_receipt(v_token);
   if v_receipt->'order'->>'order_no' is distinct from v_checkout->>'order_no' then
