@@ -10,6 +10,7 @@ declare
   v_order_takeaway uuid := gen_random_uuid();
   v_order_preorder uuid := gen_random_uuid();
   v_order_delivery uuid := gen_random_uuid();
+  v_order_cross_tenant uuid := gen_random_uuid();
   v_order_mismatch uuid := gen_random_uuid();
   v_actor uuid := '00000000-0000-0000-0000-000000000001'::uuid;
   v_error text;
@@ -43,7 +44,8 @@ begin
     (v_order_takeaway,v_business_a,v_outlet_a,'SMOKE-TAKEAWAY','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING'),
     (v_order_preorder,v_business_a,v_outlet_a,'SMOKE-PREORDER','CUSTOMER_SELF_ORDER','PRE_ORDER','NEW','PENDING'),
     (v_order_delivery,v_business_a,v_outlet_a,'SMOKE-DELIVERY','CUSTOMER_SELF_ORDER','DELIVERY','NEW','PENDING'),
-    (v_order_mismatch,v_business_b,v_outlet_a,'SMOKE-MISMATCH','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING');
+    (v_order_cross_tenant,v_business_b,v_outlet_b,'SMOKE-CROSS-TENANT','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING'),
+    (v_order_mismatch,v_business_a,v_outlet_b,'SMOKE-MISMATCH','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING');
 
   -- Deny non-members before exercising successful actions.
   begin
@@ -59,9 +61,9 @@ begin
     raise exception 'Denied lifecycle action modified order status';
   end if;
 
-  -- CI-only role stub is switched to allow testing server-side transitions.
-  create or replace function public.has_business_role(p_business_id uuid, p_roles text[])
-  returns boolean language sql stable as $stub$ select true $stub$;
+  -- Create an owner membership only for Business A. CI auth.uid() is fixed to v_actor.
+  insert into public.business_users(business_id,user_id,role)
+  values (v_business_a,v_actor,'OWNER');
 
   -- Takeaway must follow pickup handoff states; delivery handoff is rejected.
   perform public.nortago_update_order_status(v_order_takeaway,'PROCESSING','  started  ');
@@ -127,7 +129,24 @@ begin
     raise exception 'Delivery terminal status mismatch';
   end if;
 
-  -- A business membership on the order's business must not authorize a mismatched outlet.
+  -- Membership in Business A must not authorize Business B.
+  begin
+    perform public.nortago_update_order_status(v_order_cross_tenant,'PROCESSING',null);
+    raise exception 'Expected cross-tenant role denial';
+  exception when others then
+    v_error := sqlerrm;
+    if v_error not like '%NORTAGO_ORDER_FORBIDDEN%' then
+      raise exception 'Expected cross-tenant NORTAGO_ORDER_FORBIDDEN, got: %',v_error;
+    end if;
+  end;
+  if (select status from public.otc_orders where id=v_order_cross_tenant) <> 'NEW' then
+    raise exception 'Cross-tenant denial changed order status';
+  end if;
+  if exists (select 1 from public.nortago_order_status_audit where order_id=v_order_cross_tenant) then
+    raise exception 'Cross-tenant denial must not create audit event';
+  end if;
+
+  -- An authorized Business A member still cannot update an order linked to Business B's outlet.
   begin
     perform public.nortago_update_order_status(v_order_mismatch,'PROCESSING',null);
     raise exception 'Expected outlet/business mismatch denial';
