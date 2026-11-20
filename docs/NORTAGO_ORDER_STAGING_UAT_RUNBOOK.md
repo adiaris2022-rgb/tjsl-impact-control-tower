@@ -52,6 +52,16 @@ For each order, use only the displayed action that is valid for its current stat
 - [ ] Confirm an order whose outlet belongs to a different business is rejected.
 - [ ] Confirm audit visibility follows actual staging RLS, not the CI fixture.
 
+### Additional lifecycle edge-path coverage
+
+Automated disposable-CI test: `supabase/tests/nortago_order_lifecycle_edge_transitions_smoke.sql`.
+
+- [ ] Scheduled recovery path: NEW → SCHEDULED → FULFILLMENT_CHECK → FULFILLMENT_ISSUE → PROCESSING → READY → WAITING_PICKUP → PICKUP_VERIFIED → SUCCESS.
+- [ ] Audit count, actor, and trimmed schedule note are preserved on the recovery path.
+- [ ] Terminal SUCCESS cannot be reopened to PROCESSING; rejected transition must leave order and audit unchanged.
+- [ ] Owner Inbox check path: PROCESSING → FULFILLMENT_CHECK → READY → WAITING_PICKUP → PICKUP_VERIFIED → SUCCESS.
+- [ ] Payment status remains unchanged on both paths.
+
 ## 4. Outlet subscription (manual, no settlement)
 
 - [ ] Prepare monthly plan (Rp50,000) for outlet A and confirm invoice/plan snapshot.
