@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     p_provider_payload: verified || {},
   });
   if (settleError) {
-    return json({ error: "SUBSCRIPTION_SETTLEMENT_FAILED", message: settleError.message }, 500);
+    return json({ error: "SUBSCRIPTION_SETTLEMENT_FAILED" }, 500);
   }
   return json({ ok: true, result });
 }
