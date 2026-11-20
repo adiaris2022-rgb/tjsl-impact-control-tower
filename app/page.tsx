@@ -6,11 +6,6 @@ import { createBrowserClient } from "@supabase/ssr";
 
 const PUBLIC_APP_URL = "https://nortago-ct-bos-production.up.railway.app";
 
-const plans = [
-  {name:"STARTER",price:"Rp499 ribu",period:"/bulan",desc:"Untuk bisnis yang ingin mulai punya sistem kendali.",items:["1 outlet","5 user","Sales & transaksi","Procurement dasar","Finance dasar"],featured:false},
-  {name:"BUSINESS",price:"Rp999 ribu",period:"/bulan",desc:"Untuk bisnis yang membutuhkan Full BOS.",items:["Hingga 3 outlet","15 user","Sales + Procurement + Finance","Approval & Control","Owner Control Tower"],featured:true},
-  {name:"PRO",price:"Rp1,999 juta",period:"/bulan",desc:"Untuk bisnis multi-outlet dan kebutuhan prioritas.",items:["Multi-outlet","50 user","Full BOS","Priority support","Control & Intelligence"],featured:false},
-];
 
 function Logo(){
   return <svg viewBox="0 0 120 110" width="46" height="42" aria-label="NORTAGO logo" role="img" data-logo-lock="nortago-original-reference">
@@ -29,6 +24,7 @@ export default function LandingPage(){
   const [busy,setBusy]=useState(false);
   const [sent,setSent]=useState(false);
   const [error,setError]=useState("");
+  const [quoteCycle,setQuoteCycle]=useState<"MONTHLY"|"YEARLY">("MONTHLY");
 
   async function requestTestAccess(e:React.FormEvent){
     e.preventDefault();
@@ -94,21 +90,37 @@ export default function LandingPage(){
     </section>
 
     <section id="harga" style={{maxWidth:1180,margin:"0 auto",padding:"20px 22px 90px"}}>
-      <div style={{textAlign:"center",marginBottom:34}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>PILIH SESUAI SKALA BISNIS</div><h2 style={{fontSize:38,margin:"10px 0"}}>Mulai dari sistem yang benar.</h2><p style={{color:"#8fa9a5"}}>Harga awal untuk paket berlangganan CT BOS NORTAGO.</p></div>
-      <div className="plans-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
-        {plans.map(p=><article key={p.name} style={{border:p.featured?"1px solid rgba(103,217,195,.55)":"1px solid rgba(255,255,255,.09)",borderRadius:20,padding:24,background:p.featured?"linear-gradient(160deg,rgba(20,69,61,.7),rgba(8,23,21,.95))":"rgba(255,255,255,.025)",position:"relative"}}>
-          {p.featured&&<div style={{position:"absolute",right:18,top:18,fontSize:9,fontWeight:900,letterSpacing:1,color:"#06100f",background:"#67d9c3",padding:"6px 9px",borderRadius:999}}>REKOMENDASI</div>}
-          <div style={{fontSize:11,fontWeight:900,letterSpacing:1.4,color:"#67d9c3"}}>{p.name}</div><div style={{fontSize:34,fontWeight:900,marginTop:13}}>{p.price}<span style={{fontSize:12,color:"#78918d",fontWeight:500}}>{p.period}</span></div>
-          <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.6,minHeight:42}}>{p.desc}</p>
-          <div style={{display:"grid",gap:9,margin:"18px 0 24px"}}>{p.items.map(it=><div key={it} style={{fontSize:12,color:"#b6cbc7"}}>✓ {it}</div>)}</div>
-          <button onClick={()=>router.push("/login")} style={{width:"100%",border:p.featured?"0":"1px solid rgba(255,255,255,.14)",background:p.featured?"#67d9c3":"rgba(255,255,255,.04)",color:p.featured?"#04100e":"#fff",borderRadius:10,padding:"12px",fontWeight:900}}>Pilih {p.name} →</button>
-        </article>)}
-      </div>
-      <div style={{textAlign:"center",marginTop:20,color:"#657d79",fontSize:11}}>Implementasi tersedia terpisah sesuai kebutuhan bisnis.</div>
+      <div style={{textAlign:"center",maxWidth:760,margin:"0 auto 28px"}}><div style={{color:"#67d9c3",fontSize:11,fontWeight:900,letterSpacing:1.4}}>PENAWARAN BERDASARKAN KEBUTUHAN</div><h2 style={{fontSize:38,margin:"10px 0"}}>Harga CT BOS bersifat custom.</h2><p style={{color:"#8fa9a5",lineHeight:1.7}}>Setiap bisnis memiliki skala operasional, jumlah outlet, pengguna, modul, dan kebutuhan integrasi yang berbeda. Tim NORTAGO menyusun penawaran setelah asesmen ruang lingkup bisnis Anda.</p></div>
+      <article style={{maxWidth:850,margin:"0 auto",border:"1px solid rgba(103,217,195,.35)",borderRadius:22,padding:28,background:"linear-gradient(145deg,rgba(20,69,61,.35),rgba(8,23,21,.88))"}}>
+        <div style={{fontSize:11,color:"#67d9c3",fontWeight:900,letterSpacing:1.4}}>CT BOS · CUSTOM BUSINESS SCOPE</div>
+        <h3 style={{fontSize:25,margin:"10px 0"}}>Satu sistem, disesuaikan dengan struktur bisnis Anda.</h3>
+        <p style={{fontSize:13,color:"#a7bfbb",lineHeight:1.7}}>Nilai penawaran ditentukan berdasarkan jumlah outlet dan user, modul yang digunakan, integrasi, migrasi data, konfigurasi, pelatihan, serta kebutuhan dukungan operasional.</p>
+        <div style={{fontSize:12,fontWeight:800,color:"#d8e9e5",marginTop:22}}>Preferensi periode pembayaran</div>
+        <div role="group" aria-label="Preferensi periode pembayaran CT BOS" style={{display:"flex",gap:9,marginTop:10,flexWrap:"wrap"}}>
+          <button type="button" aria-pressed={quoteCycle==="MONTHLY"} onClick={()=>setQuoteCycle("MONTHLY")} style={{border:"1px solid rgba(103,217,195,.45)",background:quoteCycle==="MONTHLY"?"#67d9c3":"rgba(255,255,255,.04)",color:quoteCycle==="MONTHLY"?"#04100e":"#fff",borderRadius:999,padding:"11px 18px",fontWeight:800}}>Bulanan</button>
+          <button type="button" aria-pressed={quoteCycle==="YEARLY"} onClick={()=>setQuoteCycle("YEARLY")} style={{border:"1px solid rgba(103,217,195,.45)",background:quoteCycle==="YEARLY"?"#67d9c3":"rgba(255,255,255,.04)",color:quoteCycle==="YEARLY"?"#04100e":"#fff",borderRadius:999,padding:"11px 18px",fontWeight:800}}>Tahunan</button>
+        </div>
+        <div style={{marginTop:18,padding:16,borderRadius:13,background:"rgba(255,255,255,.035)",border:"1px solid rgba(255,255,255,.08)"}}>
+          <div style={{fontSize:12,color:"#67d9c3",fontWeight:900}}>Ruang lingkup yang dinilai</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginTop:12}}>
+            {["Jumlah outlet dan pengguna","Modul Sales, Procurement, Finance, HR & Ops","Integrasi dan alur kerja khusus","Migrasi data dan konfigurasi","Pelatihan dan onboarding","Dukungan operasional / SLA"].map(x=><div key={x} style={{fontSize:12,color:"#b6cbc7"}}>✓ {x}</div>)}
+          </div>
+        </div>
+        <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.7,margin:"18px 0 0"}}>Periode yang dipilih: <b style={{color:"#fff"}}>{quoteCycle==="MONTHLY"?"Bulanan":"Tahunan"}</b>. Nilai langganan CT BOS dan biaya implementasi/onboarding akan dirinci terpisah dalam penawaran resmi setelah asesmen. Tidak ada harga paket tetap yang ditampilkan pada halaman ini.</p>
+        <div style={{marginTop:18,padding:"13px 15px",borderRadius:12,border:"1px solid rgba(103,217,195,.18)",color:"#a7bfbb",fontSize:12,lineHeight:1.6}}>Untuk memulai asesmen, gunakan akses tes di bagian atas halaman lalu hubungi tim NORTAGO untuk pembahasan kebutuhan dan penawaran.</div>
+      </article>
+      <article style={{margin:"34px auto 0",maxWidth:850,border:"1px solid rgba(103,217,195,.25)",borderRadius:18,padding:22,background:"rgba(103,217,195,.045)",textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#67d9c3",fontWeight:900,letterSpacing:1.4}}>PRODUK MANDIRI · NORTAGO ORDER</div>
+        <h3 style={{fontSize:23,margin:"8px 0"}}>Sistem Pemesanan Digital Terintegrasi</h3>
+        <div style={{fontSize:25,fontWeight:900}}>Rp50.000 <span style={{fontSize:12,color:"#8fa9a5",fontWeight:500}}>/ outlet / bulan</span></div>
+        <div style={{fontSize:14,color:"#b6cbc7",marginTop:6}}>Rp500.000 / outlet / tahun · Hemat Rp100.000 (16,7%)</div>
+        <p style={{fontSize:12,color:"#8fa9a5",lineHeight:1.6}}>Ditagihkan per outlet, terpisah dari CT BOS. Setiap outlet memiliki invoice dan masa aktif sendiri. Pembayaran bersifat prepaid/manual; tidak mengasumsikan auto-renewal.</p>
+        <button onClick={()=>router.push("/otc/subscribe")} style={{border:"1px solid rgba(103,217,195,.45)",background:"transparent",color:"#fff",borderRadius:10,padding:"11px 18px",fontWeight:800}}>Lihat NORTAGO Order →</button>
+      </article>
     </section>
 
     <section style={{borderTop:"1px solid rgba(255,255,255,.07)",borderBottom:"1px solid rgba(255,255,255,.07)",background:"rgba(255,255,255,.018)"}}>
-      <div style={{maxWidth:900,margin:"0 auto",padding:"68px 22px",textAlign:"center"}}><h2 style={{fontSize:36,margin:"0 0 14px"}}>Owner tidak perlu mengejar data.</h2><p style={{color:"#8fa9a5",lineHeight:1.7,fontSize:16}}>CT BOS dirancang agar aktivitas penting tercatat, approval terlacak, evidence tersedia, dan penyimpangan terlihat lebih cepat.</p><button onClick={()=>document.getElementById("harga")?.scrollIntoView({behavior:"smooth"})} style={{marginTop:16,background:"#67d9c3",border:0,borderRadius:11,padding:"14px 22px",fontWeight:900}}>Lihat Paket CT BOS →</button></div>
+      <div style={{maxWidth:900,margin:"0 auto",padding:"68px 22px",textAlign:"center"}}><h2 style={{fontSize:36,margin:"0 0 14px"}}>Owner tidak perlu mengejar data.</h2><p style={{color:"#8fa9a5",lineHeight:1.7,fontSize:16}}>CT BOS dirancang agar aktivitas penting tercatat, approval terlacak, evidence tersedia, dan penyimpangan terlihat lebih cepat.</p><button onClick={()=>document.getElementById("harga")?.scrollIntoView({behavior:"smooth"})} style={{marginTop:16,background:"#67d9c3",border:0,borderRadius:11,padding:"14px 22px",fontWeight:900}}>Lihat Penawaran CT BOS →</button></div>
     </section>
 
     <footer style={{maxWidth:1180,margin:"0 auto",padding:"28px 22px 36px",display:"flex",justifyContent:"space-between",gap:20,flexWrap:"wrap",color:"#607873",fontSize:10}}>
