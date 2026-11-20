@@ -105,9 +105,11 @@ begin
   if not public.nortago_outlet_has_bos(v_entry.outlet_id) then raise exception 'FEATURE_REQUIRES_NORTAGO_BOS'; end if;
   if not public.has_business_role(v_entry.business_id,array['OWNER','PROGRAM_MANAGER','PARTNER','STAFF']) then raise exception 'Not authorized'; end if;
   if p_status not in ('CALLED','SEATED','CANCELLED','COMPLETED') then raise exception 'Unsupported queue status'; end if;
-  if (v_entry.status='WAITING' and p_status not in ('CALLED','CANCELLED'))
-    or (v_entry.status='CALLED' and p_status not in ('SEATED','CANCELLED'))
-    or (v_entry.status='SEATED' and p_status<>'COMPLETED') then raise exception 'Invalid queue status transition'; end if;
+  if not (
+    (v_entry.status='WAITING' and p_status in ('CALLED','CANCELLED'))
+    or (v_entry.status='CALLED' and p_status in ('SEATED','CANCELLED'))
+    or (v_entry.status='SEATED' and p_status='COMPLETED')
+  ) then raise exception 'Invalid queue status transition'; end if;
   if p_status='SEATED' then
     if p_table_id is null then raise exception 'Select a table before seating guest'; end if;
     select t.capacity into v_table_capacity from public.nortago_bos_tables t where t.id=p_table_id and t.outlet_id=v_entry.outlet_id and t.is_active=true for update;
