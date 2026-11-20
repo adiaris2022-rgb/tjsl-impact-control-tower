@@ -32,9 +32,9 @@ begin
   if has_table_privilege('authenticated','public.nortago_order_status_audit','insert') then
     raise exception 'Authenticated role must not insert audit records directly';
   end if;
-end $;
+end $$;
 -- Set the audit fixture identity explicitly so this test is independent of prior smoke-test auth stubs.
-create or replace function auth.uid() returns uuid language sql stable as $ select '00000000-0000-4000-8000-000000000001'::uuid $;
+create or replace function auth.uid() returns uuid language sql stable as $$ select '00000000-0000-4000-8000-000000000001'::uuid $$;
 set local role authenticated;
 do $$
 declare

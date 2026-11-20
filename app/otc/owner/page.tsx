@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { INBOX_PAGE_SIZE, buildInboxCursorFilter, cursorFromPage, type InboxCursor } from "./inbox-pagination.mjs";
 
 type Outlet = { id: string; name: string };
 type Order = { id: string; outlet_id: string; order_no: string; customer_name: string; customer_whatsapp: string; fulfillment_type: string; payment_method: string; scheduled_at: string | null; delivery_address: string | null; delivery_note: string | null; total: number | string; status: string; payment_status: string; created_at: string };
@@ -13,7 +14,6 @@ async function getSupabase() {
   return createClient(config.url, config.key);
 }
 const money = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
-const INBOX_PAGE_SIZE = 100;
 type LifecycleAction = { label: string; nextStatus: string };
 type AuditEvent = { id: number; from_status: string; to_status: string; note: string | null; created_at: string; actor_user_id: string };
 function lifecycleActions(order: Order): LifecycleAction[] {
@@ -62,7 +62,8 @@ export default function Owner() {
   const [inboxFilter, setInboxFilter] = useState("ALL");
   const [expandedOrderId, setExpandedOrderId] = useState("");
   const [orderRefresh, setOrderRefresh] = useState(0);
-  const [inboxOffset, setInboxOffset] = useState(0);
+  const [inboxCursor, setInboxCursor] = useState<InboxCursor | null>(null);
+  const [inboxNextCursor, setInboxNextCursor] = useState<InboxCursor | null>(null);
   const [inboxHasMore, setInboxHasMore] = useState(false);
   const [lifecycleNote, setLifecycleNote] = useState("");
   const [busyOrderId, setBusyOrderId] = useState("");
@@ -98,9 +99,10 @@ export default function Owner() {
       try {
         const supabase = await getSupabase();
         const start = new Date(); start.setHours(0, 0, 0, 0);
+        const inboxQuery = supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(INBOX_PAGE_SIZE);
         const [{ data: orders, error: orderError }, { data: inbox, error: inboxError }, { data: outlets, error: outletError }] = await Promise.all([
           supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()),
-          supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).range(inboxOffset, inboxOffset + INBOX_PAGE_SIZE - 1),
+          inboxCursor ? inboxQuery.or(buildInboxCursorFilter(inboxCursor)) : inboxQuery,
           supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
         ]);
         if (orderError) throw orderError;
@@ -121,8 +123,10 @@ export default function Owner() {
         setRows(grouped);
         setMetrics({ count: orderRows.length, total: orderRows.filter((order) => order.payment_status === "PAID").reduce((sum, order) => sum + Number(order.total || 0), 0), outlets: outletRows.length });
         const mappedInboxRows = inboxRows.map((order) => ({ ...order, outlet_name: names.get(order.outlet_id) || order.outlet_id }));
-        setInboxHasMore(inboxRows.length === INBOX_PAGE_SIZE);
-        if (inboxOffset === 0) setInboxOrders(mappedInboxRows);
+        const nextCursor = cursorFromPage(inboxRows);
+        setInboxNextCursor(nextCursor);
+        setInboxHasMore(Boolean(nextCursor));
+        if (!inboxCursor) setInboxOrders(mappedInboxRows);
         else setInboxOrders((previous) => {
           const merged = new Map(previous.map((order) => [order.id, order]));
           mappedInboxRows.forEach((order) => merged.set(order.id, order));
@@ -133,7 +137,7 @@ export default function Owner() {
       } finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
-  }, [businessId, orderRefresh, inboxOffset]);
+  }, [businessId, orderRefresh, inboxCursor]);
   useEffect(() => {
     if (!businessId || !expandedOrderId) { setAuditEvents([]); return; }
     let alive = true;
@@ -174,7 +178,9 @@ export default function Owner() {
       });
       if (rpcError) throw rpcError;
       setLifecycleNote("");
-      setInboxOffset(0);
+      setInboxCursor(null);
+      setInboxNextCursor(null);
+      setInboxHasMore(false);
       setOrderRefresh((value) => value + 1);
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Gagal memperbarui status order.");
@@ -188,7 +194,7 @@ export default function Owner() {
     </header>
     <section className="customer-title"><span>ORDER & SALES</span><h1>Owner Dashboard</h1><p>Ringkasan transaksi dan penjualan untuk bisnis yang dipilih.</p>
       {businessIds.length > 1 ? <label className="business-switcher">Pilih bisnis
-        <select value={businessId} onChange={(event) => { setBusinessId(event.target.value); setInboxOffset(0); setInboxOrders([]); setInboxHasMore(false); setExpandedOrderId(""); setActionError(""); setAuditEvents([]); }}>{businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}</select>
+        <select value={businessId} onChange={(event) => { setBusinessId(event.target.value); setInboxCursor(null); setInboxNextCursor(null); setInboxOrders([]); setInboxHasMore(false); setExpandedOrderId(""); setActionError(""); setAuditEvents([]); }}>{businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}</select>
       </label> : null}
     </section>
     {error ? <div className="info-box wide">{error}</div> : null}
@@ -229,7 +235,7 @@ export default function Owner() {
             </div>
           </div></td></tr>)}
         </tbody></table></div>}
-        {inboxHasMore ? <button type="button" className="otc-secondary" disabled={loading} onClick={() => setInboxOffset((value) => value + INBOX_PAGE_SIZE)}>Muat 100 order berikutnya</button> : <small className="muted">Semua order hari ini telah dimuat.</small>}
+        {inboxHasMore ? <button type="button" className="otc-secondary" disabled={loading || !inboxNextCursor} onClick={() => inboxNextCursor && setInboxCursor(inboxNextCursor)}>Muat 100 order berikutnya</button> : <small className="muted">Semua order hari ini telah dimuat.</small>}
         <small className="muted" style={{display:"block",marginTop:8}}>Pencarian dan filter mencakup order yang sudah dimuat. Muat halaman berikutnya untuk mencari order yang lebih lama.</small>
       </section>
     </>}
