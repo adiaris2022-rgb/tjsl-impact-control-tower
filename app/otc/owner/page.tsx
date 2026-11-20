@@ -13,6 +13,43 @@ async function getSupabase() {
   return createClient(config.url, config.key);
 }
 const money = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value || 0);
+type LifecycleAction = { label: string; nextStatus: string };
+type AuditEvent = { id: number; from_status: string; to_status: string; note: string | null; created_at: string; actor_user_id: string };
+function lifecycleActions(order: Order): LifecycleAction[] {
+  switch (order.status) {
+    case "NEW":
+    case "PAID":
+      return [{ label: "Jadwalkan", nextStatus: "SCHEDULED" }, { label: "Mulai proses", nextStatus: "PROCESSING" }];
+    case "SCHEDULED":
+      return [{ label: "Mulai proses", nextStatus: "PROCESSING" }, { label: "Perlu pemeriksaan", nextStatus: "FULFILLMENT_CHECK" }];
+    case "PROCESSING":
+      return [{ label: "Tandai siap", nextStatus: "READY" }, { label: "Periksa order", nextStatus: "FULFILLMENT_CHECK" }, { label: "Ada kendala", nextStatus: "FULFILLMENT_ISSUE" }];
+    case "FULFILLMENT_CHECK":
+      return [{ label: "Tandai siap", nextStatus: "READY" }, { label: "Ada kendala", nextStatus: "FULFILLMENT_ISSUE" }];
+    case "FULFILLMENT_ISSUE":
+      return [{ label: "Lanjutkan proses", nextStatus: "PROCESSING" }];
+    case "READY":
+      return order.fulfillment_type === "DELIVERY"
+        ? [{ label: "Serahkan ke kurir", nextStatus: "HANDED_OVER_TO_DELIVERY" }]
+        : order.fulfillment_type === "TAKE_AWAY" || order.fulfillment_type === "PRE_ORDER"
+          ? [{ label: "Siap diambil", nextStatus: "WAITING_PICKUP" }]
+          : [];
+    case "WAITING_PICKUP":
+      return order.fulfillment_type === "TAKE_AWAY" || order.fulfillment_type === "PRE_ORDER"
+        ? [{ label: "Pickup terverifikasi", nextStatus: "PICKUP_VERIFIED" }]
+        : [];
+    case "PICKUP_VERIFIED":
+      return order.fulfillment_type === "TAKE_AWAY" || order.fulfillment_type === "PRE_ORDER"
+        ? [{ label: "Selesaikan order", nextStatus: "SUCCESS" }]
+        : [];
+    case "HANDED_OVER_TO_DELIVERY":
+      return order.fulfillment_type === "DELIVERY" ? [{ label: "Tandai selesai", nextStatus: "SUCCESS" }] : [];
+    case "SUCCESS":
+      return order.fulfillment_type === "PRE_ORDER" ? [{ label: "Finalisasi Pre-Order", nextStatus: "PO_SUCCESS" }] : [];
+    default:
+      return [];
+  }
+}
 
 export default function Owner() {
   const [businessIds, setBusinessIds] = useState<string[]>([]);
