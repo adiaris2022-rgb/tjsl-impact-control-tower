@@ -2,16 +2,16 @@ import Link from "next/link";
 
 const features = [
   { number: "01", title: "Menu digital yang selalu rapi", text: "Tampilkan produk, harga, foto, kategori, dan ketersediaan dalam satu menu yang mudah dibuka dari ponsel." },
-  { number: "02", title: "Pesanan masuk tanpa chat berulang", text: "Pelanggan memilih item, jumlah, outlet, dan detail pesanan langsung dari alur checkout." },
-  { number: "03", title: "Satu alur untuk berbagai kebutuhan", text: "Terima Take Away, Pre-Order, dan Delivery—tanpa memaksa pelanggan mengunduh aplikasi." },
-  { number: "04", title: "Owner punya pandangan yang jelas", text: "Pantau pesanan dan detail transaksi melalui area pengelolaan, agar tim lebih mudah menindaklanjuti." },
+  { number: "02", title: "Pesan dan bayar langsung", text: "Pelanggan memilih menu, jumlah, jenis pesanan, detail, lalu menyelesaikan pembayaran melalui metode yang tersedia." },
+  { number: "03", title: "PO, Takeaway, dan Delivery", text: "Pelanggan memilih Pre-Order untuk waktu tertentu, Takeaway untuk mengambil sendiri, atau Delivery untuk diantar." },
+  { number: "04", title: "Fleksibel dari satu usaha hingga banyak outlet", text: "Dapat digunakan oleh UMKM, bisnis menengah, perusahaan besar, dan bisnis dengan beberapa outlet sesuai konfigurasi sistem." },
 ];
 
 const steps = [
-  { title: "Bagikan menu", text: "Letakkan tautan NORTAGO ORDER di bio, WhatsApp, media sosial, atau materi promosi." },
-  { title: "Pelanggan memilih", text: "Pelanggan membuka menu, memilih produk, lalu mengisi informasi pesanan." },
-  { title: "Pesanan diterima", text: "Pesanan tersimpan dan dapat ditinjau tim melalui inbox pemilik." },
-  { title: "Tim menindaklanjuti", text: "Kelola proses pesanan sesuai kesiapan operasional outlet." },
+  { title: "Bagikan satu link", text: "Pasang link NORTAGO ORDER di bio WhatsApp, Instagram, Facebook, TikTok, status, grup, poster, atau iklan." },
+  { title: "Pelanggan buka menu", text: "Menu, foto, pilihan produk, harga, dan informasi tersedia dalam satu halaman yang mudah dibuka." },
+  { title: "Pilih, pesan, dan bayar", text: "Pelanggan memilih produk, jumlah, jenis order, jadwal bila diperlukan, lalu menyelesaikan pembayaran." },
+  { title: "Penjual memproses", text: "Penjual menerima detail pesanan dan menyiapkan order untuk diambil atau diantar sesuai jadwal." },
 ];
 
 export default function OrderLandingPage() {
@@ -83,9 +83,9 @@ export default function OrderLandingPage() {
           <div>
             <span className="nl-eyebrow">ORDERING SYSTEM UNTUK BISNIS F&amp;B</span>
             <h1>Pesanan lebih rapi.<br/><em>Operasional lebih ringan.</em></h1>
-            <p className="nl-lead">Bawa menu dan proses pemesanan bisnis Anda ke satu alur digital. Pelanggan tinggal buka link, pilih menu, dan kirim pesanan—tanpa perlu install aplikasi.</p>
+            <p className="nl-lead">Jadikan menu, pemesanan, dan pembayaran bisnis Anda mudah diakses melalui satu link. Bagikan di WhatsApp, Instagram, Facebook, TikTok, bio, status, grup, atau iklan. Pelanggan tinggal buka menu, pilih, pesan, dan bayar—tanpa perlu mengunduh aplikasi.</p>
             <div className="nl-actions"><Link className="nl-cta" href="/otc/customer-order">Jelajahi Menu Digital ↗</Link><a className="nl-secondary" href="#cara-kerja">Lihat cara kerja</a></div>
-            <div className="nl-proof">Untuk usaha yang ingin menyederhanakan order dari pelanggan.</div>
+            <div className="nl-proof">Fleksibel untuk UMKM, usaha menengah, perusahaan besar, dan bisnis dengan banyak outlet.</div>
           </div>
           <div className="nl-preview" aria-label="Ilustrasi menu digital">
             <div className="nl-previewtop"><span>Customer Menu Preview</span><span>● LIVE MENU</span></div>
@@ -100,14 +100,14 @@ export default function OrderLandingPage() {
         </section>
       </div>
       <section className="nl-section tint" id="fitur"><div className="nl-wrap">
-        <div className="nl-sectionhead"><span className="nl-eyebrow">LEBIH DARI MENU ONLINE</span><h2>Alur order yang lebih sederhana,<br/>dari pelanggan sampai tim Anda.</h2><p>Kurangi langkah yang berulang. Berikan pelanggan jalur pemesanan yang jelas, dan bantu tim fokus pada pesanan yang perlu disiapkan.</p></div>
+        <div className="nl-sectionhead"><span className="nl-eyebrow">SATU LINK UNTUK PROMOSI DAN TRANSAKSI</span><h2>Promosi Anda mengundang pelanggan.<br/>Link NORTAGO ORDER memudahkan transaksi.</h2><p>Tidak perlu mengarahkan pelanggan ke percakapan panjang untuk menanyakan menu, harga, atau mengulang pesanan. Menu dan alur order tersedia dalam satu link.</p></div>
         <div className="nl-grid4">{features.map(f=><article className="nl-card" key={f.number}><span className="nl-cardnum">{f.number}</span><h3>{f.title}</h3><p>{f.text}</p></article>)}</div>
       </div></section>
       <section className="nl-section" id="cara-kerja"><div className="nl-wrap">
         <div className="nl-sectionhead"><span className="nl-eyebrow">CARA KERJA</span><h2>Empat langkah. Satu alur order.</h2><p>Mulai dari link menu yang mudah dibagikan hingga tim menindaklanjuti pesanan.</p></div>
         <div className="nl-flow">{steps.map((s,i)=><article className="nl-flowstep" key={s.title}><span>{i+1}</span><h3>{s.title}</h3><p>{s.text}</p></article>)}</div>
       </div></section>
-      <section className="nl-section tint"><div className="nl-wrap"><div className="nl-banner"><div><h2>Mulai dari menu digital.<br/>Bangun pengalaman order yang lebih baik.</h2><p>Kenali alur NORTAGO ORDER melalui menu pelanggan.</p></div><Link className="nl-secondary" href="/otc/customer-order">Buka Customer Menu ↗</Link></div></div></section>
+      <section className="nl-section tint"><div className="nl-wrap"><div className="nl-banner"><div><h2>Untuk usaha kecil hingga perusahaan multi-outlet.<br/>Satu link pemesanan yang praktis.</h2><p>NORTAGO ORDER membantu pelanggan memesan dan membayar, serta membantu penjual menerima dan memproses order.</p></div><Link className="nl-secondary" href="/otc/customer-order">Buka Customer Menu ↗</Link></div></div></section>
       <footer className="nl-wrap nl-footer"><span>© NORTAGO ORDER · Sistem Pemesanan Digital Terintegrasi</span><span>Menu · Checkout · Order Management</span></footer>
     </main>
   );
