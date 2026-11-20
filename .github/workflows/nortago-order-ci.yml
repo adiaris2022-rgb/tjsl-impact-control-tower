@@ -59,6 +59,8 @@ jobs:
           test -f supabase/tests/nortago_bos_tables_smoke.sql
           test -f supabase/migrations/20261120_nortago_bos_walkin_queue_v1.sql
           test -f supabase/tests/nortago_bos_walkin_queue_smoke.sql
+          test -f supabase/migrations/20261120_nortago_bos_dinein_sessions_v1.sql
+          test -f supabase/tests/nortago_bos_dinein_sessions_smoke.sql
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -141,3 +143,15 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_bos_walkin_queue_smoke.sql
+      - name: Apply Dine-In sessions migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_dinein_sessions_v1.sql
+      - name: Reapply sessions migration (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_bos_dinein_sessions_v1.sql
+      - name: Dine-In sessions smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_bos_dinein_sessions_smoke.sql
