@@ -1,4 +1,4 @@
--- Disposable fixture test for customer checkout idempotency.
+-- Disposable fixture test for customer checkout idempotency and checkout-to-receipt.
 begin;
 do $$
 declare
@@ -9,6 +9,8 @@ declare
   v_items jsonb;
   v_first jsonb;
   v_second jsonb;
+  v_receipt jsonb;
+  v_receipt_item jsonb;
   v_conflict_raised boolean := false;
   v_order_count integer;
   v_item_count integer;
@@ -26,7 +28,8 @@ begin
   insert into public.otc_outlets(id,business_id,name,is_active)
     values (v_outlet_id,v_business_id,'Idempotency Smoke Outlet',true);
   insert into public.otc_products(id,business_id,name,base_price,is_active)
-    values (v_product_id,v_business_id,'Smoke Product',25000,true);
+    values (v_product_id,v_business_id,'Smoke Product',30000,true);
+  -- Outlet override deliberately differs from the product base price.
   insert into public.otc_outlet_products(outlet_id,product_id,price,is_available)
     values (v_outlet_id,v_product_id,25000,true);
   v_items := jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',2));
@@ -44,6 +47,31 @@ begin
     or v_first->>'receipt_token' is distinct from v_second->>'receipt_token'
     or v_second->>'reused' is distinct from 'true' then
     raise exception 'Retry must return the same order and receipt capability';
+  end if;
+
+  -- Validate the complete customer receipt path using the capability returned by checkout.
+  v_receipt := public.nortago_get_customer_receipt((v_first->>'receipt_token')::uuid);
+  if v_receipt is null or v_receipt->'order' is null or v_receipt->'items' is null then
+    raise exception 'Checkout receipt token must return order and item data';
+  end if;
+  if v_receipt->'order'->>'order_no' is distinct from v_first->>'order_no'
+    or v_receipt->'order'->>'customer_name' is distinct from 'Smoke Customer'
+    or v_receipt->'order'->>'fulfillment_type' is distinct from 'TAKE_AWAY'
+    or v_receipt->'order'->>'status' is distinct from 'NEW'
+    or v_receipt->'order'->>'payment_status' is distinct from 'PENDING'
+    or (v_receipt->'order'->>'subtotal')::numeric is distinct from 50000
+    or (v_receipt->'order'->>'total')::numeric is distinct from 50000 then
+    raise exception 'Receipt order header did not match checkout';
+  end if;
+  if jsonb_array_length(v_receipt->'items') <> 1 then
+    raise exception 'Receipt should return exactly one order item';
+  end if;
+  v_receipt_item := v_receipt->'items'->0;
+  if v_receipt_item->>'product_name_snapshot' is distinct from 'Smoke Product'
+    or (v_receipt_item->>'unit_price')::numeric is distinct from 25000
+    or (v_receipt_item->>'quantity')::integer is distinct from 2
+    or (v_receipt_item->>'line_total')::numeric is distinct from 50000 then
+    raise exception 'Receipt item data or outlet price override mismatch: %',v_receipt_item;
   end if;
 
   begin
