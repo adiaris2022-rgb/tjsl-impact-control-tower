@@ -27,7 +27,7 @@ language sql
 stable
 security definer
 set search_path = pg_catalog, public, pg_temp
-as $
+as $$
   select exists (
     select 1
     from public.outlet_subscriptions s
