@@ -60,6 +60,8 @@ jobs:
           create role anon nologin;
           create role authenticated nologin;
           create role service_role nologin;
+          create schema auth;
+          create function auth.uid() returns uuid language sql stable as $ select '00000000-0000-0000-0000-000000000001'::uuid $;
           create table public.businesses (id uuid primary key default gen_random_uuid());
           create table public.tjsl_partners (id uuid primary key default gen_random_uuid());
           create function public.has_business_role(p_business_id uuid, p_roles text[])
