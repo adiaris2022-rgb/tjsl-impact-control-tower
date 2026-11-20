@@ -34,6 +34,11 @@ begin
     raise exception 'Missing centralized BOS entitlement helper';
   end if;
 
+  if position('current_period_start <= now()' in pg_get_functiondef('public.nortago_outlet_has_bos(uuid)'::regprocedure))=0
+    or position('current_period_end > now()' in pg_get_functiondef('public.nortago_outlet_has_bos(uuid)'::regprocedure))=0 then
+    raise exception 'BOS entitlement must enforce subscription start and expiry timestamps';
+  end if;
+
   if not exists (
     select 1 from pg_proc
     where oid='public.nortago_create_customer_reservation(uuid,text,text,timestamp with time zone,integer,text)'::regprocedure
