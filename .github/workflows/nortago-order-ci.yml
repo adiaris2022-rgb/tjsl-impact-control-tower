@@ -135,6 +135,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_billing_smoke.sql
+      - name: Run per-outlet subscription billing functional smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_per_outlet_smoke.sql
       - name: Run schema and transactional RPC smoke checks
         env:
           PGPASSWORD: postgres
