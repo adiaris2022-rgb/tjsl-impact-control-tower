@@ -88,6 +88,7 @@ export default function OwnerSubscriptionsPage() {
         setSubscriptions((subscriptionResult.data || []) as Subscription[]);
         setOutlets((outletResult.data || []) as Outlet[]);
         setSelectedOutletIds((outletResult.data || []).map((outlet: Outlet) => outlet.id));
+        setSelectedOutletIds((outletResult.data || []).map((outlet: Outlet) => outlet.id));
       } catch (cause: unknown) {
         if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat data langganan.");
       } finally {
