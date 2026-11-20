@@ -82,8 +82,8 @@ export default function OrderLandingPage() {
         <section className="nl-hero">
           <div>
             <span className="nl-eyebrow">ORDERING SYSTEM UNTUK BISNIS F&amp;B</span>
-            <h1>Pesanan lebih rapi.<br/><em>Operasional lebih ringan.</em></h1>
-            <p className="nl-lead">Jadikan menu, pemesanan, dan pembayaran bisnis Anda mudah diakses melalui satu link. Bagikan di WhatsApp, Instagram, Facebook, TikTok, bio, status, grup, atau iklan. Pelanggan tinggal buka menu, pilih, pesan, dan bayar—tanpa perlu mengunduh aplikasi.</p>
+            <h1>Promosi di mana saja.<br/><em>Order dari satu link.</em></h1>
+            <p className="nl-lead">Promosikan produk dan jasa Anda seperti biasa di WhatsApp, Instagram, Facebook, dan TikTok—cukup tambahkan link NORTAGO ORDER. Pembeli melihat foto, visual, detail produk atau jasa, memilih pesanan, menentukan PO, Takeaway atau Delivery, melakukan pembayaran, dan order langsung masuk. Tanpa perlu pelanggan mengunduh aplikasi.</p>
             <div className="nl-actions"><Link className="nl-cta" href="/otc/customer-order">Jelajahi Menu Digital ↗</Link><a className="nl-secondary" href="#cara-kerja">Lihat cara kerja</a></div>
             <div className="nl-proof">Fleksibel untuk UMKM, usaha menengah, perusahaan besar, dan bisnis dengan banyak outlet.</div>
           </div>
@@ -107,6 +107,11 @@ export default function OrderLandingPage() {
           <article className="nl-card"><span className="nl-cardnum">🛵 DELIVERY</span><h3>Pesan, bayar, lalu diantar</h3><p>Pesanan dikirim ke alamat pelanggan. Pengantaran dapat menggunakan jasa kurir pihak ketiga.</p></article>
           <article className="nl-card"><span className="nl-cardnum">🏢 MULTI-OUTLET</span><h3>Untuk bisnis berbagai skala</h3><p>Mulai UMKM, usaha menengah, perusahaan besar, hingga bisnis yang memiliki beberapa outlet.</p></article>
         </div>
+      </div></section>
+      <section className="nl-section tint" id="harga"><div className="nl-wrap">
+        <div className="nl-sectionhead"><span className="nl-eyebrow">LANGGANAN TERJANGKAU</span><h2>Satu bulan hanya Rp50.000.</h2><p>Gunakan satu link untuk promosi dan menerima order. Biaya langganan tetap—tidak dihitung berdasarkan jenis pesanan.</p></div>
+        <div className="nl-banner"><div><h2>5.000 transaksi dalam sebulan?<br/>Biaya aplikasi setara Rp10 per transaksi.</h2><p>Rp50.000 biaya langganan bulanan ÷ 5.000 transaksi = Rp10 per transaksi (simulasi).</p></div><Link className="nl-secondary" href="/otc/customer-order">Lihat Menu Digital ↗</Link></div>
+        <div className="nl-sectionhead" style={{marginTop:28}}><p>Biaya langganan Rp50.000/bulan. Contoh simulasi: 100 transaksi = Rp500/transaksi · 500 = Rp100 · 1.000 = Rp50 · 2.500 = Rp20 · 5.000 = Rp10 · 10.000 = Rp5. Biaya pengiriman, jika ada, mengikuti layanan delivery yang digunakan.</p></div>
       </div></section>
       <section className="nl-section tint" id="fitur"><div className="nl-wrap">
         <div className="nl-sectionhead"><span className="nl-eyebrow">SATU LINK UNTUK PROMOSI DAN TRANSAKSI</span><h2>Promosi Anda mengundang pelanggan.<br/>Link NORTAGO ORDER memudahkan transaksi.</h2><p>Tidak perlu mengarahkan pelanggan ke percakapan panjang untuk menanyakan menu, harga, atau mengulang pesanan. Menu dan alur order tersedia dalam satu link.</p></div>
