@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useEffect,useMemo,useState } from "react";
-import { getSupabase } from "@/lib/supabase";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type Outlet={id:string;name:string};
 type TableRow={id:string;table_code:string;table_name:string;capacity:number;is_active:boolean};
 type Session={id:string;table_id:string;table_code:string;table_name:string;capacity:number;guest_name:string|null;party_size:number;status:string;opened_at:string;closed_at:string|null;note:string|null};
+async function getSupabase():Promise<SupabaseClient>{const response=await fetch("/api/supabase-config",{cache:"no-store"});const config=await response.json().catch(()=>({}));if(!response.ok||!config.url||!config.key)throw new Error(config.error||"Konfigurasi Supabase tidak tersedia.");return createClient(config.url,config.key);}
 
 export default function BosSessionsPage(){
  const [client,setClient]=useState<any>(null),[outlets,setOutlets]=useState<Outlet[]>([]),[outletId,setOutletId]=useState(""),[tables,setTables]=useState<TableRow[]>([]),[sessions,setSessions]=useState<Session[]>([]),[tableId,setTableId]=useState(""),[guest,setGuest]=useState(""),[party,setParty]=useState("2"),[note,setNote]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
