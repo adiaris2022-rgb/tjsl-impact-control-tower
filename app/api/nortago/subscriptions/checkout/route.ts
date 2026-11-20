@@ -28,9 +28,14 @@ export async function POST(request: NextRequest) {
     const outletIds = Array.isArray(body.outlet_ids)
       ? [...new Set(body.outlet_ids.filter((id: unknown) => typeof id === "string"))] as string[]
       : [];
-    const planCode = body.plan_code === "NORTAGO_OUTLET_YEARLY"
-      ? "NORTAGO_OUTLET_YEARLY"
-      : body.plan_code === "NORTAGO_OUTLET_MONTHLY" ? "NORTAGO_OUTLET_MONTHLY" : "";
+    const allowedPlanCodes = [
+      "NORTAGO_ORDER_MONTHLY", "NORTAGO_ORDER_YEARLY",
+      "NORTAGO_BOS_MONTHLY", "NORTAGO_BOS_YEARLY",
+    ] as const;
+    const planCode = allowedPlanCodes.includes(body.plan_code)
+      ? body.plan_code
+      : body.plan_code === "NORTAGO_OUTLET_MONTHLY" ? "NORTAGO_ORDER_MONTHLY"
+        : body.plan_code === "NORTAGO_OUTLET_YEARLY" ? "NORTAGO_ORDER_YEARLY" : "";
     if (!businessId || !outletIds.length || outletIds.length > 100 || !planCode) {
       return json({ error: "INVALID_REQUEST" }, 400);
     }
