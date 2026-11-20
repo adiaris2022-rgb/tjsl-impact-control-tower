@@ -23,6 +23,13 @@ export default function Owner() {
   const [inboxSearch, setInboxSearch] = useState("");
   const [inboxFilter, setInboxFilter] = useState("ALL");
   const [expandedOrderId, setExpandedOrderId] = useState("");
+  const [orderRefresh, setOrderRefresh] = useState(0);
+  const [lifecycleNote, setLifecycleNote] = useState("");
+  const [busyOrderId, setBusyOrderId] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [auditError, setAuditError] = useState("");
+  const [auditLoading, setAuditLoading] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -79,7 +86,26 @@ export default function Owner() {
       } finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
-  }, [businessId]);
+  }, [businessId, orderRefresh]);
+  useEffect(() => {
+    if (!businessId || !expandedOrderId) { setAuditEvents([]); return; }
+    let alive = true;
+    setAuditLoading(true); setAuditError("");
+    (async () => {
+      try {
+        const supabase = await getSupabase();
+        const { data, error: auditQueryError } = await supabase.from("nortago_order_status_audit")
+          .select("id,from_status,to_status,note,created_at,actor_user_id")
+          .eq("business_id", businessId).eq("order_id", expandedOrderId)
+          .order("created_at", { ascending: false }).limit(20);
+        if (auditQueryError) throw auditQueryError;
+        if (alive) setAuditEvents((data || []) as AuditEvent[]);
+      } catch (cause) {
+        if (alive) setAuditError(cause instanceof Error ? cause.message : "Riwayat status belum dapat dimuat.");
+      } finally { if (alive) setAuditLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [businessId, expandedOrderId, orderRefresh]);
   const currentTime = useMemo(() => new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }), []);
   const filteredInboxOrders = useMemo(() => inboxOrders.filter((order) => {
     const q = inboxSearch.trim().toLowerCase();
@@ -87,6 +113,25 @@ export default function Owner() {
     const matchesFilter = inboxFilter === "ALL" || (inboxFilter === "OPEN" && !["SUCCESS", "PO_SUCCESS", "COMPLETED", "CANCELLED"].includes(order.status)) || (inboxFilter === "PAID" && order.payment_status === "PAID") || (inboxFilter === "UNPAID" && order.payment_status !== "PAID");
     return matchesSearch && matchesFilter;
   }), [inboxOrders, inboxSearch, inboxFilter]);
+  async function handleStatusUpdate(order: Order, nextStatus: string) {
+    if (busyOrderId) return;
+    setBusyOrderId(order.id); setActionError("");
+    try {
+      const supabase = await getSupabase();
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError || !auth.user) throw new Error("Sesi login tidak ditemukan. Silakan login ulang.");
+      const { error: rpcError } = await supabase.rpc("nortago_update_order_status", {
+        p_order_id: order.id,
+        p_next_status: nextStatus,
+        p_note: lifecycleNote.trim() || null,
+      });
+      if (rpcError) throw rpcError;
+      setLifecycleNote("");
+      setOrderRefresh((value) => value + 1);
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Gagal memperbarui status order.");
+    } finally { setBusyOrderId(""); }
+  }
   if (loading && !businessId) return <main className="otc-page"><div className="loading">Memuat Owner Dashboard…</div></main>;
   if (error && !businessId) return <main className="otc-page"><div className="info-box wide">{error}</div></main>;
   return <main className="otc-page">
@@ -105,7 +150,7 @@ export default function Owner() {
         {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pembayaran terverifikasi</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="data-panel">
-        <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · READ ONLY</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} pesanan</span></div>
+        <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} pesanan</span></div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0"}}>
           <input aria-label="Cari pesanan" placeholder="Cari nomor order, customer, WhatsApp, outlet…" value={inboxSearch} onChange={(e)=>setInboxSearch(e.target.value)} style={{flex:"1 1 240px",padding:12,borderRadius:10,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}} />
           <select aria-label="Filter pesanan" value={inboxFilter} onChange={(e)=>setInboxFilter(e.target.value)} style={{padding:12,borderRadius:10,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}}>
@@ -119,7 +164,21 @@ export default function Owner() {
             <td><button type="button" className="otc-secondary" onClick={()=>setExpandedOrderId(expandedOrderId===order.id?"":order.id)}>{expandedOrderId===order.id?"Tutup":"Lihat"}</button></td>
           </tr>)}
           {filteredInboxOrders.filter(order=>order.id===expandedOrderId).map(order=><tr key={order.id+"-detail"}><td colSpan={6}><div style={{padding:12,display:"grid",gap:6}}>
-            <strong>Detail {order.order_no}</strong><div>WhatsApp: {order.customer_whatsapp||"—"}</div><div>Metode pembayaran: {order.payment_method||"—"}</div><div>Jadwal: {order.scheduled_at?new Date(order.scheduled_at).toLocaleString("id-ID"):"—"}</div><div>Alamat delivery: {order.delivery_address||"—"}</div><div>Catatan: {order.delivery_note||"—"}</div><small>Inbox ini read-only. Perubahan status belum tersedia sampai workflow server-side disiapkan.</small>
+            <strong>Detail {order.order_no}</strong><div>WhatsApp: {order.customer_whatsapp||"—"}</div><div>Metode pembayaran: {order.payment_method||"—"}</div><div>Jadwal: {order.scheduled_at?new Date(order.scheduled_at).toLocaleString("id-ID"):"—"}</div><div>Alamat delivery: {order.delivery_address||"—"}</div><div>Catatan pelanggan: {order.delivery_note||"—"}</div>
+            <div style={{marginTop:12,display:"grid",gap:8}}>
+              <label style={{display:"grid",gap:5}}>Catatan tindakan (opsional, maks. 500 karakter)
+                <textarea value={lifecycleNote} maxLength={500} onChange={(e)=>setLifecycleNote(e.target.value)} rows={2} placeholder="Catatan untuk riwayat status…" style={{width:"100%",padding:10,borderRadius:9,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}}/>
+              </label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {lifecycleActions(order).map(action=><button key={action.nextStatus} type="button" className="otc-secondary" disabled={Boolean(busyOrderId)} onClick={()=>handleStatusUpdate(order,action.nextStatus)}>{busyOrderId===order.id? "Memproses…" : action.label}</button>)}
+              </div>
+              {actionError && expandedOrderId===order.id ? <div className="info-box">{actionError}</div> : null}
+              <small>Setiap perubahan status divalidasi oleh server dan dicatat dalam audit trail. Status pembayaran tidak diubah oleh tindakan ini.</small>
+            </div>
+            <div style={{marginTop:14}}>
+              <strong>Riwayat status</strong>
+              {auditLoading?<div className="muted">Memuat riwayat…</div>:auditError?<div className="muted">Riwayat belum dapat ditampilkan: {auditError}</div>:auditEvents.length===0?<div className="muted">Belum ada perubahan status tercatat.</div>:<ul style={{paddingLeft:18,marginTop:8}}>{auditEvents.map(event=><li key={event.id} style={{marginBottom:8}}><strong>{event.from_status} → {event.to_status}</strong><div>{new Date(event.created_at).toLocaleString("id-ID")}</div>{event.note?<div>Catatan: {event.note}</div>:null}</li>)}</ul>}
+            </div>
           </div></td></tr>)}
         </tbody></table></div>}
       </section>
