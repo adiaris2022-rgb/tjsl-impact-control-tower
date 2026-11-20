@@ -125,8 +125,8 @@ export async function POST(request: NextRequest) {
         }
 
         const payload = {
-          title: `NORTAGO Order — ${invoice.plan_code}`,
-          description: `Langganan NORTAGO Order outlet ${invoice.outlet_id} · invoice ${invoiceNo}`,
+          title: `${String(invoice.plan_code).startsWith("NORTAGO_BOS") ? "NORTAGO BOS" : "NORTAGO Order"} — ${invoice.plan_code}`,
+          description: `Langganan ${String(invoice.plan_code).startsWith("NORTAGO_BOS") ? "NORTAGO BOS" : "NORTAGO Order"} outlet ${invoice.outlet_id} · invoice ${invoiceNo}`,
           amount,
           reference_id: invoiceNo,
           customer: {
