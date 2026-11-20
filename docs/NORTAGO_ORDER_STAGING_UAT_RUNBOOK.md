@@ -110,3 +110,25 @@ Commercial release review may proceed only after all critical checkout/receipt, 
 ## Paid-order fulfillment regression (CI fixture)
 
 The release-first CI now includes `supabase/tests/nortago_order_lifecycle_paid_order_smoke.sql`. It seeds a disposable order with `status=PAID` and `payment_status=PAID` (no provider call or real payment), then advances Takeaway fulfillment through PROCESSING → READY → WAITING_PICKUP → PICKUP_VERIFIED → SUCCESS. It asserts the payment state remains PAID, the five audit transitions are ordered and actor-attributed. This is automated CI coverage only; do not use a live payment to reproduce it in staging.
+
+## Owner Inbox pagination — cursor consistency
+
+The Owner Inbox uses keyset/cursor pagination ordered by `created_at DESC, id DESC`. Each page contains up to 100 rows. The cursor is the last row of the current page; the next query selects rows strictly older than that tuple. This prevents new orders arriving at the top of the inbox from shifting offset-based pages and causing skipped/duplicated rows. Search and filters remain client-side over **loaded** pages; they are not server-side search over every order.
+
+### Manual UAT cases
+
+- [ ] Seed or use a disposable business with more than 100 orders created today.
+- [ ] Load page 1; confirm 100 rows and the Load More control.
+- [ ] Load page 2; confirm no overlap with page 1 and that the next older orders appear.
+- [ ] Insert a new order at the top after page 1 has loaded; page 2 must still start strictly after the last page-1 cursor, with no skipped/duplicated rows.
+- [ ] Use several orders with the same `created_at`; confirm the ID descending tie-breaker keeps page boundaries deterministic.
+- [ ] Load the final short page; Load More disappears after it returns fewer than 100 rows.
+- [ ] Switch business; loaded rows and cursor reset so no prior business order remains visible.
+- [ ] Perform a lifecycle action; inbox resets to page 1 and refreshed status/audit are visible.
+- [ ] Search/filter; confirm the UI labels that results are limited to loaded rows and load more pages when searching older orders.
+- [ ] Verify every page query is scoped to the selected `business_id` and that real staging RLS still applies.
+
+### Automated helper coverage
+
+The cursor-filter builder and page cursor extraction are covered by `node --test app/otc/owner/inbox-pagination.test.mjs`. This tests filter generation, tie-break cursor extraction, short-page termination, and input validation; it does not replace preview browser UAT or database/RLS verification.
+
