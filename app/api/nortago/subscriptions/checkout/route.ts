@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         { p_business_id: businessId, p_outlet_id: outletId, p_plan_code: planCode },
       );
       if (invoiceError || !invoice) {
-        failures.push({ outlet_id: outletId, error: invoiceError?.message || "INVOICE_PREPARATION_FAILED" });
+        failures.push({ outlet_id: outletId, error: "INVOICE_PREPARATION_FAILED" });
         continue;
       }
 
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return json({
       error: "SUBSCRIPTION_CHECKOUT_FAILED",
-      message: error instanceof Error ? error.message : "Unexpected error",
+      message: "Unexpected checkout error",
     }, 500);
   }
 }
