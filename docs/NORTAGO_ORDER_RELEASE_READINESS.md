@@ -328,3 +328,30 @@ No PR was merged; no live/staging migration, production deployment, payment/webh
 - PR #18 exact head `03ac27ceb0d268826c2b76e49808a923786d9e13`: CI Run #191 PASS. PR #26 exact head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: CI Run #216 PASS. PR #29 exact head `d63f3aa9ab0e20b972766b7215db245b8f54cccb`: CI Run #238 PASS.
 - The baseline lifecycle bypass was reproduced only in disposable CI by simulating authenticated table and column DML grants against the core `FOR ALL` membership policy. The RPC-only hardening migration removes client order/item mutation privileges while retaining authenticated business-scoped SELECT; the regression test rejects direct UPDATE/INSERT/DELETE and accepts the lifecycle RPC with audit/payment-state assertions. Effective Supabase staging/live grants remain unverified.
 - Browser UAT, real tenant/role verification, approved staging migration, delivery/courier decision, and commercial sign-off remain open. No production deployment, payment, or webhook activation.
+
+## Superseding exact-head refresh — 22 Nov 2026, 03:14 WIB
+
+This section supersedes prior snapshots for current GitHub refs/checks. Metadata and workflow runs were queried again by exact PR head SHA. All PRs #1, #12–#17 remain open, draft, unmerged, and mergeable.
+
+
+| PR | Exact head SHA | Exact base SHA | CI run | Exact Vercel commit status |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | #136 PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | failure — Vercel build-rate-limit |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | failure — Vercel build-rate-limit |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | success |
+| #18 | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | #191 PASS | success |
+| #26 | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `b76d0ae85911b6963af96bb1fd92ba5d90816649` | #216 PASS | success |
+| #28 | `52cb20fe18aae46ade87c05847a4bc7d2bc5d904` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | #245 PASS | success |
+| #29 | `d63f3aa9ab0e20b972766b7215db245b8f54cccb` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | #238 PASS | success |
+
+- Exact SHA workflow lookup confirms all seven requested PR CI runs completed successfully; PR #16/#17 remain Run #141/#143 PASS.
+- Job-level verification was performed for Runs #141, #143, #216, #238, and #245; both build and PostgreSQL validation jobs completed successfully on the inspected runs.
+- The prior PR #28 snapshot listed head `f3445584...` and Run #244. That is superseded: the current head is `52cb20fe...`, Run #245 PASS, and Vercel commit status is success.
+- PR #14/#15 Vercel remain build-rate-limited despite their CI success. Vercel success does not replace browser UAT; preview pages have not been independently tested on desktop/mobile in this refresh.
+- The lifecycle baseline direct-status bypass is proven in simulated client-grant disposable CI; PR #26 hardening denies direct order/item mutations and permits the approved RPC. Effective Supabase staging/live grants, identity, and RLS remain unverified.
+- Automated checkout-to-receipt, tenant isolation, per-outlet subscription, pagination, and lifecycle assertions are evidence from disposable CI only. Browser/customer/owner UAT, staging verification, delivery/courier decision, and commercial sign-off remain open.
+- No merge, production deploy, staging/live database migration, payment/webhook activation, secret/environment change, or destructive action occurred. LinkBayar webhook remains disabled.
