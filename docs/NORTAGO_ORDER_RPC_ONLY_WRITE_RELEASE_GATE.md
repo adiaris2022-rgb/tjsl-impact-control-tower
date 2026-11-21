@@ -10,22 +10,35 @@ PR #26 makes client table access read-only for order headers and order items:
 - `authenticated`: SELECT only, subject to business-scoped RLS.
 - Checkout/idempotency, customer receipt, and lifecycle remain SECURITY DEFINER RPC paths; no client table mutation is required by the reviewed `app/otc` checkout, Owner Inbox, or Owner Report pages.
 
-## Verified CI evidence for the security implementation
+## Security review: baseline bypass and RPC-only hardening
 
-- Security implementation commit tested: `837d1fe8692cad816f47bffa96268a6ffdaeee62`
-- CI run #208 for the security implementation commit: [SUCCESS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44865351744)
-- Exact current PR #26 head at this document update: `176814a87c38b909aa15c59c05be141e1b69c731`
-- Exact-head CI run #209: [SUCCESS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44871268859)
-- Jobs: PostgreSQL migrations/security/functional smoke checks SUCCESS; install, pagination unit tests, and production build SUCCESS.
-- Coverage includes PostgreSQL migration/replay, simulated broad client DML grants, RPC-only privilege checks, lifecycle and audit tests, checkout-to-receipt idempotency, tenant isolation, per-outlet subscription, pagination, and Order-only scope guards.
+### What the migrations actually enforce
+- `20260928_otc_commerce_core_v1.sql` enables RLS, but `otc_orders_staff_manage` and `otc_order_items_staff_manage` are **FOR ALL** policies for business-membership roles (OWNER, PROGRAM_MANAGER, PARTNER, STAFF). The core migration does not itself declare explicit table DML grants.
+- `20261120_nortago_order_lifecycle_rpc_v1.sql` implements `nortago_update_order_status` as SECURITY DEFINER: it requires `auth.uid()`, checks business membership, verifies outlet/business consistency, validates fulfillment-specific transitions, and inserts an audit event. The migration does not install a status-audit trigger that forces direct table writes through this RPC.
+- `20261120_nortago_order_release_scope_guard_v1.sql` has a trigger on INSERT/UPDATE of `order_source`, `fulfillment_type`, and `status`; it rejects Dine-In and STAFF_WALK_IN but does not validate the lifecycle transition or create audit rows.
+- Therefore the direct-status bypass is **confirmed in the disposable CI grant simulation**, not confirmed against live Supabase effective grants. Broad client DML grants plus the core FOR ALL business-membership policy allow direct status updates that skip RPC validation/audit.
 
-CI is disposable PostgreSQL evidence only. It does not verify effective privileges or RLS in the Supabase staging project.
+### PR #26 prevention
+- `20261121_nortago_order_rpc_only_write_privileges_v1.sql` revokes table-level and explicit column-level INSERT/UPDATE/DELETE privileges from PUBLIC, anon, and authenticated on both `otc_orders` and `otc_order_items`; it grants authenticated SELECT only.
+- The migration replaces the broad order/item FOR ALL policies with business-scoped SELECT-only policies. RLS remains enabled on both tables.
+- Checkout/idempotency and receipt remain SECURITY DEFINER RPCs; lifecycle remains the authenticated SECURITY DEFINER `nortago_update_order_status`. The client UI does not need direct table writes for these flows.
+
+### Regression evidence
+- `nortago_order_rpc_only_write_privileges_smoke.sql` verifies post-hardening table/column DML privileges are absent, scoped reads remain available, direct status UPDATE/order INSERT/item INSERT/UPDATE/DELETE are rejected, the approved lifecycle RPC advances status and appends one audit event, and payment status remains unchanged.
+- Added `nortago_order_status_direct_write_baseline_smoke.sql` in commit `e4f77826f948e98ac054ce13c87cba39cceafdb5`. In a rollback-only CI fixture, before the hardening migration, it deliberately proves the broad grants + FOR ALL policy allow a direct status update and that this write produces no lifecycle audit row.
+- The CI workflow now applies the Order-only trigger, runs the baseline bypass proof, then applies/replays the RPC-only hardening migration.
+
+### CI evidence
+- Prior exact PR #26 head `9dadb6b4ce296079c5e5673266a18e5b8f20a81f`: [Run #213 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44875004150), production build, both pagination unit-test suites, and PostgreSQL migration/replay/security/checkout/tenant/subscription/lifecycle/scope checks.
+- PR #25 pagination release-base commit `b76d0ae85911b6963af96bb1fd92ba5d90816649`: [Run #199 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44857892093), including inbox and summary cursor-pagination tests plus PostgreSQL smoke tests.
+- CI uses a disposable PostgreSQL database and simulated client grants. It does not prove actual Supabase staging privileges or real-user RLS.
 
 ## Preview deployment evidence and browser-UAT limitation
 
-- PR #26 Vercel status was SUCCESS/Ready for head `176814a87c38b909aa15c59c05be141e1b69c731`; the deployment preview URL returned by Vercel is: [Preview](https://nortago-order-staging-git-fix-nortago-order-rpc-652c1f-nortago.vercel.app).
-- The current web inspection tool could not open that preview URL. This is a deployment-status signal only, not browser UAT; no checkout, authentication, or receipt interaction is claimed.
-- PR #14 and PR #15 preview status checks are failing with Vercel `api-deployments-free-per-day` build-rate limit. Do not infer the same failure for PR #26, whose status is Ready.
+- Vercel check was **SUCCESS** for the prior exact PR #26 head `9dadb6b4ce296079c5e5673266a18e5b8f20a81f`. The status target is a Vercel project/deployment dashboard, not an independently verified current-head preview URL.
+- The earlier preview alias in this document was tied to an older SHA and is not accepted as evidence for the newer head. A direct open attempt was inaccessible; no checkout/auth/receipt browser interaction is claimed.
+- The new baseline-bypass test and CI workflow update advance PR #26; exact-head CI must be refreshed on the final commit before review. Preview/browser UAT remains a staging gate.
+- PR #14/#15 previews have previously been blocked by Vercel build-rate-limit status; do not infer those failures for PR #26.
 
 ## Required staging checks — exact preview SHA
 
