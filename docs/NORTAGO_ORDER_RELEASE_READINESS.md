@@ -42,7 +42,7 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | #17 | Success | Preview status returned by GitHub |
 | #18 | Success | Exact current head Vercel status |
 | #26 | Success | Exact current head Vercel status |
-| #28 | Success | Exact current head Vercel status |
+| #28 | Failure — Vercel build-rate-limit | Current docs-only head status; CI #221 passed on earlier code-tested ref, current docs-only head not CI-tested |
 | #29 | Success | Exact current head Vercel status |
 
 A successful Vercel check is deployment evidence only; preview pages were not independently browser-verified.
