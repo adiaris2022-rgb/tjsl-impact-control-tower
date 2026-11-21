@@ -6,20 +6,20 @@ NORTAGO ORDER is a shareable link for product catalog, checkout, and order intak
 
 Excluded from this release: Dine-In, Walk-In/POS, reservations, queues, tables/seating/capacity, sessions, Control Tower, and BOS (deferred until Order is live and stable).
 
-## Current pull request chain and CI evidence (20 Nov 2026)
+## Current pull request chain and CI evidence (21 Nov 2026)
 
 All PRs listed remain **open, draft, and unmerged**. Head/base references were refreshed during the release-first review.
 
 | PR | Head branch | Head SHA / latest CI-tested code ref | Base branch | Latest verified CI |
 |---|---|---|---|
 | #1 | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` | Run #69 PASS |
-| #12 | `release/nortago-order-only-20261120` | `31e517eed0c280ed25e57c144405bbd2fcb0178b` | `feature/nortago-order-audit-fix` | Run #131 PASS |
+| #12 | `release/nortago-order-only-20261120` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` | Run #183 PASS |
 | #13 | `fix/nortago-order-plan-snapshot-20261120` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` | Run #136 PASS |
 | #14 | `fix/nortago-order-checkout-idempotency-20261120` | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` | Run #138 PASS |
 | #15 | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | Run #140 PASS |
 | #16 | `chore/nortago-order-scope-smoke-dedupe` | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | Run #141 PASS |
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
-| #18 | `feature/nortago-order-lifecycle-rpc` | CI-tested code `8e084c579d40c023ea13aace0d028d55da628c89` (docs follow-up) | `feature/nortago-order-owner-inbox` | Run #174 PASS |
+| #18 | `feature/nortago-order-lifecycle-rpc` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `feature/nortago-order-owner-inbox` | Run #191 PASS |\n| #26 | `fix/nortago-order-rpc-only-write-privileges-20261121` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `fix/nortago-order-pagination-release-base-18-20261121` | Run #216 PASS |\n| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `eb22b44e131d2dbe94ee276b6f4319945fc253da` | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #221 PASS |\n| #29 | `feat/nortago-order-services-20261121` | `d8af9eb46dcc6a28d1d0e7d7f6388382a95b02c3` | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #230 PASS |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
 - [CI Run #174](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44770912476) passed on PR #18 head `8e084c579d40c023ea13aace0d028d55da628c89`: production build, migrations/replay, lifecycle security tests, checkout-to-receipt assertions, tenant isolation, and per-outlet subscription checks.
@@ -31,13 +31,13 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | PR | Vercel status | Evidence |
 |---|---|---|
 | #1 | Success | Preview status returned by GitHub |
-| #12 | Failure | Build-rate-limit |
+| #12 | Success | Exact current head Vercel status |
 | #13 | Success | Preview status returned by GitHub |
 | #14 | Failure | Build-rate-limit |
 | #15 | Failure | Build-rate-limit |
 | #16 | Success | Preview status returned by GitHub |
 | #17 | Success | Preview status returned by GitHub |
-| #18 | Success | Current-head Vercel status check; preview URL not independently verified |
+| #18 | Success | Exact current head Vercel status |\n| #26 | Success | Exact current head Vercel status |\n| #28 | Success | Exact current head Vercel status |\n| #29 | Success | Exact current head Vercel status |
 
 A successful Vercel check is deployment evidence only; preview pages were not independently browser-verified.
 
@@ -241,3 +241,4 @@ PR #29 remains draft and is not part of the release-critical PR #26 hardening pa
 - Commit `49d1797450600467c36164be3124987a21a8282e` added the missing service-type mapping but still failed build: conditional string values widened to `string`, not the `PRODUCT|SERVICE` union.
 - Follow-up `d8a9655bb1495c3e3e9e3ec7fc0cc85065143f22` narrows the mapping with `Product["product_type"]`. CI Run #44890601112 is pending at this evidence refresh; it must pass before this branch is considered build-clean.
 - Owner/service CRUD (creating and assigning services to outlets), staging migration, and browser UAT remain unimplemented/unverified.
+\n## Product/Service catalog CI evidence (21 Nov 2026)\n\nPR #29 now validates the Product/Service schema in the disposable PostgreSQL CI environment. The workflow applies and replays `20261121_nortago_order_services_catalog_v1.sql`, then runs `nortago_order_services_catalog_smoke.sql` after the idempotent checkout RPC is installed.\n\n- Both `PRODUCT` and `SERVICE` catalog types are stored and mapped to an active outlet.\n- Invalid catalog type values are rejected by the CHECK constraint.\n- A SERVICE item is submitted through the same customer checkout RPC and the receipt RPC returns the correct service snapshot, quantity, outlet price, and total.\n- All fixture data is rollback-only in disposable CI.\n- CI Run #230 PASS on exact PR #29 head `d8af9eb46dcc6a28d1d0e7d7f6388382a95b02c3`.\n\nManual staging UAT must still verify Owner catalog editing, global active/inactive, outlet availability, and outlet-specific price; the catalog CI smoke test does not substitute for UI testing.\n
