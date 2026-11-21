@@ -7,7 +7,7 @@ declare
   v_order uuid := '30000000-0000-4000-8000-000000000099';
   v_business uuid := '10000000-0000-4000-8000-000000000099';
   v_outlet uuid := '20000000-0000-4000-8000-000000000099';
-  v_actor uuid := '00000000-0000-4000-8000-000000000001';
+  v_actor uuid := '00000000-0000-0000-0000-000000000001';
 begin
   if not exists (select 1 from pg_class where oid='public.otc_orders'::regclass and relrowsecurity) then
     raise exception 'otc_orders must keep RLS enabled';
