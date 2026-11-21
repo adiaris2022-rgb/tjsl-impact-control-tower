@@ -26,6 +26,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run Owner Inbox cursor pagination unit tests
         run: node --test app/otc/owner/inbox-pagination.test.mjs
+      - name: Run Owner summary cursor pagination unit tests
+        run: node --test app/otc/owner/summary-pagination.test.mjs
       - name: Production build
         run: npm run build
 
