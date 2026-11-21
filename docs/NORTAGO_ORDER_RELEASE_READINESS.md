@@ -380,3 +380,27 @@ PR #18 head `03ac27ceb0d268826c2b76e49808a923786d9e13` Run #191 PASS; Vercel suc
 **PR #28 current head at this refresh:** `d41d9a9eea5d6fb601b87c88d0e3c921da5565b0`; base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. Exact-SHA workflow lookup returned no CI run for this head; Run #245 PASS is on the previous docs head `52cb20fe18aae46ade87c05847a4bc7d2bc5d904`. Vercel status on current head is success. Browser UAT is not implied by Vercel status.
 
 Security tests are disposable PostgreSQL evidence. No effective grants/RLS on real Supabase staging/live have been verified. Browser UAT, real tenant/role checks, delivery/courier decision, and commercial sign-off remain open. No merge, live/staging migration, production deployment, payment/webhook activation, secret/environment change, or destructive action. LinkBayar remains disabled.
+
+
+## Superseding exact-head snapshot — 22 Nov 2026 05:19 WIB
+
+This snapshot supersedes the prior PR #28 exact-head notes above. Fresh GitHub pull-request metadata and commit statuses were read for PRs #1/#12/#13/#14/#15/#16/#17. Workflow evidence was checked against the exact listed commit; PR #12 run #183 was verified directly via its run/check-runs endpoint because the commit-run wrapper returned no run.
+
+| PR | Head SHA | Base SHA | CI exact head | Vercel exact head |
+|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789` | #136 PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | failure — Vercel build-rate limit |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | failure — Vercel build-rate limit |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | success |
+
+For PR #16 run #141 and PR #17 run #143, both jobs (production build and PostgreSQL migration/smoke) were fetched and completed successfully. All seven PRs remain open, draft, unmerged, and mergeable.
+
+
+### PR #28 documentation CI refresh
+
+Before this documentation-only refresh, PR #28 head was `3a0933690a8653b424f888c50298465a5ceb6224`, base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. Run #247 completed successfully on that exact head: **Install and production build — success; Validate PostgreSQL migrations and smoke tests — success**. Exact-head Vercel status was success. Links: [Run #247](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44951420111), [preview](https://vercel.com/nortago/nortago-order-staging/Xi8o41WTSTqXeEBDC4Jaqh2BjJPy).
+
+This evidence update itself advances PR #28's documentation branch. Its new commit SHA and CI/Vercel statuses must be refreshed separately; #247 does not apply to that new commit. No browser UAT or live/staging database verification is implied.
