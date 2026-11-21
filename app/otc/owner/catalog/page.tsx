@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 type Outlet = { id: string; business_id: string; name: string };
-type CatalogItem = { id: string; name: string; description: string | null; category: string | null; base_price: number; product_type: "PRODUCT" | "SERVICE"; is_active: boolean; is_available: boolean };
+type CatalogItem = { id: string; name: string; description: string | null; category: string | null; image_url: string | null; base_price: number; product_type: "PRODUCT" | "SERVICE"; is_active: boolean; is_available: boolean };
 
 async function getSupabase() {
   const response = await fetch("/api/supabase-config", { cache: "no-store" });
@@ -23,7 +23,9 @@ export default function OwnerCatalog() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busyItemId, setBusyItemId] = useState("");
+  const [editingItemId, setEditingItemId] = useState("");
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
+  const [detailsDrafts, setDetailsDrafts] = useState<Record<string, { name: string; description: string; category: string; image_url: string }>>({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [type, setType] = useState<"PRODUCT" | "SERVICE">("SERVICE");
@@ -39,18 +41,20 @@ export default function OwnerCatalog() {
     const oid = selectedOutlet || outletId;
     if (!bid || !oid) return;
     const { data, error: queryError } = await supabase.from("otc_outlet_products")
-      .select("price,is_available,product:otc_products(id,name,description,category,base_price,product_type,is_active)")
+      .select("price,is_available,product:otc_products(id,name,description,category,image_url,base_price,product_type,is_active)")
       .eq("outlet_id", oid).order("product_id");
     if (queryError) throw queryError;
     const mapped = (data || []).filter((row: any) => row.product).map((row: any) => ({
       ...row.product,
       base_price: Number(row.price ?? row.product.base_price ?? 0),
-      product_type: row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT",
+      image_url: row.product.image_url ?? null,
+      product_type: row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT", 
       is_active: Boolean(row.product.is_active),
       is_available: Boolean(row.is_available),
     }));
     setItems(mapped as CatalogItem[]);
     setPriceDrafts(Object.fromEntries(mapped.map((item: any) => [item.id, String(item.base_price)])));
+    setDetailsDrafts(Object.fromEntries(mapped.map((item: any) => [item.id, { name: item.name, description: item.description || "", category: item.category || "", image_url: item.image_url || "" }])));
   }
 
   useEffect(() => {
@@ -133,6 +137,34 @@ export default function OwnerCatalog() {
     } finally { setBusyItemId(""); }
   }
 
+  async function saveItemDetails(item: CatalogItem) {
+    const draft = detailsDrafts[item.id];
+    if (!draft || !draft.name.trim() || busyItemId) return;
+    const image = draft.image_url.trim();
+    if (image && !/^https?:\/\//i.test(image)) { setError("URL foto harus diawali http:// atau https://."); return; }
+    setBusyItemId(item.id); setError(""); setNotice("");
+    try {
+      const supabase = await getSupabase();
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError || !auth.user) throw new Error("Login Owner diperlukan.");
+      const { data: membership, error: membershipError } = await supabase.from("business_users").select("business_id").eq("user_id", auth.user.id).eq("business_id", businessId).maybeSingle();
+      if (membershipError) throw membershipError;
+      if (!membership) throw new Error("Akses bisnis tidak valid.");
+      const { data: updated, error: updateError } = await supabase.from("otc_products").update({
+        name: draft.name.trim(), description: draft.description.trim() || null,
+        category: draft.category.trim() || null, image_url: image || null,
+      }).eq("id", item.id).eq("business_id", businessId).select("id").maybeSingle();
+      if (updateError) throw updateError;
+      if (!updated) throw new Error("Item tidak ditemukan atau akses ditolak.");
+      setNotice("Detail katalog berhasil diperbarui. Perubahan berlaku untuk seluruh outlet bisnis ini.");
+      setEditingItemId("");
+      await loadCatalog(businessId, outletId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Gagal memperbarui detail katalog.");
+    } finally { setBusyItemId(""); }
+  }
+
+
   async function createItem(event: React.FormEvent) {
     event.preventDefault();
     if (!name.trim() || price === "" || Number(price) < 0 || !outletId) return;
@@ -173,7 +205,7 @@ export default function OwnerCatalog() {
     <section className="otc-shop" style={{alignItems:"start"}}>
       <div className="menu-panel">
         <div className="section-head"><div><span className="eyebrow">OUTLET MENU</span><h2>Katalog outlet</h2></div><span className="pill">{items.length} item</span></div>
-        {items.map(item=><article className="product-card" key={item.id}><div className="product-info"><small>{item.product_type === "SERVICE" ? "JASA" : "PRODUK"} · {item.is_active && item.is_available ? "TERSEDIA" : "NONAKTIF DI OUTLET"}</small><h3>{item.name}</h3><p>{item.category || "Tanpa kategori"}{item.description ? " · "+item.description : ""}</p><div style={{display:"grid",gap:8,marginTop:8}}><b>{money(item.base_price)}</b><label>Harga outlet (Rp)<input type="number" min="0" step="100" inputMode="decimal" value={priceDrafts[item.id] ?? String(item.base_price)} onChange={e=>setPriceDrafts(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>saveOutletPrice(item)}>Simpan harga outlet</button></div></div><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>toggleAvailability(item)}>{busyItemId===item.id?"Memproses…":item.is_available?"Nonaktifkan di outlet":"Aktifkan di outlet"}</button></article>)}
+        {items.map(item=><article className="product-card" key={item.id}><div className="product-info"><small>{item.product_type === "SERVICE" ? "JASA" : "PRODUK"} · {item.is_active && item.is_available ? "TERSEDIA" : "NONAKTIF DI OUTLET"}</small><h3>{item.name}</h3><p>{item.category || "Tanpa kategori"}{item.description ? " · "+item.description : ""}</p><div style={{display:"grid",gap:8,marginTop:8}}><b>{money(item.base_price)}</b><label>Harga outlet (Rp)<input type="number" min="0" step="100" inputMode="decimal" value={priceDrafts[item.id] ?? String(item.base_price)} onChange={e=>setPriceDrafts(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>saveOutletPrice(item)}>Simpan harga outlet</button></div></div><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>setEditingItemId(editingItemId===item.id?"":item.id)}>{editingItemId===item.id?"Tutup edit":"Edit detail"}</button>{editingItemId===item.id? <form onSubmit={event=>{event.preventDefault();saveItemDetails(item);}} style={{display:"grid",gap:8,padding:12,border:"1px solid #d7e1e5",borderRadius:12,marginTop:8}}><label>Nama item<input required maxLength={120} value={detailsDrafts[item.id]?.name ?? item.name} onChange={e=>setDetailsDrafts(prev=>({...prev,[item.id]:{...(prev[item.id]||{name:item.name,description:item.description||"",category:item.category||"",image_url:item.image_url||""}),name:e.target.value}}))}/></label><label>Deskripsi<textarea maxLength={500} value={detailsDrafts[item.id]?.description ?? item.description ?? ""} onChange={e=>setDetailsDrafts(prev=>({...prev,[item.id]:{...(prev[item.id]||{name:item.name,description:item.description||"",category:item.category||"",image_url:item.image_url||""}),description:e.target.value}}))}/></label><label>Kategori<input maxLength={80} value={detailsDrafts[item.id]?.category ?? item.category ?? ""} onChange={e=>setDetailsDrafts(prev=>({...prev,[item.id]:{...(prev[item.id]||{name:item.name,description:item.description||"",category:item.category||"",image_url:item.image_url||""}),category:e.target.value}}))}/></label><label>URL foto<input type="url" placeholder="https://…" value={detailsDrafts[item.id]?.image_url ?? item.image_url ?? ""} onChange={e=>setDetailsDrafts(prev=>({...prev,[item.id]:{...(prev[item.id]||{name:item.name,description:item.description||"",category:item.category||"",image_url:item.image_url||""}),image_url:e.target.value}}))}/></label><button type="submit" className="otc-primary full" disabled={Boolean(busyItemId)||loading}>{busyItemId===item.id?"Menyimpan…":"Simpan detail"}</button><p className="fine">Nama, deskripsi, kategori, dan foto adalah data produk/jasa bisnis yang digunakan bersama semua outlet. Harga tetap per outlet.</p></form>:null}<button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>toggleAvailability(item)}>{busyItemId===item.id?"Memproses…":item.is_available?"Nonaktifkan di outlet":"Aktifkan di outlet"}</button></article>)}
         {!loading && items.length===0 ? <p className="muted">Belum ada item di outlet ini. Tambahkan item dari form.</p> : null}
       </div>
       <aside className="cart-panel" style={{position:"static"}}>
