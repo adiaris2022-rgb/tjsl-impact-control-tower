@@ -231,3 +231,13 @@ PR #26 migration `20261121_nortago_order_rpc_only_write_privileges_v1.sql` revok
 - [ ] Real Supabase staging effective grants, RLS, and role/outlet behavior verified.
 - [ ] Owner/customer UAT, delivery operations, and release sign-off.
 - [ ] Production deploy and payment/webhook approval remain explicit owner decisions.
+
+
+## Service catalog branch CI refresh — 21 Nov 2026, 16:39 WIB
+
+PR #29 remains draft and is not part of the release-critical PR #26 hardening path. Its current head is `d8a9655bb1495c3e3e9e3ec7fc0cc85065143f22`, base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. Product/service catalog support is a separate enhancement.
+
+- Run #44890309224 on `e5f251c73ffb635a25b7452e269086cf07d301f7` failed TypeScript build because the catalog mapping omitted `product_type` in the CI merge ref; the PostgreSQL migration/replay and database smoke job passed.
+- Commit `49d1797450600467c36164be3124987a21a8282e` added the missing service-type mapping but still failed build: conditional string values widened to `string`, not the `PRODUCT|SERVICE` union.
+- Follow-up `d8a9655bb1495c3e3e9e3ec7fc0cc85065143f22` narrows the mapping with `Product["product_type"]`. CI Run #44890601112 is pending at this evidence refresh; it must pass before this branch is considered build-clean.
+- Owner/service CRUD (creating and assigning services to outlets), staging migration, and browser UAT remain unimplemented/unverified.
