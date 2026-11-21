@@ -77,7 +77,7 @@ export default function CustomerOrder() {
             cat: row.product.category || undefined,
             desc: row.product.description || undefined,
             image_url: row.product.image_url || null,
-            product_type: row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT",
+            product_type: (row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT") as Product["product_type"],
           }));
         if (alive) setProducts(mapped);
       } catch (cause: unknown) {
