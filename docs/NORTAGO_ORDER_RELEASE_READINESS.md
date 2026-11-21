@@ -404,3 +404,12 @@ For PR #16 run #141 and PR #17 run #143, both jobs (production build and Postgre
 Before this documentation-only refresh, PR #28 head was `3a0933690a8653b424f888c50298465a5ceb6224`, base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. Run #247 completed successfully on that exact head: **Install and production build — success; Validate PostgreSQL migrations and smoke tests — success**. Exact-head Vercel status was success. Links: [Run #247](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44951420111), [preview](https://vercel.com/nortago/nortago-order-staging/Xi8o41WTSTqXeEBDC4Jaqh2BjJPy).
 
 This evidence update itself advances PR #28's documentation branch. Its new commit SHA and CI/Vercel statuses must be refreshed separately; #247 does not apply to that new commit. No browser UAT or live/staging database verification is implied.
+
+
+## Payment/lifecycle policy gate — 22 Nov 2026
+
+Fresh review of `nortago_order_lifecycle_rpc_smoke.sql`, `nortago_order_lifecycle_paid_order_smoke.sql`, and the lifecycle RPC migration found a release policy question: the RPC permits a `NEW` order to advance to `PROCESSING` while `payment_status='PENDING'` (the disposable test explicitly exercises this path). This preserves separate payment and fulfillment status, but with payment/webhook integrations disabled, an owner can start fulfillment before payment verification. This may be intended for Cash/Other orders; it should not be silently assumed for QRIS.
+
+**Release decision required:** confirm whether owner-initiated fulfillment while payment is PENDING is permitted for all methods, or restrict unpaid progression (e.g., only permitted manual-payment methods). No schema/RPC behavior was changed because this is a commercial policy decision and payment activation is not approved. Add this decision to UAT before launch.
+
+The latest prior documentation commit `07515c1d9cc579aeebf75523e0696ca4ccaf305e` completed Run #248 PASS (both production build and PostgreSQL migration/smoke jobs). This policy note advances the docs branch; its new exact-head CI is pending and will be reported separately.
