@@ -153,14 +153,6 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_lifecycle_rpc_v1.sql
-      - name: Apply RPC-only order and item write privileges
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_rpc_only_write_privileges_v1.sql
-      - name: Replay RPC-only order and item write privileges (idempotency)
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_rpc_only_write_privileges_v1.sql
       - name: Apply Order-only release scope guard
         env:
           PGPASSWORD: postgres
@@ -169,6 +161,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_release_scope_guard_v1.sql
+      - name: Prove pre-hardening direct status bypass in disposable CI
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_status_direct_write_baseline_smoke.sql
+      - name: Apply RPC-only order and item write privileges
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_rpc_only_write_privileges_v1.sql
+      - name: Replay RPC-only order and item write privileges (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_rpc_only_write_privileges_v1.sql
       - name: Run subscription billing security smoke checks
         env:
           PGPASSWORD: postgres
