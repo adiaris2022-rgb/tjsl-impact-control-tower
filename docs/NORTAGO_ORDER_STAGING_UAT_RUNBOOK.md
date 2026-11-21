@@ -132,3 +132,20 @@ The Owner Inbox uses keyset/cursor pagination ordered by `created_at DESC, id DE
 
 The cursor-filter builder and page cursor extraction are covered by `node --test app/otc/owner/inbox-pagination.test.mjs`. This tests filter generation, tie-break cursor extraction, short-page termination, and input validation; it does not replace preview browser UAT or database/RLS verification.
 
+
+
+## Owner dashboard summary metrics — pagination beyond provider row cap
+
+The owner dashboard summary (daily transaction count, paid total, and per-outlet metrics) now fetches rows using cursor/keyset pagination in chunks of 1,000. Each page preserves the selected business and local-day start filters and uses deterministic `created_at DESC, id DESC` ordering. This prevents the Supabase/PostgREST default row cap from silently truncating dashboard metrics. The helper deduplicates IDs, propagates query errors (no partial metrics), rejects invalid rows/cursors, detects a non-advancing cursor, and stops at a safety page cap.
+
+
+### Manual UAT cases
+
+- [ ] Seed a disposable business with more than 1,000 orders today; verify the displayed transaction count and paid total include rows from subsequent pages.
+- [ ] Include multiple outlets and verify each outlet's transaction, paid nominal, and attention counts are calculated across all pages.
+- [ ] Insert a new order during page loading; cursor pagination must not shift the next page and duplicate/skip rows.
+- [ ] Verify the query stays scoped to the selected business and date boundary on every page.
+- [ ] Simulate a later-page query error; the dashboard must show a loading/error state rather than silently displaying partial totals.
+- [ ] Verify a repeated/non-advancing cursor fails closed.
+
+Automated helper coverage is in `app/otc/owner/summary-pagination.test.mjs`; it is CI-level logic coverage, not live staging verification.

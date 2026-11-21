@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { INBOX_PAGE_SIZE, buildInboxCursorFilter, cursorFromPage, type InboxCursor } from "./inbox-pagination.mjs";
+import { fetchAllSummaryRows, SUMMARY_PAGE_SIZE } from "./summary-pagination.mjs";
 
 type Outlet = { id: string; name: string };
 type Order = { id: string; outlet_id: string; order_no: string; customer_name: string; customer_whatsapp: string; fulfillment_type: string; payment_method: string; scheduled_at: string | null; delivery_address: string | null; delivery_note: string | null; total: number | string; status: string; payment_status: string; created_at: string };
@@ -100,18 +101,24 @@ export default function Owner() {
         const supabase = await getSupabase();
         const start = new Date(); start.setHours(0, 0, 0, 0);
         const inboxQuery = supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(INBOX_PAGE_SIZE);
-        const [{ data: orders, error: orderError }, { data: inbox, error: inboxError }, { data: outlets, error: outletError }] = await Promise.all([
-          supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()),
+        const startIso = start.toISOString();
+        const summaryPromise = fetchAllSummaryRows((cursor, pageSize) => {
+          let query = supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at")
+            .eq("business_id", businessId).gte("created_at", startIso)
+            .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize);
+          return cursor ? query.or(buildInboxCursorFilter(cursor)) : query;
+        });
+        const [{ data: inbox, error: inboxError }, { data: outlets, error: outletError }, summaryRows] = await Promise.all([
           inboxCursor ? inboxQuery.or(buildInboxCursorFilter(inboxCursor)) : inboxQuery,
           supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
+          summaryPromise,
         ]);
-        if (orderError) throw orderError;
         if (inboxError) throw inboxError;
         if (outletError) throw outletError;
         if (!alive) return;
         const outletRows = (outlets || []) as Outlet[];
         const names = new Map(outletRows.map((outlet) => [outlet.id, outlet.name]));
-        const orderRows = (orders || []) as Order[];
+        const orderRows = summaryRows as Order[];
         const inboxRows = (inbox || []) as Order[];
         const grouped = [...new Set(orderRows.map((order) => order.outlet_id))].map((id) => {
           const matching = orderRows.filter((order) => order.outlet_id === id);
