@@ -14,10 +14,18 @@ PR #26 makes client table access read-only for order headers and order items:
 
 - Security implementation commit tested: `837d1fe8692cad816f47bffa96268a6ffdaeee62`
 - CI run #208 for the security implementation commit: [SUCCESS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44865351744)
+- Exact current PR #26 head at this document update: `176814a87c38b909aa15c59c05be141e1b69c731`
+- Exact-head CI run #209: [SUCCESS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44871268859)
 - Jobs: PostgreSQL migrations/security/functional smoke checks SUCCESS; install, pagination unit tests, and production build SUCCESS.
 - Coverage includes PostgreSQL migration/replay, simulated broad client DML grants, RPC-only privilege checks, lifecycle and audit tests, checkout-to-receipt idempotency, tenant isolation, per-outlet subscription, pagination, and Order-only scope guards.
 
 CI is disposable PostgreSQL evidence only. It does not verify effective privileges or RLS in the Supabase staging project.
+
+## Preview deployment evidence and browser-UAT limitation
+
+- PR #26 Vercel status was SUCCESS/Ready for head `176814a87c38b909aa15c59c05be141e1b69c731`; the deployment preview URL returned by Vercel is: [Preview](https://nortago-order-staging-git-fix-nortago-order-rpc-652c1f-nortago.vercel.app).
+- The current web inspection tool could not open that preview URL. This is a deployment-status signal only, not browser UAT; no checkout, authentication, or receipt interaction is claimed.
+- PR #14 and PR #15 preview status checks are failing with Vercel `api-deployments-free-per-day` build-rate limit. Do not infer the same failure for PR #26, whose status is Ready.
 
 ## Required staging checks — exact preview SHA
 
@@ -62,6 +70,5 @@ Record UTC timestamp, exact preview SHA, staging project ref (not credentials), 
 - Audit retention: cascade-delete behavior and approved retention policy.
 - Delivery: fee configuration and courier responsibility wording.
 - Browser UAT/staging evidence on exact preview SHA.
-- Preview deployment: currently blocked by Vercel `api-deployments-free-per-day` rate limit; CI is not a substitute for browser UAT.
 
 No live migration, production deploy, payment activation, or webhook enablement is authorized by this document. LinkBayar remains disabled. NORTAGO ORDER only; Dine-In, Reservation, Walk-In/POS, queue, table/seating/capacity, sessions, Control Tower, and BOS are excluded.
