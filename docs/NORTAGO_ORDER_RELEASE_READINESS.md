@@ -413,3 +413,12 @@ Fresh review of `nortago_order_lifecycle_rpc_smoke.sql`, `nortago_order_lifecycl
 **Release decision required:** confirm whether owner-initiated fulfillment while payment is PENDING is permitted for all methods, or restrict unpaid progression (e.g., only permitted manual-payment methods). No schema/RPC behavior was changed because this is a commercial policy decision and payment activation is not approved. Add this decision to UAT before launch.
 
 The latest prior documentation commit `07515c1d9cc579aeebf75523e0696ca4ccaf305e` completed Run #248 PASS (both production build and PostgreSQL migration/smoke jobs). This policy note advances the docs branch; its new exact-head CI is pending and will be reported separately.
+
+
+### Latest release-first execution — 22 Nov 2026, 06:15 WIB
+
+- Refreshed PR #1/#12/#13/#14/#15/#16/#17 metadata and exact commit workflow runs. All remain Open/Draft/Unmerged/mergeable; exact-head CI runs #69/#183/#136/#138/#140/#141/#143 all PASS. Vercel status on #14/#15 is build-rate-limit failure; the other five exact heads are success.
+- PR #28 exact head `8f7771af27c5a46abcd526e1db28dcd8e7866661`: CI Run #249 PASS (PostgreSQL migration/security/smoke job and production build job). Exact-head Vercel status success. This corrects the prior stale #247/#248 references.
+- Scope guard audit found the OTC core check permits `POS_INTEGRATED`, while the existing Order guard rejected only Dine-In and `STAFF_WALK_IN`. Since POS-integrated/Walk-In is deferred from NORTAGO ORDER, created draft PR #30 to close this source gap.
+- PR #30 branch `fix/nortago-order-pos-integrated-scope-guard-20261122`, exact head `751a307185dd99cd8842bc5cd54a4a3ad8352f8e`, base PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`, 3 commits ahead/0 behind. Adds an idempotent forward migration rejecting `POS_INTEGRATED` with `ORDER_ONLY_POS_DISABLED`, insert and legacy-lifecycle regression tests, and CI migration/replay steps. CI Run #250 is in progress; no PASS claim until it completes.
+- PR #30 remains Draft/Open/unmerged. No staging/live migration or production action. LinkBayar webhook stays disabled. Browser UAT and live staging grants/RLS verification remain open.
