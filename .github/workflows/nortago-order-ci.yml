@@ -161,6 +161,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_order_release_scope_guard_v1.sql
+      - name: Apply NORTAGO Order POS-integrated source guard
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261122_nortago_order_pos_integrated_scope_guard_v1.sql
+      - name: Replay NORTAGO Order POS-integrated source guard (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261122_nortago_order_pos_integrated_scope_guard_v1.sql
       - name: Prove pre-hardening direct status bypass in disposable CI
         env:
           PGPASSWORD: postgres
