@@ -422,3 +422,10 @@ The latest prior documentation commit `07515c1d9cc579aeebf75523e0696ca4ccaf305e`
 - Scope guard audit found the OTC core check permits `POS_INTEGRATED`, while the existing Order guard rejected only Dine-In and `STAFF_WALK_IN`. Since POS-integrated/Walk-In is deferred from NORTAGO ORDER, created draft PR #30 to close this source gap.
 - PR #30 branch `fix/nortago-order-pos-integrated-scope-guard-20261122`, exact head `751a307185dd99cd8842bc5cd54a4a3ad8352f8e`, base PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`, 3 commits ahead/0 behind. Adds an idempotent forward migration rejecting `POS_INTEGRATED` with `ORDER_ONLY_POS_DISABLED`, insert and legacy-lifecycle regression tests, and CI migration/replay steps. CI Run #250 is in progress; no PASS claim until it completes.
 - PR #30 remains Draft/Open/unmerged. No staging/live migration or production action. LinkBayar webhook stays disabled. Browser UAT and live staging grants/RLS verification remain open.
+
+
+### POS-integrated scope gap closed in feature branch — 22 Nov 2026
+
+- Exact PR #30 head `751a307185dd99cd8842bc5cd54a4a3ad8352f8e`, base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: [CI Run #250 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102). Both production-build and PostgreSQL migration/smoke jobs passed.
+- New forward migration applies and replays idempotently. Scope tests reject POS-integrated INSERT with `ORDER_ONLY_POS_DISABLED`, seed a legacy POS-integrated row only in a rollback fixture, and prove lifecycle RPC cannot advance it or emit audit; valid online Take Away remains accepted.
+- PR #30 remains Draft/Open/unmerged. Exact-head Vercel status had no result returned; preview/browser UAT is not claimed. No staging/live migration or production deployment.
