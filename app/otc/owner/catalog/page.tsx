@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 type Outlet = { id: string; business_id: string; name: string };
-type CatalogItem = { id: string; name: string; description: string | null; category: string | null; base_price: number; product_type: "PRODUCT" | "SERVICE"; is_active: boolean };
+type CatalogItem = { id: string; name: string; description: string | null; category: string | null; base_price: number; product_type: "PRODUCT" | "SERVICE"; is_active: boolean; is_available: boolean };
 
 async function getSupabase() {
   const response = await fetch("/api/supabase-config", { cache: "no-store" });
@@ -22,6 +22,7 @@ export default function OwnerCatalog() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [busyItemId, setBusyItemId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [type, setType] = useState<"PRODUCT" | "SERVICE">("SERVICE");
@@ -44,7 +45,8 @@ export default function OwnerCatalog() {
       ...row.product,
       base_price: Number(row.price ?? row.product.base_price ?? 0),
       product_type: row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT",
-      is_active: Boolean(row.product.is_active && row.is_available),
+      is_active: Boolean(row.product.is_active),
+      is_available: Boolean(row.is_available),
     }));
     setItems(mapped as CatalogItem[]);
   }
@@ -86,6 +88,28 @@ export default function OwnerCatalog() {
     catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat katalog outlet."); }
   }
 
+  async function toggleAvailability(item: CatalogItem) {
+    if (!outletId || busyItemId) return;
+    setBusyItemId(item.id); setError(""); setNotice("");
+    try {
+      const supabase = await getSupabase();
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError || !auth.user) throw new Error("Login Owner diperlukan.");
+      const { data: membership, error: membershipError } = await supabase.from("business_users").select("business_id").eq("user_id", auth.user.id).eq("business_id", businessId).maybeSingle();
+      if (membershipError) throw membershipError;
+      if (!membership) throw new Error("Akses bisnis tidak valid.");
+      const nextAvailable = !item.is_available;
+      const { error: updateError } = await supabase.from("otc_outlet_products")
+        .update({ is_available: nextAvailable })
+        .eq("outlet_id", outletId).eq("product_id", item.id);
+      if (updateError) throw updateError;
+      setNotice(nextAvailable ? "Item diaktifkan untuk outlet ini." : "Item dinonaktifkan hanya untuk outlet ini.");
+      await loadCatalog(businessId, outletId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Gagal mengubah ketersediaan item.");
+    } finally { setBusyItemId(""); }
+  }
+
   async function createItem(event: React.FormEvent) {
     event.preventDefault();
     if (!name.trim() || price === "" || Number(price) < 0 || !outletId) return;
@@ -125,8 +149,8 @@ export default function OwnerCatalog() {
     {notice ? <div className="info-box wide">{notice}</div> : null}
     <section className="otc-shop" style={{alignItems:"start"}}>
       <div className="menu-panel">
-        <div className="section-head"><div><span className="eyebrow">OUTLET MENU</span><h2>Katalog aktif & tersedia</h2></div><span className="pill">{items.length} item</span></div>
-        {items.map(item=><article className="product-card" key={item.id}><div className="product-info"><small>{item.product_type === "SERVICE" ? "JASA" : "PRODUK"} · {item.is_active ? "TERSEDIA" : "NONAKTIF"}</small><h3>{item.name}</h3><p>{item.category || "Tanpa kategori"}{item.description ? " · "+item.description : ""}</p><b>{money(item.base_price)}</b></div></article>)}
+        <div className="section-head"><div><span className="eyebrow">OUTLET MENU</span><h2>Katalog outlet</h2></div><span className="pill">{items.length} item</span></div>
+        {items.map(item=><article className="product-card" key={item.id}><div className="product-info"><small>{item.product_type === "SERVICE" ? "JASA" : "PRODUK"} · {item.is_active && item.is_available ? "TERSEDIA" : "NONAKTIF DI OUTLET"}</small><h3>{item.name}</h3><p>{item.category || "Tanpa kategori"}{item.description ? " · "+item.description : ""}</p><b>{money(item.base_price)}</b></div><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>toggleAvailability(item)}>{busyItemId===item.id?"Memproses…":item.is_available?"Nonaktifkan di outlet":"Aktifkan di outlet"}</button></article>)}
         {!loading && items.length===0 ? <p className="muted">Belum ada item di outlet ini. Tambahkan item dari form.</p> : null}
       </div>
       <aside className="cart-panel" style={{position:"static"}}>
