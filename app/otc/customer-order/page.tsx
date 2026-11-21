@@ -66,7 +66,8 @@ export default function CustomerOrder() {
           .from("otc_outlet_products")
           .select("price,is_available,product:otc_products(id,name,description,category,image_url,base_price,product_type)")
           .eq("outlet_id", outletId)
-          .eq("is_available", true);
+          .eq("is_available", true)
+          .eq("product.is_active", true);
         if (queryError) throw queryError;
         const mapped = (data || [])
           .filter((row: any) => row.product && row.product.id)
