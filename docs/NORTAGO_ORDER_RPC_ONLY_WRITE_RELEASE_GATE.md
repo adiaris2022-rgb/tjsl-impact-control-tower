@@ -10,11 +10,12 @@ PR #26 makes client table access read-only for order headers and order items:
 - `authenticated`: SELECT only, subject to business-scoped RLS.
 - Checkout/idempotency, customer receipt, and lifecycle remain SECURITY DEFINER RPC paths; no client table mutation is required by the reviewed `app/otc` checkout, Owner Inbox, or Owner Report pages.
 
-## CI evidence
+## Current exact-head CI evidence
 
-- Code commit: `81ac2e25482203f93533b1932af9051a03d5d616`
-- CI run #203: [SUCCESS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44861777874)
-- Coverage: production build, Owner Inbox and summary pagination unit tests, PostgreSQL migration/replay, simulated broad client DML grants, RPC-only privilege checks, lifecycle and audit tests, checkout-to-receipt idempotency, tenant isolation, per-outlet subscription, and Order-only scope guards.
+- Current PR head: `837d1fe8692cad816f47bffa96268a6ffdaeee62`
+- CI run #208: [SUCCESS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44865351744)
+- Jobs: PostgreSQL migrations/security/functional smoke checks SUCCESS; install, pagination unit tests, and production build SUCCESS.
+- Coverage includes PostgreSQL migration/replay, simulated broad client DML grants, RPC-only privilege checks, lifecycle and audit tests, checkout-to-receipt idempotency, tenant isolation, per-outlet subscription, pagination, and Order-only scope guards.
 
 CI is disposable PostgreSQL evidence only. It does not verify effective privileges or RLS in the Supabase staging project.
 
