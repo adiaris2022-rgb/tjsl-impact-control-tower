@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { INBOX_PAGE_SIZE, buildInboxCursorFilter, cursorFromPage, type InboxCursor } from "./inbox-pagination.mjs";
+import { fetchAllSummaryRows, SUMMARY_PAGE_SIZE } from "./summary-pagination.mjs";
 
 type Outlet = { id: string; name: string };
 type Order = { id: string; outlet_id: string; order_no: string; customer_name: string; customer_whatsapp: string; fulfillment_type: string; payment_method: string; scheduled_at: string | null; delivery_address: string | null; delivery_note: string | null; total: number | string; status: string; payment_status: string; created_at: string };
@@ -61,6 +63,9 @@ export default function Owner() {
   const [inboxFilter, setInboxFilter] = useState("ALL");
   const [expandedOrderId, setExpandedOrderId] = useState("");
   const [orderRefresh, setOrderRefresh] = useState(0);
+  const [inboxCursor, setInboxCursor] = useState<InboxCursor | null>(null);
+  const [inboxNextCursor, setInboxNextCursor] = useState<InboxCursor | null>(null);
+  const [inboxHasMore, setInboxHasMore] = useState(false);
   const [lifecycleNote, setLifecycleNote] = useState("");
   const [busyOrderId, setBusyOrderId] = useState("");
   const [actionError, setActionError] = useState("");
@@ -95,18 +100,25 @@ export default function Owner() {
       try {
         const supabase = await getSupabase();
         const start = new Date(); start.setHours(0, 0, 0, 0);
-        const [{ data: orders, error: orderError }, { data: inbox, error: inboxError }, { data: outlets, error: outletError }] = await Promise.all([
-          supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()),
-          supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).limit(100),
+        const inboxQuery = supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(INBOX_PAGE_SIZE);
+        const startIso = start.toISOString();
+        const summaryPromise = fetchAllSummaryRows((cursor, pageSize) => {
+          let query = supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at")
+            .eq("business_id", businessId).gte("created_at", startIso)
+            .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize);
+          return cursor ? query.or(buildInboxCursorFilter(cursor)) : query;
+        });
+        const [{ data: inbox, error: inboxError }, { data: outlets, error: outletError }, summaryRows] = await Promise.all([
+          inboxCursor ? inboxQuery.or(buildInboxCursorFilter(inboxCursor)) : inboxQuery,
           supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
+          summaryPromise,
         ]);
-        if (orderError) throw orderError;
         if (inboxError) throw inboxError;
         if (outletError) throw outletError;
         if (!alive) return;
         const outletRows = (outlets || []) as Outlet[];
         const names = new Map(outletRows.map((outlet) => [outlet.id, outlet.name]));
-        const orderRows = (orders || []) as Order[];
+        const orderRows = summaryRows as Order[];
         const inboxRows = (inbox || []) as Order[];
         const grouped = [...new Set(orderRows.map((order) => order.outlet_id))].map((id) => {
           const matching = orderRows.filter((order) => order.outlet_id === id);
@@ -117,13 +129,22 @@ export default function Owner() {
         }).sort((a, b) => b.nominal - a.nominal);
         setRows(grouped);
         setMetrics({ count: orderRows.length, total: orderRows.filter((order) => order.payment_status === "PAID").reduce((sum, order) => sum + Number(order.total || 0), 0), outlets: outletRows.length });
-        setInboxOrders(inboxRows.map((order) => ({ ...order, outlet_name: names.get(order.outlet_id) || order.outlet_id })));
+        const mappedInboxRows = inboxRows.map((order) => ({ ...order, outlet_name: names.get(order.outlet_id) || order.outlet_id }));
+        const nextCursor = cursorFromPage(inboxRows);
+        setInboxNextCursor(nextCursor);
+        setInboxHasMore(Boolean(nextCursor));
+        if (!inboxCursor) setInboxOrders(mappedInboxRows);
+        else setInboxOrders((previous) => {
+          const merged = new Map(previous.map((order) => [order.id, order]));
+          mappedInboxRows.forEach((order) => merged.set(order.id, order));
+          return Array.from(merged.values());
+        });
       } catch (cause) {
         if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat Owner Dashboard.");
       } finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
-  }, [businessId, orderRefresh]);
+  }, [businessId, orderRefresh, inboxCursor]);
   useEffect(() => {
     if (!businessId || !expandedOrderId) { setAuditEvents([]); return; }
     let alive = true;
@@ -164,6 +185,9 @@ export default function Owner() {
       });
       if (rpcError) throw rpcError;
       setLifecycleNote("");
+      setInboxCursor(null);
+      setInboxNextCursor(null);
+      setInboxHasMore(false);
       setOrderRefresh((value) => value + 1);
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Gagal memperbarui status order.");
@@ -177,7 +201,7 @@ export default function Owner() {
     </header>
     <section className="customer-title"><span>ORDER & SALES</span><h1>Owner Dashboard</h1><p>Ringkasan transaksi dan penjualan untuk bisnis yang dipilih.</p>
       {businessIds.length > 1 ? <label className="business-switcher">Pilih bisnis
-        <select value={businessId} onChange={(event) => setBusinessId(event.target.value)}>{businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}</select>
+        <select value={businessId} onChange={(event) => { setBusinessId(event.target.value); setInboxCursor(null); setInboxNextCursor(null); setInboxOrders([]); setInboxHasMore(false); setExpandedOrderId(""); setActionError(""); setAuditEvents([]); }}>{businessIds.map((id) => <option key={id} value={id}>Bisnis · {id.slice(0, 8)}</option>)}</select>
       </label> : null}
     </section>
     {error ? <div className="info-box wide">{error}</div> : null}
@@ -187,7 +211,7 @@ export default function Owner() {
         {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pembayaran terverifikasi</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="data-panel">
-        <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} pesanan</span></div>
+        <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} cocok · {inboxOrders.length} dimuat</span></div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"12px 0"}}>
           <input aria-label="Cari pesanan" placeholder="Cari nomor order, customer, WhatsApp, outlet…" value={inboxSearch} onChange={(e)=>setInboxSearch(e.target.value)} style={{flex:"1 1 240px",padding:12,borderRadius:10,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}} />
           <select aria-label="Filter pesanan" value={inboxFilter} onChange={(e)=>setInboxFilter(e.target.value)} style={{padding:12,borderRadius:10,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}}>
@@ -218,6 +242,8 @@ export default function Owner() {
             </div>
           </div></td></tr>)}
         </tbody></table></div>}
+        {inboxHasMore ? <button type="button" className="otc-secondary" disabled={loading || !inboxNextCursor} onClick={() => inboxNextCursor && setInboxCursor(inboxNextCursor)}>Muat 100 order berikutnya</button> : <small className="muted">Semua order hari ini telah dimuat.</small>}
+        <small className="muted" style={{display:"block",marginTop:8}}>Pencarian dan filter mencakup order yang sudah dimuat. Muat halaman berikutnya untuk mencari order yang lebih lama.</small>
       </section>
     </>}
     <footer>Supported by NORTAGO · Order & Sales summary · Business ID: {businessId || "—"}</footer>
