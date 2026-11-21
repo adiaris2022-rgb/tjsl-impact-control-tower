@@ -21,7 +21,7 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
 | #18 | `feature/nortago-order-lifecycle-rpc` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `feature/nortago-order-owner-inbox` | Run #191 PASS |
 | #26 | `fix/nortago-order-rpc-only-write-privileges-20261121` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `fix/nortago-order-pagination-release-base-18-20261121` | Run #216 PASS |
-| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `eb22b44e131d2dbe94ee276b6f4319945fc253da` (CI-tested ref; docs-only updates afterward) | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #221 PASS; latest docs-only head not CI-tested |
+| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `f34455841e66f1801da46309c87cff1205499c6e` (exact current head) | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #244 PASS (exact current head) |
 | #29 | `feat/nortago-order-services-20261121` | `d63f3aa9ab0e20b972766b7215db245b8f54cccb` | `fix/nortago-order-rpc-only-write-privileges-20261121` | [Run #238 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44912723538) |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
@@ -317,3 +317,14 @@ Baseline CI explicitly grants simulated client table/column DML before the lifec
 - [ ] Production release explicitly approved.
 
 No PR was merged; no live/staging migration, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed. LinkBayar webhook remains disabled.
+
+
+## Exact-head refresh — 22 Nov 2026
+
+- Re-read PR metadata for #1 and #12–#17 from GitHub. All remain open, draft, unmerged, and mergeable; head/base SHAs are unchanged from the table above.
+- Re-fetched workflow runs by the exact current head SHA for each PR: #1 Run #69 PASS, #12 Run #183 PASS, #13 Run #136 PASS, #14 Run #138 PASS, #15 Run #140 PASS, #16 Run #141 PASS, and #17 Run #143 PASS.
+- Exact-head Vercel statuses refreshed: #1 success, #12 success, #13 success, #14 build-rate-limit failure, #15 build-rate-limit failure, #16 success, #17 success.
+- PR #28 current head `f34455841e66f1801da46309c87cff1205499c6e`: CI Run #244 PASS and Vercel status success. The docs-only branch has no app/migration changes in this refresh.
+- PR #18 exact head `03ac27ceb0d268826c2b76e49808a923786d9e13`: CI Run #191 PASS. PR #26 exact head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: CI Run #216 PASS. PR #29 exact head `d63f3aa9ab0e20b972766b7215db245b8f54cccb`: CI Run #238 PASS.
+- The baseline lifecycle bypass was reproduced only in disposable CI by simulating authenticated table and column DML grants against the core `FOR ALL` membership policy. The RPC-only hardening migration removes client order/item mutation privileges while retaining authenticated business-scoped SELECT; the regression test rejects direct UPDATE/INSERT/DELETE and accepts the lifecycle RPC with audit/payment-state assertions. Effective Supabase staging/live grants remain unverified.
+- Browser UAT, real tenant/role verification, approved staging migration, delivery/courier decision, and commercial sign-off remain open. No production deployment, payment, or webhook activation.
