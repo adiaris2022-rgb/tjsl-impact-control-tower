@@ -102,20 +102,16 @@ export default function Owner() {
         const start = new Date(); start.setHours(0, 0, 0, 0);
         const inboxQuery = supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(INBOX_PAGE_SIZE);
         const startIso = start.toISOString();
-        const [{ summaryRows, inbox, inboxError, outlets, outletError }] = await Promise.all([
-          (async () => {
-            const summaryRows = await fetchAllSummaryRows((cursor, pageSize) => {
-              let query = supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at")
-                .eq("business_id", businessId).gte("created_at", startIso)
-                .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize);
-              return cursor ? query.or(buildInboxCursorFilter(cursor)) : query;
-            });
-            const [{ data: inbox, error: inboxError }, { data: outlets, error: outletError }] = await Promise.all([
-              inboxCursor ? inboxQuery.or(buildInboxCursorFilter(inboxCursor)) : inboxQuery,
-              supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
-            ]);
-            return { summaryRows, inbox, inboxError, outlets, outletError };
-          })(),
+        const summaryPromise = fetchAllSummaryRows((cursor, pageSize) => {
+          let query = supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at")
+            .eq("business_id", businessId).gte("created_at", startIso)
+            .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize);
+          return cursor ? query.or(buildInboxCursorFilter(cursor)) : query;
+        });
+        const [{ data: inbox, error: inboxError }, { data: outlets, error: outletError }, summaryRows] = await Promise.all([
+          inboxCursor ? inboxQuery.or(buildInboxCursorFilter(inboxCursor)) : inboxQuery,
+          supabase.from("otc_outlets").select("id,name").eq("business_id", businessId),
+          summaryPromise,
         ]);
         if (inboxError) throw inboxError;
         if (outletError) throw outletError;
