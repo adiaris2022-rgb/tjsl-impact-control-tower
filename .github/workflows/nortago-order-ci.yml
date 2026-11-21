@@ -100,6 +100,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_services_catalog_v1.sql
+      - name: Apply atomic catalog creation RPC
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_catalog_create_rpc_v1.sql
+      - name: Replay atomic catalog creation RPC (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_catalog_create_rpc_v1.sql
+      - name: Run atomic catalog creation RPC security smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_catalog_create_rpc_smoke.sql
       - name: Simulate Supabase client DML grants before release hardening
         env:
           PGPASSWORD: postgres
