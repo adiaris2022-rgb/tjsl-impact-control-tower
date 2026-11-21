@@ -188,7 +188,10 @@ export default function OwnerCatalog() {
 
   async function createItem(event: React.FormEvent) {
     event.preventDefault();
-    if (!name.trim() || price === "" || Number(price) < 0 || !outletId) return;
+    const numericPrice = Number(price);
+    if (!name.trim() || price === "" || !Number.isFinite(numericPrice) || numericPrice < 0 || !outletId) return;
+    const image = imageUrl.trim();
+    if (image && !/^https?:\\/\\//i.test(image)) { setError("URL foto harus diawali http:// atau https://."); return; }
     setSaving(true); setError(""); setNotice("");
     try {
       const supabase = await getSupabase();
@@ -197,16 +200,17 @@ export default function OwnerCatalog() {
       const { data: membership, error: membershipError } = await supabase.from("business_users").select("business_id").eq("user_id", auth.user.id).eq("business_id", businessId).maybeSingle();
       if (membershipError) throw membershipError;
       if (!membership) throw new Error("Akses bisnis tidak valid.");
-      const { data: product, error: productError } = await supabase.from("otc_products").insert({
-        business_id: businessId, name: name.trim(), description: description.trim() || null,
-        category: category.trim() || null, image_url: imageUrl.trim() || null,
-        base_price: Number(price), product_type: type, is_active: true,
-      }).select("id").single();
-      if (productError) throw productError;
-      const { error: outletProductError } = await supabase.from("otc_outlet_products").upsert({
-        outlet_id: outletId, product_id: product.id, price: Number(price), is_available: true,
-      }, { onConflict: "outlet_id,product_id" });
-      if (outletProductError) throw outletProductError;
+      const { data: created, error: createError } = await supabase.rpc("nortago_create_catalog_item_for_outlet", {
+        p_outlet_id: outletId,
+        p_name: name.trim(),
+        p_description: description.trim() || null,
+        p_category: category.trim() || null,
+        p_image_url: image || null,
+        p_price: numericPrice,
+        p_product_type: type,
+      });
+      if (createError) throw createError;
+      if (!created?.product_id) throw new Error("Respons penyimpanan katalog tidak lengkap.");
       setName(""); setDescription(""); setCategory(""); setPrice(""); setImageUrl("");
       setNotice(type === "SERVICE" ? "Jasa berhasil ditambahkan dan aktif di outlet ini." : "Produk berhasil ditambahkan dan aktif di outlet ini.");
       await loadCatalog(businessId, outletId);
