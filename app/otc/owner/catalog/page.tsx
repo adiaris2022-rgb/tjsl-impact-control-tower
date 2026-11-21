@@ -72,8 +72,9 @@ export default function OwnerCatalog() {
         if (outletError) throw outletError;
         if (!alive) return;
         setOutlets((outletData || []) as Outlet[]);
-        const initialBusiness = ids[0];
-        const initialOutlet = outletData?.find((o: any) => o.business_id === initialBusiness)?.id || outletData?.[0]?.id || "";
+        const initialOutletRecord = outletData?.find((o: any) => o.business_id === ids[0]) || outletData?.[0];
+        const initialOutlet = initialOutletRecord?.id || "";
+        const initialBusiness = initialOutletRecord?.business_id || ids[0];
         setBusinessId(initialBusiness);
         setOutletId(initialOutlet);
         if (!initialOutlet) setNotice("Belum ada outlet aktif. Buat/aktifkan outlet terlebih dahulu.");
