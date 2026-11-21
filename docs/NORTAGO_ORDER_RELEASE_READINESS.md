@@ -21,8 +21,8 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
 | #18 | `feature/nortago-order-lifecycle-rpc` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `feature/nortago-order-owner-inbox` | Run #191 PASS |
 | #26 | `fix/nortago-order-rpc-only-write-privileges-20261121` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `fix/nortago-order-pagination-release-base-18-20261121` | Run #216 PASS |
-| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `eb22b44e131d2dbe94ee276b6f4319945fc253da` | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #221 PASS |
-| #29 | `feat/nortago-order-services-20261121` | `d8af9eb46dcc6a28d1d0e7d7f6388382a95b02c3` | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #230 PASS |
+| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `d349e756d3dd6ca789e4bc1c7e4ba2ef74bc0fb9` | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #221 PASS on prior head `eb22b44e131d2dbe94ee276b6f4319945fc253da` (docs-only current head not CI-tested) |
+| #29 | `feat/nortago-order-services-20261121` | `d63f3aa9ab0e20b972766b7215db245b8f54cccb` | `fix/nortago-order-rpc-only-write-privileges-20261121` | [Run #238 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44912723538) |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
 - [CI Run #174](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44770912476) passed on PR #18 head `8e084c579d40c023ea13aace0d028d55da628c89`: production build, migrations/replay, lifecycle security tests, checkout-to-receipt assertions, tenant isolation, and per-outlet subscription checks.
