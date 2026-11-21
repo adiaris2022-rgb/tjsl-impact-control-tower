@@ -6,20 +6,23 @@ NORTAGO ORDER is a shareable link for product catalog, checkout, and order intak
 
 Excluded from this release: Dine-In, Walk-In/POS, reservations, queues, tables/seating/capacity, sessions, Control Tower, and BOS (deferred until Order is live and stable).
 
-## Current pull request chain and CI evidence (20 Nov 2026)
+## Current pull request chain and CI evidence (21 Nov 2026)
 
 All PRs listed remain **open, draft, and unmerged**. Head/base references were refreshed during the release-first review.
 
 | PR | Head branch | Head SHA / latest CI-tested code ref | Base branch | Latest verified CI |
 |---|---|---|---|
 | #1 | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` | Run #69 PASS |
-| #12 | `release/nortago-order-only-20261120` | `31e517eed0c280ed25e57c144405bbd2fcb0178b` | `feature/nortago-order-audit-fix` | Run #131 PASS |
+| #12 | `release/nortago-order-only-20261120` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` | Run #183 PASS |
 | #13 | `fix/nortago-order-plan-snapshot-20261120` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` | Run #136 PASS |
 | #14 | `fix/nortago-order-checkout-idempotency-20261120` | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` | Run #138 PASS |
 | #15 | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | Run #140 PASS |
 | #16 | `chore/nortago-order-scope-smoke-dedupe` | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | Run #141 PASS |
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
-| #18 | `feature/nortago-order-lifecycle-rpc` | CI-tested code `8e084c579d40c023ea13aace0d028d55da628c89` (docs follow-up) | `feature/nortago-order-owner-inbox` | Run #174 PASS |
+| #18 | `feature/nortago-order-lifecycle-rpc` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `feature/nortago-order-owner-inbox` | Run #191 PASS |
+| #26 | `fix/nortago-order-rpc-only-write-privileges-20261121` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `fix/nortago-order-pagination-release-base-18-20261121` | Run #216 PASS |
+| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `f34455841e66f1801da46309c87cff1205499c6e` (exact current head) | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #244 PASS (exact current head) |
+| #29 | `feat/nortago-order-services-20261121` | `d63f3aa9ab0e20b972766b7215db245b8f54cccb` | `fix/nortago-order-rpc-only-write-privileges-20261121` | [Run #238 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44912723538) |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
 - [CI Run #174](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44770912476) passed on PR #18 head `8e084c579d40c023ea13aace0d028d55da628c89`: production build, migrations/replay, lifecycle security tests, checkout-to-receipt assertions, tenant isolation, and per-outlet subscription checks.
@@ -31,13 +34,16 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | PR | Vercel status | Evidence |
 |---|---|---|
 | #1 | Success | Preview status returned by GitHub |
-| #12 | Failure | Build-rate-limit |
+| #12 | Success | Exact current head Vercel status |
 | #13 | Success | Preview status returned by GitHub |
 | #14 | Failure | Build-rate-limit |
 | #15 | Failure | Build-rate-limit |
 | #16 | Success | Preview status returned by GitHub |
 | #17 | Success | Preview status returned by GitHub |
-| #18 | Success | Current-head Vercel status check; preview URL not independently verified |
+| #18 | Success | Exact current head Vercel status |
+| #26 | Success | Exact current head Vercel status |
+| #28 | Failure — Vercel build-rate-limit | Current docs-only head status; CI #221 passed on earlier code-tested ref, current docs-only head not CI-tested |
+| #29 | Success | Exact current head Vercel status |
 
 A successful Vercel check is deployment evidence only; preview pages were not independently browser-verified.
 
@@ -195,3 +201,130 @@ PR #18 Run #179 jobs (production build and PostgreSQL migration/replay + lifecyc
 - Current Vercel status check for this branch head is **success**; the deployment page remains inaccessible to independent browser inspection. Current-head customer UAT remains unverified.
 - PR #12 exact head `31e517eed0c280ed25e57c144405bbd2fcb0178b` still has no PR workflow run returned by exact-commit lookup; its CI remains unverified (not promoted from historical Run #131). Vercel check is failure due to build-rate-limit.
 - Outlet-specific staff assignment remains a schema/authorization design blocker if the release requires per-outlet restriction. Current lifecycle authorization is business membership with a business/outlet consistency guard; do not claim outlet-level staff isolation.
+
+
+## Exact-head release evidence refresh — 21 Nov 2026, 15:35 WIB
+
+This refresh supersedes older exact-head and preview-status rows above. PRs remain open, draft, and unmerged. Workflow CI and commit statuses were queried against the exact current PR head SHA.
+
+| PR | Head branch | Exact head SHA | Base branch | Exact base SHA | CI run | Vercel commit status |
+|---|---|---|---|---|---|
+| #1 | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` | `545f4953368d0e85d7573c609bf4abf96b041c80` | [#69 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | success |
+| #12 | `release/nortago-order-only-20261120` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | [#183 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | success |
+| #13 | `fix/nortago-order-plan-snapshot-20261120` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | [#136 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | success |
+| #14 | `fix/nortago-order-checkout-idempotency-20261120` | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | [#138 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | failure — Vercel build-rate-limit |
+| #15 | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | `f3a86754461b06b10250b073a38fae906bfd2777` | [#140 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | failure — Vercel build-rate-limit |
+| #16 | `chore/nortago-order-scope-smoke-dedupe` | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#141 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | success |
+| #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#143 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | success |
+| #18 | `feature/nortago-order-lifecycle-rpc` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | [#191 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44832208699) | success |
+| #26 | `fix/nortago-order-rpc-only-write-privileges-20261121` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `fix/nortago-order-pagination-release-base-18-20261121` | `b76d0ae85911b6963af96bb1fd92ba5d90816649` | [#216 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219) | success |
+
+PR #12's earlier preview-rate-limit status was stale for the old commit; its current exact head is CI #183 PASS and Vercel success. PR #14 and #15 remain build-rate-limited for preview. Vercel success is commit-status evidence only; no browser inspection was performed.
+
+### Lifecycle privilege evidence refresh
+
+The baseline commerce migration creates `otc_orders_staff_manage` as `FOR ALL` for authenticated business roles. The lifecycle migration adds `nortago_update_order_status(uuid,text,text)` as SECURITY DEFINER, validates auth/business/outlet/status transition, updates `status`, and appends an audit row; it does not add a trigger that forces direct status writes to use the RPC. With client DML grants, direct status UPDATE therefore bypasses the RPC/audit path. The disposable CI baseline deliberately simulates Supabase-like DML grants and proves the bypass before hardening.
+
+PR #26 migration `20261121_nortago_order_rpc_only_write_privileges_v1.sql` revokes table and column mutation privileges from `PUBLIC`, `anon`, and `authenticated` for order headers/items; restores authenticated SELECT only; and replaces mutation `FOR ALL` policies with business-scoped SELECT policies. CI Run #216 on the exact head proves direct UPDATE/INSERT/item mutation are rejected, authenticated scoped reads remain, and approved lifecycle RPC transitions still work and create audit while payment status stays unchanged. This is disposable CI effective-privilege evidence, not a live Supabase staging privilege check.
+
+### Updated release gates
+
+- [x] Exact current head CI for PR #1 and #12–#18, plus PR #26, queried by SHA.
+- [x] PR #16 Run #141 and PR #17 Run #143 confirmed PASS.
+- [x] PR #26 exact-head Run #216 PASS, including pre-hardening bypass proof and post-hardening RPC-only privilege regression test.
+- [x] Exact commit status refreshed for Vercel across the listed PRs.
+- [ ] Current-head preview independently opened in browser on desktop/mobile.
+- [ ] Real Supabase staging effective grants, RLS, and role/outlet behavior verified.
+- [ ] Owner/customer UAT, delivery operations, and release sign-off.
+- [ ] Production deploy and payment/webhook approval remain explicit owner decisions.
+
+
+## Service catalog branch CI refresh — 21 Nov 2026, 16:39 WIB
+
+PR #29 remains draft and is not part of the release-critical PR #26 hardening path. Its current head is `d8a9655bb1495c3e3e9e3ec7fc0cc85065143f22`, base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. Product/service catalog support is a separate enhancement.
+
+- Run #44890309224 on `e5f251c73ffb635a25b7452e269086cf07d301f7` failed TypeScript build because the catalog mapping omitted `product_type` in the CI merge ref; the PostgreSQL migration/replay and database smoke job passed.
+- Commit `49d1797450600467c36164be3124987a21a8282e` added the missing service-type mapping but still failed build: conditional string values widened to `string`, not the `PRODUCT|SERVICE` union.
+- Follow-up `d8a9655bb1495c3e3e9e3ec7fc0cc85065143f22` narrows the mapping with `Product["product_type"]`. CI Run #44890601112 is pending at this evidence refresh; it must pass before this branch is considered build-clean.
+- Owner/service CRUD (creating and assigning services to outlets), staging migration, and browser UAT remain unimplemented/unverified.
+
+## Product/Service catalog CI evidence (21 Nov 2026)
+
+PR #29 now validates the Product/Service schema in the disposable PostgreSQL CI environment. The workflow applies and replays `20261121_nortago_order_services_catalog_v1.sql`, then runs `nortago_order_services_catalog_smoke.sql` after the idempotent checkout RPC is installed.
+
+- Both `PRODUCT` and `SERVICE` catalog types are stored and mapped to an active outlet.
+- Invalid catalog type values are rejected by the CHECK constraint.
+- A SERVICE item is submitted through the same customer checkout RPC and the receipt RPC returns the correct service snapshot, quantity, outlet price, and total.
+- All fixture data is rollback-only in disposable CI.
+- CI Run #230 PASS on exact PR #29 head `d8af9eb46dcc6a28d1d0e7d7f6388382a95b02c3`.
+
+Manual staging UAT must still verify Owner catalog editing, global active/inactive, outlet availability, and outlet-specific price; the catalog CI smoke test does not substitute for UI testing.
+
+
+## Atomic owner catalog creation — PR #29 current head
+
+PR #29 adds a single authenticated SECURITY DEFINER RPC, `nortago_create_catalog_item_for_outlet`, for creating a business-scoped PRODUCT or SERVICE and its selected outlet mapping in one database transaction. The RPC derives the business from the outlet, requires an active outlet and business-role membership, validates name/type/price/description/category/image URL, and returns the created item. EXECUTE is granted only to `authenticated`; PUBLIC and `anon` are revoked.
+
+
+- The owner catalog form now calls the RPC instead of performing separate product INSERT and outlet mapping UPSERT operations, preventing a partial create/orphan if the second write fails.
+- Regression SQL `nortago_order_catalog_create_rpc_smoke.sql` checks execute privileges, authenticated success for PRODUCT and SERVICE, no-membership denial, inactive-outlet denial, invalid type/negative price/invalid image/blank name rejection, unauthenticated denial, and outlet mapping/price consistency.
+- The workflow applies and replays the migration, then runs the regression test.
+- Exact PR #29 head: `d63f3aa9ab0e20b972766b7215db245b8f54cccb`. CI Run #238 PASS on exact current PR #29 head; Vercel status is success. The earlier #230 PASS and database PASS on the previous commit do not validate this latest RPC migration. An intermediate build failure from an over-escaped URL regex was fixed using case-normalized `startsWith` checks; the final exact head passed both build and PostgreSQL jobs in CI #238.
+
+
+## Exact-head CI and commit-status refresh — 21 Nov 2026, 22:35 WIB
+
+GitHub PR metadata and workflow runs were refreshed by exact commit SHA. PRs #1, #12–#17 remain open, draft, and unmerged.
+
+| PR | Exact head SHA | Exact base SHA | CI | Exact Vercel commit status |
+|---|---|---|---|---|
+| #1 | a75820a8ca6d14c3f92fd3dfcfb9821f28429843 | 545f4953368d0e85d7573c609bf4abf96b041c80 | #69 PASS | success |
+| #12 | a323dcdedb5fd1048d9d2b2e3560c6ced889789c | a75820a8ca6d14c3f92fd3dfcfb9821f28429843 | #183 PASS | success |
+| #13 | c0a5e75cf9a8964848ad00aa4b5d57d1753140a6 | a323dcdedb5fd1048d9d2b2e3560c6ced889789c | #136 PASS | success |
+| #14 | f3a86754461b06b10250b073a38fae906bfd2777 | c0a5e75cf9a8964848ad00aa4b5d57d1753140a6 | #138 PASS | failure — deployment rate limit |
+| #15 | e16260f8147e3b55255be6bf5163a32774abe280 | f3a86754461b06b10250b073a38fae906bfd2777 | #140 PASS | failure — deployment rate limit |
+| #16 | db3e6a43edc4edc4d3338504d87da11163594e42 | e16260f8147e3b55255be6bf5163a32774abe280 | #141 PASS | success |
+| #17 | 7516e1b22d5cd340b872db4bc516471a81ef74d4 | e16260f8147e3b55255be6bf5163a32774abe280 | #143 PASS | success |
+
+Exact commit workflow lookup confirmed run numbers and success conclusions for all seven. PR #16 Run #141 and PR #17 Run #143 are reconfirmed PASS.
+
+### Additional exact-head evidence
+
+| PR | Head SHA | Base SHA | CI | Preview/commit status |
+|---|---|---|---|---|
+| #18 | 03ac27ceb0d268826c2b76e49808a923786d9e13 | 7516e1b22d5cd340b872db4bc516471a81ef74d4 | #191 PASS | Vercel success |
+| #26 | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | b76d0ae85911b6963af96bb1fd92ba5d90816649 | #216 PASS | Vercel Preview Comments check run success; status endpoint transiently unavailable during refresh (prior exact status was success) |
+| #28 | 88e8f6643061aa9004b95d57621bf4baad02e8c6 | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | #243 PASS | failure — Vercel deployment rate limit |
+| #29 | d63f3aa9ab0e20b972766b7215db245b8f54cccb | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | #238 PASS | success |
+
+- PR #28 Run #243 completed both production-build and PostgreSQL migration/smoke jobs successfully on its exact current head. Vercel failed solely with the account/project build-rate-limit status.
+- PR #29 Run #238 completed production build, migration/replay, catalog-create security tests, catalog checkout-to-receipt smoke, pagination tests, and order lifecycle/security checks on exact head. Vercel commit status for this exact head is success.
+- PR #26 Run #216 completed both CI jobs successfully. Its Vercel Preview Comments check run is success; the commit-status endpoint disconnected transiently during this refresh, so the endpoint result is not newly confirmed here.
+
+### Migration/security scope cross-check
+
+The complete migration directory listing was compared on PR #18 lifecycle branch and PR #26 hardening branch. In the OTC lifecycle path, the relevant files are the commerce-core migration (creates RLS and business-member FOR ALL policies), customer checkout and idempotency migrations (SECURITY DEFINER transactional RPCs), lifecycle RPC/audit migration, Order-only scope lock, Order-only scope guard trigger, and PR #26 RPC-only write-privilege migration. PR #26 additionally contains the direct-write baseline proof and post-hardening privilege regression test.
+
+Baseline CI explicitly grants simulated client table/column DML before the lifecycle and RLS migrations; the baseline test proves direct status UPDATE can succeed without RPC audit. The hardening migration revokes table and column mutation rights from client roles, restores authenticated SELECT, and replaces mutation policies with read policies. The post-hardening test checks effective table/column privileges, RLS remains enabled, scoped reads, direct status/order/item writes rejected, approved lifecycle RPC works, one audit row is created, and payment state is unchanged. This evidence is from disposable PostgreSQL CI, not actual Supabase staging.
+
+### Release gates remain
+
+- [ ] Browser UAT for latest preview (desktop and mobile).
+- [ ] Real Supabase staging effective grants/RLS/identity and business/outlet role checks.
+- [ ] Checkout-to-receipt and Owner lifecycle UAT on deployed preview/staging.
+- [ ] Delivery fee/courier operational decision.
+- [ ] Commercial owner sign-off.
+- [ ] Production release explicitly approved.
+
+No PR was merged; no live/staging migration, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed. LinkBayar webhook remains disabled.
+
+
+## Exact-head refresh — 22 Nov 2026
+
+- Re-read PR metadata for #1 and #12–#17 from GitHub. All remain open, draft, unmerged, and mergeable; head/base SHAs are unchanged from the table above.
+- Re-fetched workflow runs by the exact current head SHA for each PR: #1 Run #69 PASS, #12 Run #183 PASS, #13 Run #136 PASS, #14 Run #138 PASS, #15 Run #140 PASS, #16 Run #141 PASS, and #17 Run #143 PASS.
+- Exact-head Vercel statuses refreshed: #1 success, #12 success, #13 success, #14 build-rate-limit failure, #15 build-rate-limit failure, #16 success, #17 success.
+- PR #28 current head `f34455841e66f1801da46309c87cff1205499c6e`: CI Run #244 PASS and Vercel status success. The docs-only branch has no app/migration changes in this refresh.
+- PR #18 exact head `03ac27ceb0d268826c2b76e49808a923786d9e13`: CI Run #191 PASS. PR #26 exact head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: CI Run #216 PASS. PR #29 exact head `d63f3aa9ab0e20b972766b7215db245b8f54cccb`: CI Run #238 PASS.
+- The baseline lifecycle bypass was reproduced only in disposable CI by simulating authenticated table and column DML grants against the core `FOR ALL` membership policy. The RPC-only hardening migration removes client order/item mutation privileges while retaining authenticated business-scoped SELECT; the regression test rejects direct UPDATE/INSERT/DELETE and accepts the lifecycle RPC with audit/payment-state assertions. Effective Supabase staging/live grants remain unverified.
+- Browser UAT, real tenant/role verification, approved staging migration, delivery/courier decision, and commercial sign-off remain open. No production deployment, payment, or webhook activation.
