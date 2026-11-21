@@ -112,6 +112,13 @@ begin
     null;
   end;
   begin
+    insert into public.otc_order_items(order_id,product_name_snapshot,unit_price,quantity,line_total)
+    values('30000000-0000-4000-8000-000000000099','Direct item insert denied',1,1,1);
+    raise exception 'Direct item insert unexpectedly succeeded';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
     update public.otc_order_items set quantity=2 where order_id='30000000-0000-4000-8000-000000000099';
     raise exception 'Direct item update unexpectedly succeeded';
   exception when insufficient_privilege then
@@ -123,16 +130,31 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $$;
+  perform public.nortago_update_order_status('30000000-0000-4000-8000-000000000099','PROCESSING','rpc-only write smoke');
+  if (select status from public.otc_orders where id='30000000-0000-4000-8000-000000000099') <> 'PROCESSING' then
+    raise exception 'Approved lifecycle RPC did not advance the order';
+  end if;
+  select count(*) into v_count from public.nortago_order_status_audit where order_id='30000000-0000-4000-8000-000000000099';
+  if v_count <> 1 then raise exception 'Approved lifecycle RPC must append exactly one audit event'; end if;
+  if (select payment_status from public.otc_orders where id='30000000-0000-4000-8000-000000000099') <> 'PENDING' then
+    raise exception 'Lifecycle RPC must not change payment status';
+  end if;
+end $;
 reset role;
 
 do $$
 begin
-  if (select status from public.otc_orders where id='30000000-0000-4000-8000-000000000099') <> 'NEW' then
-    raise exception 'Direct status mutation changed the order';
+  if (select status from public.otc_orders where id='30000000-0000-4000-8000-000000000099') <> 'PROCESSING' then
+    raise exception 'Approved lifecycle RPC status was not retained';
   end if;
   if (select quantity from public.otc_order_items where order_id='30000000-0000-4000-8000-000000000099') <> 1 then
     raise exception 'Direct item mutation changed the item';
+  end if;
+  if (select payment_status from public.otc_orders where id='30000000-0000-4000-8000-000000000099') <> 'PENDING' then
+    raise exception 'Lifecycle RPC must leave payment status unchanged';
+  end if;
+  if (select count(*) from public.nortago_order_status_audit where order_id='30000000-0000-4000-8000-000000000099') <> 1 then
+    raise exception 'Lifecycle RPC audit row missing';
   end if;
 end $$;
 rollback;
