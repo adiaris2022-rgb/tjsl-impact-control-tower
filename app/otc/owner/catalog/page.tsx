@@ -192,7 +192,8 @@ export default function OwnerCatalog() {
     const numericPrice = Number(price);
     if (!name.trim() || price === "" || !Number.isFinite(numericPrice) || numericPrice < 0 || !outletId) return;
     const image = imageUrl.trim();
-    if (image && !/^https?:\\/\\//i.test(image)) { setError("URL foto harus diawali http:// atau https://."); return; }
+    const imageLower = image.toLowerCase();
+    if (image && !(imageLower.startsWith("http://") || imageLower.startsWith("https://"))) { setError("URL foto harus diawali http:// atau https://."); return; }
     setSaving(true); setError(""); setNotice("");
     try {
       const supabase = await getSupabase();
