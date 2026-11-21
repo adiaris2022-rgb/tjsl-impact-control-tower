@@ -10,9 +10,15 @@ declare
   v_outlet_b uuid := '82000000-0000-4000-8000-000000000002';
   v_outlet_inactive uuid := '82000000-0000-4000-8000-000000000003';
 begin
-  if has_function_privilege('anon','public.nortago_create_catalog_item_for_outlet(uuid,text,text,text,text,numeric,text)','execute')
-    or has_function_privilege('public','public.nortago_create_catalog_item_for_outlet(uuid,text,text,text,text,numeric,text)','execute') then
-    raise exception 'Catalog-create RPC must not be executable by anon or PUBLIC';
+  if has_function_privilege('anon','public.nortago_create_catalog_item_for_outlet(uuid,text,text,text,text,numeric,text)','execute') then
+    raise exception 'Catalog-create RPC must not be executable by anon';
+  end if;
+  if exists (
+    select 1 from pg_proc p, lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+    where p.oid='public.nortago_create_catalog_item_for_outlet(uuid,text,text,text,text,numeric,text)'::regprocedure
+      and acl.grantee=0 and acl.privilege_type='EXECUTE'
+  ) then
+    raise exception 'Catalog-create RPC must not retain PUBLIC EXECUTE';
   end if;
   if not has_function_privilege('authenticated','public.nortago_create_catalog_item_for_outlet(uuid,text,text,text,text,numeric,text)','execute') then
     raise exception 'Authenticated must be granted catalog-create RPC execute';
