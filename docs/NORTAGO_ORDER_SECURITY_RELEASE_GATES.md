@@ -42,6 +42,17 @@ Use a disposable staging project and a preview built from the exact head SHA bei
 
 CI on a disposable database is not live staging UAT. A preview for a different SHA is not evidence for the current branch.
 
+## Automated CI evidence snapshot (2026-11-21)
+
+The following exact-head workflow runs were rechecked:
+
+- Lifecycle and audit PR #18 head `03ac27ceb0d268826c2b76e49808a923786d9e13`: run `44832208699`, both build and PostgreSQL jobs passed.
+- Inbox pagination PR #21 head `7439811f8abf9692a369c2c48a278afcef3b77fe`: run `44832523269`, both jobs passed.
+- Cursor pagination PR #22 head `1ab07fc4d16be27420e01a8c84e35ba8e2ec77c9`: run `44838570910`, both jobs passed.
+- Summary pagination PR #23 head `7ae228012ad064a49fdeb436073e5002536fede4`: run `44843787049`, both build and PostgreSQL jobs passed.
+
+These are disposable CI results only. They do not establish preview-browser behavior, real-account permissions, or Supabase staging readiness.
+
 ## Release scope and prohibited actions
 
 NORTAGO ORDER only. Exclude Dine-In, Reservation, Walk-In/POS, queue, tables/seating/capacity, sessions, and Control Tower from this release. BOS remains deferred until ORDER is live and stable.
