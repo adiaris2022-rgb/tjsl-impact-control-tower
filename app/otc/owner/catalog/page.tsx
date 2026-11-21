@@ -23,6 +23,7 @@ export default function OwnerCatalog() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busyItemId, setBusyItemId] = useState("");
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [type, setType] = useState<"PRODUCT" | "SERVICE">("SERVICE");
@@ -49,6 +50,7 @@ export default function OwnerCatalog() {
       is_available: Boolean(row.is_available),
     }));
     setItems(mapped as CatalogItem[]);
+    setPriceDrafts(Object.fromEntries(mapped.map((item: any) => [item.id, String(item.base_price)])));
   }
 
   useEffect(() => {
@@ -110,6 +112,27 @@ export default function OwnerCatalog() {
     } finally { setBusyItemId(""); }
   }
 
+  async function saveOutletPrice(item: CatalogItem) {
+    const raw = priceDrafts[item.id];
+    const nextPrice = Number(raw);
+    if (raw === "" || !Number.isFinite(nextPrice) || nextPrice < 0 || !outletId || busyItemId) return;
+    setBusyItemId(item.id); setError(""); setNotice("");
+    try {
+      const supabase = await getSupabase();
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError || !auth.user) throw new Error("Login Owner diperlukan.");
+      const { data: membership, error: membershipError } = await supabase.from("business_users").select("business_id").eq("user_id", auth.user.id).eq("business_id", businessId).maybeSingle();
+      if (membershipError) throw membershipError;
+      if (!membership) throw new Error("Akses bisnis tidak valid.");
+      const { error: updateError } = await supabase.from("otc_outlet_products").update({ price: nextPrice }).eq("outlet_id", outletId).eq("product_id", item.id);
+      if (updateError) throw updateError;
+      setNotice("Harga outlet berhasil diperbarui. Harga pesanan yang sudah dibuat tidak berubah.");
+      await loadCatalog(businessId, outletId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Gagal memperbarui harga outlet.");
+    } finally { setBusyItemId(""); }
+  }
+
   async function createItem(event: React.FormEvent) {
     event.preventDefault();
     if (!name.trim() || price === "" || Number(price) < 0 || !outletId) return;
@@ -150,7 +173,7 @@ export default function OwnerCatalog() {
     <section className="otc-shop" style={{alignItems:"start"}}>
       <div className="menu-panel">
         <div className="section-head"><div><span className="eyebrow">OUTLET MENU</span><h2>Katalog outlet</h2></div><span className="pill">{items.length} item</span></div>
-        {items.map(item=><article className="product-card" key={item.id}><div className="product-info"><small>{item.product_type === "SERVICE" ? "JASA" : "PRODUK"} · {item.is_active && item.is_available ? "TERSEDIA" : "NONAKTIF DI OUTLET"}</small><h3>{item.name}</h3><p>{item.category || "Tanpa kategori"}{item.description ? " · "+item.description : ""}</p><b>{money(item.base_price)}</b></div><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>toggleAvailability(item)}>{busyItemId===item.id?"Memproses…":item.is_available?"Nonaktifkan di outlet":"Aktifkan di outlet"}</button></article>)}
+        {items.map(item=><article className="product-card" key={item.id}><div className="product-info"><small>{item.product_type === "SERVICE" ? "JASA" : "PRODUK"} · {item.is_active && item.is_available ? "TERSEDIA" : "NONAKTIF DI OUTLET"}</small><h3>{item.name}</h3><p>{item.category || "Tanpa kategori"}{item.description ? " · "+item.description : ""}</p><div style={{display:"grid",gap:8,marginTop:8}}><b>{money(item.base_price)}</b><label>Harga outlet (Rp)<input type="number" min="0" step="100" inputMode="decimal" value={priceDrafts[item.id] ?? String(item.base_price)} onChange={e=>setPriceDrafts(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>saveOutletPrice(item)}>Simpan harga outlet</button></div></div><button type="button" className="otc-secondary" disabled={Boolean(busyItemId)||loading} onClick={()=>toggleAvailability(item)}>{busyItemId===item.id?"Memproses…":item.is_available?"Nonaktifkan di outlet":"Aktifkan di outlet"}</button></article>)}
         {!loading && items.length===0 ? <p className="muted">Belum ada item di outlet ini. Tambahkan item dari form.</p> : null}
       </div>
       <aside className="cart-panel" style={{position:"static"}}>
