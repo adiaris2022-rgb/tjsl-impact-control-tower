@@ -139,7 +139,7 @@ begin
   if (select payment_status from public.otc_orders where id='30000000-0000-4000-8000-000000000099') <> 'PENDING' then
     raise exception 'Lifecycle RPC must not change payment status';
   end if;
-end $;
+end $$;
 reset role;
 
 do $$
