@@ -271,3 +271,49 @@ PR #29 adds a single authenticated SECURITY DEFINER RPC, `nortago_create_catalog
 - The workflow applies and replays the migration, then runs the regression test.
 - Exact PR #29 head: `d63f3aa9ab0e20b972766b7215db245b8f54cccb`. CI Run #238 PASS on exact current PR #29 head; Vercel status is success. The earlier #230 PASS and database PASS on the previous commit do not validate this latest RPC migration. An intermediate build failure from an over-escaped URL regex was fixed using case-normalized `startsWith` checks; the final exact head passed both build and PostgreSQL jobs in CI #238.
 
+
+## Exact-head CI and commit-status refresh — 21 Nov 2026, 22:35 WIB
+
+GitHub PR metadata and workflow runs were refreshed by exact commit SHA. PRs #1, #12–#17 remain open, draft, and unmerged.
+
+| PR | Exact head SHA | Exact base SHA | CI | Exact Vercel commit status |
+|---|---|---|---|---|
+| #1 | a75820a8ca6d14c3f92fd3dfcfb9821f28429843 | 545f4953368d0e85d7573c609bf4abf96b041c80 | #69 PASS | success |
+| #12 | a323dcdedb5fd1048d9d2b2e3560c6ced889789c | a75820a8ca6d14c3f92fd3dfcfb9821f28429843 | #183 PASS | success |
+| #13 | c0a5e75cf9a8964848ad00aa4b5d57d1753140a6 | a323dcdedb5fd1048d9d2b2e3560c6ced889789c | #136 PASS | success |
+| #14 | f3a86754461b06b10250b073a38fae906bfd2777 | c0a5e75cf9a8964848ad00aa4b5d57d1753140a6 | #138 PASS | failure — deployment rate limit |
+| #15 | e16260f8147e3b55255be6bf5163a32774abe280 | f3a86754461b06b10250b073a38fae906bfd2777 | #140 PASS | failure — deployment rate limit |
+| #16 | db3e6a43edc4edc4d3338504d87da11163594e42 | e16260f8147e3b55255be6bf5163a32774abe280 | #141 PASS | success |
+| #17 | 7516e1b22d5cd340b872db4bc516471a81ef74d4 | e16260f8147e3b55255be6bf5163a32774abe280 | #143 PASS | success |
+
+Exact commit workflow lookup confirmed run numbers and success conclusions for all seven. PR #16 Run #141 and PR #17 Run #143 are reconfirmed PASS.
+
+### Additional exact-head evidence
+
+| PR | Head SHA | Base SHA | CI | Preview/commit status |
+|---|---|---|---|---|
+| #18 | 03ac27ceb0d268826c2b76e49808a923786d9e13 | 7516e1b22d5cd340b872db4bc516471a81ef74d4 | #191 PASS | Vercel success |
+| #26 | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | b76d0ae85911b6963af96bb1fd92ba5d90816649 | #216 PASS | Vercel Preview Comments check run success; status endpoint transiently unavailable during refresh (prior exact status was success) |
+| #28 | 88e8f6643061aa9004b95d57621bf4baad02e8c6 | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | #243 PASS | failure — Vercel deployment rate limit |
+| #29 | d63f3aa9ab0e20b972766b7215db245b8f54cccb | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | #238 PASS | success |
+
+- PR #28 Run #243 completed both production-build and PostgreSQL migration/smoke jobs successfully on its exact current head. Vercel failed solely with the account/project build-rate-limit status.
+- PR #29 Run #238 completed production build, migration/replay, catalog-create security tests, catalog checkout-to-receipt smoke, pagination tests, and order lifecycle/security checks on exact head. Vercel commit status for this exact head is success.
+- PR #26 Run #216 completed both CI jobs successfully. Its Vercel Preview Comments check run is success; the commit-status endpoint disconnected transiently during this refresh, so the endpoint result is not newly confirmed here.
+
+### Migration/security scope cross-check
+
+The complete migration directory listing was compared on PR #18 lifecycle branch and PR #26 hardening branch. In the OTC lifecycle path, the relevant files are the commerce-core migration (creates RLS and business-member FOR ALL policies), customer checkout and idempotency migrations (SECURITY DEFINER transactional RPCs), lifecycle RPC/audit migration, Order-only scope lock, Order-only scope guard trigger, and PR #26 RPC-only write-privilege migration. PR #26 additionally contains the direct-write baseline proof and post-hardening privilege regression test.
+
+Baseline CI explicitly grants simulated client table/column DML before the lifecycle and RLS migrations; the baseline test proves direct status UPDATE can succeed without RPC audit. The hardening migration revokes table and column mutation rights from client roles, restores authenticated SELECT, and replaces mutation policies with read policies. The post-hardening test checks effective table/column privileges, RLS remains enabled, scoped reads, direct status/order/item writes rejected, approved lifecycle RPC works, one audit row is created, and payment state is unchanged. This evidence is from disposable PostgreSQL CI, not actual Supabase staging.
+
+### Release gates remain
+
+- [ ] Browser UAT for latest preview (desktop and mobile).
+- [ ] Real Supabase staging effective grants/RLS/identity and business/outlet role checks.
+- [ ] Checkout-to-receipt and Owner lifecycle UAT on deployed preview/staging.
+- [ ] Delivery fee/courier operational decision.
+- [ ] Commercial owner sign-off.
+- [ ] Production release explicitly approved.
+
+No PR was merged; no live/staging migration, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed. LinkBayar webhook remains disabled.
