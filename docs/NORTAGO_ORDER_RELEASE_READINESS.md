@@ -355,3 +355,28 @@ This section supersedes prior snapshots for current GitHub refs/checks. Metadata
 - The lifecycle baseline direct-status bypass is proven in simulated client-grant disposable CI; PR #26 hardening denies direct order/item mutations and permits the approved RPC. Effective Supabase staging/live grants, identity, and RLS remain unverified.
 - Automated checkout-to-receipt, tenant isolation, per-outlet subscription, pagination, and lifecycle assertions are evidence from disposable CI only. Browser/customer/owner UAT, staging verification, delivery/courier decision, and commercial sign-off remain open.
 - No merge, production deploy, staging/live database migration, payment/webhook activation, secret/environment change, or destructive action occurred. LinkBayar webhook remains disabled.
+
+
+## Superseding exact-head evidence — 22 Nov 2026 04:22 WIB
+
+This section supersedes earlier PR #28 head/check rows above. PR metadata, exact-commit workflow runs, and commit statuses were freshly fetched from GitHub.
+
+| PR | Head SHA | Base SHA | CI | Vercel |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | #136 PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | failure — Vercel build rate limit |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | failure — Vercel build rate limit |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | success |
+
+PR #16 Run #141 and PR #17 Run #143 were rechecked at exact heads. For both, production build and PostgreSQL migration/smoke jobs completed successfully. All requested PRs #1 and #12–#17 remain open, draft, unmerged, and mergeable.
+
+PR #18 head `03ac27ceb0d268826c2b76e49808a923786d9e13` Run #191 PASS; Vercel success. PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` Run #216 PASS; Vercel success. PR #29 head `d63f3aa9ab0e20b972766b7215db245b8f54cccb` Run #238 PASS; Vercel success.
+
+**Stack ancestry confirmed:** PR #26 base `b76d0ae85911b6963af96bb1fd92ba5d90816649` compares to PR #18 head as ahead by 8 commits, behind 0, with the merge-base equal to PR #18 head. PR #26 head compares to PR #18 head as ahead by 26, behind 0. Therefore the RPC-only privilege hardening is stacked on the lifecycle branch.
+
+**PR #28 current head at this refresh:** `d41d9a9eea5d6fb601b87c88d0e3c921da5565b0`; base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. Exact-SHA workflow lookup returned no CI run for this head; Run #245 PASS is on the previous docs head `52cb20fe18aae46ade87c05847a4bc7d2bc5d904`. Vercel status on current head is success. Browser UAT is not implied by Vercel status.
+
+Security tests are disposable PostgreSQL evidence. No effective grants/RLS on real Supabase staging/live have been verified. Browser UAT, real tenant/role checks, delivery/courier decision, and commercial sign-off remain open. No merge, live/staging migration, production deployment, payment/webhook activation, secret/environment change, or destructive action. LinkBayar remains disabled.
