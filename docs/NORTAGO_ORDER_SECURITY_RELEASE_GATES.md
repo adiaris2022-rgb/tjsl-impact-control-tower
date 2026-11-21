@@ -58,3 +58,13 @@ These are disposable CI results only. They do not establish preview-browser beha
 NORTAGO ORDER only. Exclude Dine-In, Reservation, Walk-In/POS, queue, tables/seating/capacity, sessions, and Control Tower from this release. BOS remains deferred until ORDER is live and stable.
 
 No merge, production deploy, live/staging migration, destructive action, secrets/environment change, payment activation, or webhook activation without explicit owner approval. LinkBayar remains disabled.
+
+## Additional status-write audit gap — release blocker
+
+A follow-up code review of the current OTC RLS migration found a status-write risk:
+
+- `otc_orders_staff_manage` is an `FOR ALL` policy for `OWNER`, `PROGRAM_MANAGER`, `PARTNER`, and `STAFF` using business membership. It does not distinguish status updates from other order updates or enforce outlet assignment.
+- The lifecycle RPC writes an audit row when called, but the reviewed OTC policy does not require status updates to call that RPC. The Order-only scope trigger only checks `order_source` and `fulfillment_type`; no status-audit trigger is present in the reviewed migrations.
+- The reviewed migrations do not explicitly show the effective table-level UPDATE grants for `authenticated`. Therefore direct status mutation through the client is a **potential bypass**, not a verified live exploit. Effective grants and the direct-update path must be checked before release.
+
+**Gate:** on disposable CI/staging, inspect effective privileges (including `has_table_privilege`), attempt direct `UPDATE otc_orders SET status=...` as authenticated, and prove either that status writes are denied except through the lifecycle RPC or that every allowed status write is server-validated and audited. Add a regression test for the chosen enforcement. Do not claim audit completeness until this gate passes. Any enforcement migration must also preserve legitimate checkout/payment-state updates and be reviewed before staging.
