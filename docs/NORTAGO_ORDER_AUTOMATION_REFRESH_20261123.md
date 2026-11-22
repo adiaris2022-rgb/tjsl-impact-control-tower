@@ -57,3 +57,11 @@ CI step evidence for #29/#30/#31 was inspected. #29 runs catalog RPC security an
 - Delivery fee/courier operating responsibility, commercial sign-off, release and rollback approval.
 
 No merge, deployment, Supabase staging/live migration, payment/webhook activation, secrets/environment changes, or destructive actions. LinkBayar stays disabled. Release scope excludes Dine-In, Reservation, Walk-In/POS, queue, tables/seating/capacity, sessions, Control Tower, and BOS (deferred).
+
+
+## Snapshot CI verification
+
+- Initial snapshot commit: `8538fdd4640a94c1e6ae6ede0015c44fc9103cb1`.
+- [Run #264 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45060353097) was confirmed on that exact SHA. Both jobs completed: production build + pagination unit tests; PostgreSQL migration/replay/security/checkout/tenant/subscription/lifecycle/scope smoke.
+- Vercel exact commit status on the snapshot was success.
+- This evidence update is documentation-only and requires its own exact-head CI check.
