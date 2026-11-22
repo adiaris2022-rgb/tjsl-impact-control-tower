@@ -1,0 +1,53 @@
+# NORTAGO ORDER — exact-head refresh (22 Nov 2026, 15:26 WIB)
+
+This snapshot supersedes prior PR/head/CI tables where values conflict. Metadata, exact commit workflow runs, job results, and commit statuses were freshly fetched from GitHub.
+
+## Primary release PRs
+
+All PRs #1 and #12–#17 remain **Open / Draft / Unmerged / mergeable** at this refresh.
+
+| PR | Head SHA | Base branch | Base SHA | Exact-head CI | Jobs | Vercel commit status |
+|---|---|---|---|---|---|
+| [#1](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/1) | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` | `545f4953368d0e85d7573c609bf4abf96b041c80` | [#69 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | success |
+| [#12](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/12) | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | [#183 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | success |
+| [#13](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/13) | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | [#136 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | success |
+| [#14](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/14) | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | [#138 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | build rate limited |
+| [#15](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/15) | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` | `f3a86754461b06b10250b073a38fae906bfd2777` | [#140 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | build rate limited |
+| [#16](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/16) | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#141 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | success |
+| [#17](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/17) | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#143 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | success |
+
+Exact-SHA lookup confirmed each listed workflow's commit association. Job endpoints were fetched for all seven: **production build PASS (7/7), PostgreSQL migration/replay/smoke PASS (7/7)**, totaling 14/14 jobs. PR #16/#17 are specifically reconfirmed at #141/#143. Vercel failures on #14/#15 are provider build-rate limits; they are not GitHub CI failures.
+
+## Related security/scope PRs
+
+| PR | Exact head | Exact CI | Vercel |
+|---|---|---|---|
+| [#18 Lifecycle RPC](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) | `03ac27ceb0d268826c2b76e49808a923786d9e13` | [#191 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44832208699) | success |
+| [#26 RPC-only writes](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/26) | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | [#216 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219) | success |
+| [#28 release evidence](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/28) | `2cd1d5d4dbedfd4123e50597ea5d6665a36f6c00` | [#258 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44993805356) | success |
+| [#30 POS source guard](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/30) | `751a307185dd99cd8842bc5cd54a4a3ad8352f8e` | [#250 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102) | success |
+
+Both jobs were fetched and verified for each related run: production build and PostgreSQL migration/smoke.
+
+## Lifecycle security evidence and limitations
+
+Source SQL review confirmed the baseline business-membership `FOR ALL` policy does not enforce transition/audit semantics; the lifecycle RPC does, but no trigger forces direct status writes through it. The baseline bypass was reproduced in disposable PostgreSQL with simulated client table/column DML grants.
+
+PR #26's RPC-only hardening revokes client table/column mutation privileges on `otc_orders` and `otc_order_items` from `PUBLIC`, `anon`, and `authenticated`, retains authenticated SELECT with business-scoped RLS, and keeps approved SECURITY DEFINER checkout/receipt/lifecycle RPCs. Regression tests reject direct mutations and allow the approved lifecycle RPC with one audit event and unchanged payment status.
+
+PR #30 rejects `POS_INTEGRATED` in addition to Dine-In and staff Walk-In; CI preserves online Take Away acceptance and rejects legacy POS lifecycle advancement.
+
+**Evidence boundary:** effective grants, RLS, function ownership, auth identity, and real tenant role behavior on Supabase staging/live are not verified. These are source and disposable PostgreSQL CI results only.
+
+## Release gates (still open)
+
+- Current-head preview browser UAT (desktop/mobile) for Customer menu → checkout → receipt.
+- Owner Inbox → lifecycle RPC → audit browser UAT.
+- Approved disposable Supabase staging migration; capture effective table/column grants, RLS, auth and Business A/B isolation.
+- Confirm business-level vs outlet-level staff authorization requirement.
+- Delivery fee/courier handoff and payment-before-fulfillment policy.
+- Commercial sign-off, production release approval, and rollback plan.
+
+Automated CI covers checkout-to-receipt, idempotency, tenant isolation, per-outlet monthly/yearly subscription, pagination, lifecycle edges/audit, direct-DML denial, and Order scope. It does not replace deployed UAT.
+
+No merge, production deploy, staging/live migration, payment/webhook activation, secret/environment change, or destructive action is performed. LinkBayar remains disabled. Scope remains Customer Self-Order, Take Away, Pre-Order, and Delivery only; Dine-In, Reservation, Walk-In/POS, queue, tables/seating/capacity, sessions, Control Tower, and BOS remain excluded.
