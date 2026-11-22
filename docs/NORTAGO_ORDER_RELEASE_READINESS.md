@@ -520,3 +520,42 @@ Jobs were fetched from GitHub for Runs #191, #216, #253, and #250; production bu
 - Commercial sign-off and explicit production-release approval.
 
 PR #30 remains draft/open/unmerged. No merge, production deploy, staging/live migration, payment/webhook activation, secrets/environment change, or destructive action. LinkBayar webhook remains disabled.
+
+## Fresh exact-ref verification — 22 Nov 2026
+
+This snapshot supersedes older PR head/run entries above where they differ. Pull requests were refreshed from GitHub, each workflow run was queried by ID, the run's `head_sha` was matched to the current PR `head_sha`, and both CI jobs were inspected.
+
+| PR | Head SHA | Base branch / SHA | Exact CI run | CI jobs | Vercel status |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` / `545f4953368d0e85d7573c609bf4abf96b041c80` | [#69](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | build PASS; PostgreSQL PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` / `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | [#183](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | build PASS; PostgreSQL PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` / `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | [#136](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | build PASS; PostgreSQL PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` / `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | [#138](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | build PASS; PostgreSQL PASS | build rate limited |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` / `f3a86754461b06b10250b073a38fae906bfd2777` | [#140](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | build PASS; PostgreSQL PASS | build rate limited |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | [#141](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | build PASS; PostgreSQL PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | [#143](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | build PASS; PostgreSQL PASS | success |
+
+All seven are open, draft, unmerged, and reported mergeable at refresh time. CI exact-head totals: **7/7 workflow runs, 14/14 jobs PASS**. The Vercel rate limit on #14/#15 is a deployment-provider check, not a failed GitHub Actions CI job.
+
+### Security and release branches refreshed
+
+| PR | Exact head SHA | Exact CI run |
+|---|---|---|
+| #18 lifecycle RPC | `03ac27ceb0d268826c2b76e49808a923786d9e13` | [#191](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44832208699) PASS |
+| #26 RPC-only write privileges | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | [#216](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219) PASS |
+| #28 release-readiness docs | `b2338bdb6f7c4e7ffc42a9c27f8ee0e249b6d0d5` | [#255](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44973322081) PASS |
+| #30 POS-integrated scope guard | `751a307185dd99cd8842bc5cd54a4a3ad8352f8e` | [#250](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102) PASS |
+
+Both jobs (production build and PostgreSQL migration/smoke) passed for these exact run heads.
+
+### Effective privilege hardening evidence
+
+Migration `20261121_nortago_order_rpc_only_write_privileges_v1.sql` explicitly revokes table and column DML on `otc_orders` and `otc_order_items` from `PUBLIC`, `anon`, and `authenticated`; authenticated scoped SELECT is re-granted. Its regression test checks table/column privileges with `has_table_privilege` and `has_any_column_privilege`, asserts RLS remains enabled and read policies exist, then attempts direct status/order/item mutations under `authenticated` and expects `insufficient_privilege`. It invokes the approved lifecycle RPC and asserts status advancement, exactly one audit event, and unchanged payment status. This is disposable PostgreSQL CI evidence; it does not establish the actual grants/function owner/auth configuration on a Supabase staging/live project.
+
+### Current release blockers
+
+- Owner/customer browser UAT is not recorded as complete.
+- Supabase staging effective grants, RLS, auth, and real membership checks remain unverified.
+- Delivery fee/courier responsibility and payment-before-fulfillment policy need an explicit operational decision.
+- LinkBayar webhook and payment activation remain disabled.
+- No merge, production deployment, live migration, environment/secrets change, or destructive operation is authorized by this evidence refresh.
