@@ -110,3 +110,21 @@ This is migration-source and disposable PostgreSQL CI evidence. Effective grants
 ### Release gates remain open
 
 Browser UAT (customer checkout-to-receipt and owner lifecycle/audit), real staging effective grants/RLS/auth/tenant validation, delivery fee/courier decision, payment-before-fulfillment policy, commercial sign-off and production rollback/release approval remain outstanding. No merge, production deploy, staging/live migration, payment/webhook activation, secrets/environment change or destructive action. LinkBayar remains disabled; Dine-In/Reservation/Walk-In/POS/queue/tables/seating/capacity/sessions/Control Tower/BOS remain excluded from Order release scope.
+
+
+## Pagination and catalog exact-head evidence — 23 Nov 2026, 00:13 WIB
+
+These related release-readiness PRs were refreshed after the primary exact-head check:
+
+| PR | Current head SHA | Base SHA | Exact CI | Vercel |
+|---|---|---|---|---|
+| [#25 inbox + summary pagination](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/25) | `b76d0ae85911b6963af96bb1fd92ba5d90816649` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | [#199 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44857892093) | build-rate-limit failure |
+| [#29 Product/Service catalog](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/29) | `d63f3aa9ab0e20b972766b7215db245b8f54cccb` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | [#238 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44912723538) | success |
+| [#31 hourly owner report pagination](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/31) | `c58c841b11ef35a0a6c82ef2bc4d351681c82edb` | `751a307185dd99cd8842bc5cd54a4a3ad8352f8e` | [#254 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44967453458) | success |
+
+Both CI jobs passed on all three exact heads. Job steps were inspected: #25 runs Inbox and Owner summary cursor-pagination unit tests; #31 runs those two tests plus hourly-report pagination/aggregation tests. PR #29 runs atomic catalog-create RPC security tests and Product/Service checkout-to-receipt smoke tests, including migration replay, client-DML simulation, lifecycle hardening and tenant isolation. These are disposable CI assertions, not browser or live staging UAT.
+
+
+## PR #28 exact documentation head CI — 23 Nov 2026, 00:14 WIB
+
+PR #28 head is now `c3b8727264b5cb4eee54fee8bdf2e5a8dfdf5f13` (branch `docs/nortago-order-exact-release-evidence-20261121`) with base PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. [CI Run #261](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45048230178) completed PASS. Both production-build and PostgreSQL migration/replay/smoke jobs were individually fetched and passed. Exact-head Vercel status is success. PR remains open/draft/unmerged; mergeability was refreshed as true. This documentation-only commit does not change application code or database schema.
