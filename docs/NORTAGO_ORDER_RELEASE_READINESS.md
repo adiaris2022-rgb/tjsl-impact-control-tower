@@ -469,3 +469,54 @@ Reviewed source SQL at the relevant feature-branch heads:
 
 ### Release gates remain open
 Customer/owner browser UAT, staging effective grants/RLS/auth and real tenant validation, delivery fee/courier decision, payment-before-fulfillment policy, and commercial sign-off remain open. LinkBayar stays disabled. No merge, production deploy, live/staging migration, payment/webhook activation, secrets/environment change, or destructive action was performed.
+
+
+## Superseding exact-head release snapshot — 22 Nov 2026, 08:48 WIB
+
+Fresh GitHub pull-request metadata, commit-associated workflow runs, and commit statuses were retrieved in this run. This section supersedes previous exact-head tables where they conflict. PRs #1/#12–#17 remain open, draft, unmerged, and mergeable.
+
+| PR | Head SHA | Base SHA | Exact-head CI | Vercel |
+|---|---|---|---|
+| #1 | a75820a8ca6d14c3f92fd3dfcfb9821f28429843 | 545f4953368d0e85d7573c609bf4abf96b041c80 | #69 PASS | success |
+| #12 | a323dcdedb5fd1048d9d2b2e3560c6ced889789c | a75820a8ca6d14c3f92fd3dfcfb9821f28429843 | #183 PASS | success |
+| #13 | c0a5e75cf9a8964848ad00aa4b5d57d1753140a6 | a323dcdedb5fd1048d9d2b2e3560c6ced889789c | #136 PASS | success |
+| #14 | f3a86754461b06b10250b073a38fae906bfd2777 | c0a5e75cf9a8964848ad00aa4b5d57d1753140a6 | #138 PASS | failure — Vercel build-rate limit |
+| #15 | e16260f8147e3b55255be6bf5163a32774abe280 | f3a86754461b06b10250b073a38fae906bfd2777 | #140 PASS | failure — Vercel build-rate limit |
+| #16 | db3e6a43edc4edc4d3338504d87da11163594e42 | e16260f8147e3b55255be6bf5163a32774abe280 | #141 PASS | success |
+| #17 | 7516e1b22d5cd340b872db4bc516471a81ef74d4 | e16260f8147e3b55255be6bf5163a32774abe280 | #143 PASS | success |
+
+Exact commit workflow lookup confirmed the run associations; job endpoints were fetched for all seven runs. Both jobs—production build and PostgreSQL migrations/smoke—completed successfully for every requested PR. PR #16/#17 recheck confirms Run #141/#143 remain PASS.
+
+### Security/lifecycle branch review
+
+The migration tree was enumerated at PR #18 head 03ac27ceb0d268826c2b76e49808a923786d9e13, PR #26 head 99ca6c1b461ef267789a6eecf9ed18807b75a9f5, PR #12 head a323dcdedb5fd1048d9d2b2e3560c6ced889789c, and PR #30 head 751a307185dd99cd8842bc5cd54a4a3ad8352f8e. The relevant core, lifecycle RPC, Order-only scope lock, release scope guard, RPC-only write-privilege migration, and POS-integrated guard migrations were fetched and inspected.
+
+- Core OTC migration enables RLS on otc_orders and creates otc_orders_staff_manage FOR ALL using business membership. This policy is not a lifecycle transition restriction.
+- Lifecycle RPC nortago_update_order_status(uuid,text,text) is SECURITY DEFINER, uses a fixed search_path, requires auth.uid(), checks business role and outlet/business consistency, row-locks the order, validates the transition, updates status, and inserts audit. Core lifecycle migration does not install a status enforcement trigger.
+- Scope lock revokes authenticated/anon execution of reservation creation and management RPCs.
+- RPC-only hardening migration revokes table DML and all listed column INSERT/UPDATE rights on otc_orders and otc_order_items from PUBLIC/anon/authenticated, restores authenticated SELECT, and replaces broad mutation policies with business-scoped SELECT policies. Checkout, receipt, and lifecycle SECURITY DEFINER RPC write paths remain available with explicit execution grants.
+- CI explicitly simulates Supabase-style table and column DML before hardening. Baseline test proves direct status UPDATE succeeds under those grants and the broad membership policy without audit. Post-hardening regression asserts table and any-column INSERT/UPDATE rights absent, direct status UPDATE/order INSERT/item INSERT/UPDATE/DELETE denied, authenticated scoped SELECT retained, approved lifecycle RPC works, exactly one audit row is appended, and payment state remains unchanged.
+- Release scope migration trigger covers INSERT and UPDATE of order_source, fulfillment_type, and status. PR #30 adds rejection of POS_INTEGRATED in addition to Dine-In and STAFF_WALK_IN; test proves supported online Take Away still works and legacy POS lifecycle advancement is rejected without status/audit change.
+
+Effective grants, RLS, auth identity, and tenant role behavior on real Supabase staging/live remain unverified. Evidence here is SQL source and disposable PostgreSQL CI only.
+
+### Related exact-head CI and preview
+
+| PR | Exact head SHA | Exact CI | Vercel exact commit status |
+|---|---|---|---|
+| #18 | 03ac27ceb0d268826c2b76e49808a923786d9e13 | #191 PASS | success |
+| #26 | 99ca6c1b461ef267789a6eecf9ed18807b75a9f5 | #216 PASS | success |
+| #28 | cc9b25fca48e18dba944d03b5f9e22be073daacb | #253 PASS | success |
+| #30 | 751a307185dd99cd8842bc5cd54a4a3ad8352f8e | #250 PASS | success |
+
+Jobs were fetched from GitHub for Runs #191, #216, #253, and #250; production build and PostgreSQL migration/smoke jobs both completed successfully. PR #30 preview has Vercel Ready status, but independent browser UAT is not claimed.
+
+### Release gates still open
+
+- Browser UAT (customer checkout-to-receipt and Owner Inbox lifecycle/audit, desktop/mobile).
+- Actual Supabase staging effective grants/RLS/auth and real tenant/role checks.
+- Delivery fee and courier operational terms.
+- Payment-before-fulfillment policy decision (RPC permits NEW → PROCESSING while payment is PENDING; decide whether this is allowed for every payment method or only manual payment).
+- Commercial sign-off and explicit production-release approval.
+
+PR #30 remains draft/open/unmerged. No merge, production deploy, staging/live migration, payment/webhook activation, secrets/environment change, or destructive action. LinkBayar webhook remains disabled.
