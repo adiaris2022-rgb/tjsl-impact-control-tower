@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { buildInboxCursorFilter } from "../owner/inbox-pagination.mjs";
+import { fetchAllSummaryRows, SUMMARY_PAGE_SIZE } from "../owner/summary-pagination.mjs";
+import { summarizeHourlyOrders } from "./hourly-summary.mjs";
 
 type Order = { id: string; total: number | string; status: string; payment_status: string; created_at: string };
 
@@ -60,13 +63,14 @@ export default function Report() {
         const supabase = await getSupabase();
         const start = new Date();
         start.setHours(0, 0, 0, 0);
-        const { data, error: queryError } = await supabase.from("otc_orders")
-          .select("id,total,status,payment_status,created_at")
-          .eq("business_id", businessId)
-          .gte("created_at", start.toISOString())
-          .order("created_at");
-        if (queryError) throw queryError;
-        if (alive) setOrders((data || []) as Order[]);
+        const startIso = start.toISOString();
+        const reportRows = await fetchAllSummaryRows((cursor, pageSize) => {
+          let query = supabase.from("otc_orders").select("id,total,status,payment_status,created_at")
+            .eq("business_id", businessId).gte("created_at", startIso)
+            .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize);
+          return cursor ? query.or(buildInboxCursorFilter(cursor)) : query;
+        }, SUMMARY_PAGE_SIZE);
+        if (alive) setOrders(reportRows as Order[]);
       } catch (cause) {
         if (alive) setError(cause instanceof Error ? cause.message : "Gagal memuat laporan.");
       } finally {
@@ -76,19 +80,7 @@ export default function Report() {
     return () => { alive = false; };
   }, [businessId]);
 
-  const rows = useMemo(() => {
-    const grouped = new Map<string, { count: number; paidTotal: number }>();
-    for (const order of orders) {
-      const hour = new Date(order.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", hour12: false });
-      const value = grouped.get(hour) || { count: 0, paidTotal: 0 };
-      value.count += 1;
-      if (order.payment_status === "PAID") value.paidTotal += Number(order.total || 0);
-      grouped.set(hour, value);
-    }
-    return Array.from(grouped.entries())
-      .map(([hour, value]) => ({ hour, ...value }))
-      .sort((a, b) => a.hour.localeCompare(b.hour));
-  }, [orders]);
+  const rows = useMemo(() => summarizeHourlyOrders(orders), [orders]);
 
   if (loading && !businessId) return <main className="otc-page"><div className="loading">Memuat laporan…</div></main>;
   if (error && !businessId) return <main className="otc-page"><div className="info-box wide">{error}</div></main>;
