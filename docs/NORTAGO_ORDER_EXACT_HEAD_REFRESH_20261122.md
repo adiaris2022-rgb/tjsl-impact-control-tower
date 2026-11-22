@@ -128,3 +128,15 @@ Both CI jobs passed on all three exact heads. Job steps were inspected: #25 runs
 ## PR #28 exact documentation head CI — 23 Nov 2026, 00:14 WIB
 
 PR #28 head is now `c3b8727264b5cb4eee54fee8bdf2e5a8dfdf5f13` (branch `docs/nortago-order-exact-release-evidence-20261121`) with base PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`. [CI Run #261](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45048230178) completed PASS. Both production-build and PostgreSQL migration/replay/smoke jobs were individually fetched and passed. Exact-head Vercel status is success. PR remains open/draft/unmerged; mergeability was refreshed as true. This documentation-only commit does not change application code or database schema.
+
+
+## PR #28 CI completion and manual-payment release decision — 23 Nov 2026
+
+- PR #28 docs head `74fefc5ca84579636e99ad190b944de8b892709a`: [Run #262 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45048341722). Workflow run was refreshed by exact commit and completed; both production-build and PostgreSQL migration/replay/smoke jobs were fetched and PASS. Vercel exact-head status is success. PR remains open/draft/unmerged.
+
+### Payment/fulfillment policy decision (owner gate; not implemented)
+Source review of the secure checkout RPC and Checkout/Owner UI shows the currently offered payment choices are QRIS, Cash, and Other; checkout always creates `payment_status=PENDING`, no payment gateway is activated, and the Owner lifecycle action does not verify or mutate payment status. The lifecycle RPC allows `NEW → PROCESSING` regardless of `payment_status`. Thus selecting QRIS is not payment proof and the dashboard's verified-paid totals remain zero until a separate authorized settlement path is used.
+
+**Recommended release policy:** manual/offline payment only; explicitly label checkout as order submission (not payment). Until an approved payment-verification path exists, do not promise QRIS payment in-app or require prepayment for fulfillment. Allow processing while PENDING only for owner-approved cash-at-pickup / cash-on-delivery arrangements. If the business requires QRIS or transfer prepayment before fulfillment, hold those orders until verified and do not launch that flow without a manual payment-verification mechanism and a tested policy. Owner must approve this operating rule; it is not enforced by this draft.
+
+Relevant source: `supabase/migrations/20261117_nortago_customer_checkout_secure_v1.sql`, `supabase/migrations/20261120_nortago_customer_checkout_idempotency_v1.sql`, `supabase/migrations/20261120_nortago_order_lifecycle_rpc_v1.sql`, `app/otc/checkout/page.tsx`, and `app/otc/owner/page.tsx`. No payment/webhook activation or app behavior was changed.
