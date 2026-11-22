@@ -24,7 +24,7 @@ Exact-SHA lookup confirmed each listed workflow's commit association. Job endpoi
 |---|---|---|---|
 | [#18 Lifecycle RPC](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) | `03ac27ceb0d268826c2b76e49808a923786d9e13` | [#191 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44832208699) | success |
 | [#26 RPC-only writes](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/26) | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | [#216 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219) | success |
-| [#28 release evidence](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/28) | `2cd1d5d4dbedfd4123e50597ea5d6665a36f6c00` | [#258 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44993805356) | success |
+| [#28 release evidence](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/28) | `477eb8a6d0b20fd3cd831d8b45bbaf5cda532252` | [#259 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45002937446) | not rechecked in this run |
 | [#30 POS source guard](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/30) | `751a307185dd99cd8842bc5cd54a4a3ad8352f8e` | [#250 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102) | success |
 
 Both jobs were fetched and verified for each related run: production build and PostgreSQL migration/smoke.
@@ -51,3 +51,15 @@ PR #30 rejects `POS_INTEGRATED` in addition to Dine-In and staff Walk-In; CI pre
 Automated CI covers checkout-to-receipt, idempotency, tenant isolation, per-outlet monthly/yearly subscription, pagination, lifecycle edges/audit, direct-DML denial, and Order scope. It does not replace deployed UAT.
 
 No merge, production deploy, staging/live migration, payment/webhook activation, secret/environment change, or destructive action is performed. LinkBayar remains disabled. Scope remains Customer Self-Order, Take Away, Pre-Order, and Delivery only; Dine-In, Reservation, Walk-In/POS, queue, tables/seating/capacity, sessions, Control Tower, and BOS remain excluded.
+
+
+## Authoritative refresh — 22 Nov 2026, 16:36 WIB
+
+This update supersedes the earlier PR #28 row above. Fresh GitHub metadata shows PR #28 remains Open/Draft/Unmerged/mergeable at head `477eb8a6d0b20fd3cd831d8b45bbaf5cda532252`. Exact-head workflow Run #259 (ID `45002937446`) completed successfully on that SHA. Both jobs were fetched individually: **Install and production build — PASS**; **Validate PostgreSQL migrations and smoke tests — PASS**. No Vercel status was independently fetched in this refresh, and browser preview UAT remains unverified.
+
+
+### Fresh exact-head job evidence
+- PRs #1/#12/#13/#14/#15/#16/#17: all exact head SHA and exact workflow-run association refreshed. Both jobs fetched for every run: 7 production-build passes and 7 PostgreSQL migration/smoke passes (14/14).
+- PR #16 Run #141 and PR #17 Run #143 rechecked and PASS on exact current commits.
+- PR #18 Run #191, PR #26 Run #216, and PR #30 Run #250: both jobs fetched and PASS on the associated exact head SHA.
+- PR #29 exact head `d63f3aa9ab0e20b972766b7215db245b8f54cccb`, Run #238: both jobs fetched and PASS. Product/Service checkout-to-receipt and catalog mutation tests are CI-only evidence.
