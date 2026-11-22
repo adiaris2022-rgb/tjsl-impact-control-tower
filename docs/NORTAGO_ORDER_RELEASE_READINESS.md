@@ -429,3 +429,43 @@ The latest prior documentation commit `07515c1d9cc579aeebf75523e0696ca4ccaf305e`
 - Exact PR #30 head `751a307185dd99cd8842bc5cd54a4a3ad8352f8e`, base `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: [CI Run #250 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102). Both production-build and PostgreSQL migration/smoke jobs passed.
 - New forward migration applies and replays idempotently. Scope tests reject POS-integrated INSERT with `ORDER_ONLY_POS_DISABLED`, seed a legacy POS-integrated row only in a rollback fixture, and prove lifecycle RPC cannot advance it or emit audit; valid online Take Away remains accepted.
 - PR #30 remains Draft/Open/unmerged. Exact-head Vercel status had no result returned; preview/browser UAT is not claimed. No staging/live migration or production deployment.
+
+
+## Exact release-first refresh — 22 Nov 2026, 07:33 WIB
+
+This snapshot supersedes the earlier exact-head evidence where values conflict. Fresh GitHub PR metadata and commit-associated Actions runs were fetched during this refresh.
+
+### Requested release PRs (#1, #12–#17)
+
+| PR | Head SHA | Base SHA | Exact-head CI | State |
+|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | Open/Draft/Unmerged |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | Open/Draft/Unmerged |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | #136 PASS | Open/Draft/Unmerged |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | Open/Draft/Unmerged |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | Open/Draft/Unmerged |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | Open/Draft/Unmerged |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | Open/Draft/Unmerged |
+
+Exact-SHA workflow lookup returned the listed successful runs. Jobs were fetched for all seven runs: production-build and PostgreSQL migration/replay/smoke jobs both completed successfully. PR #16/#17 recheck confirms #141/#143 remain PASS. Vercel commit status: #1/#12/#13/#16/#17 success; #14/#15 build-rate-limit failure.
+
+### Security source review — direct status UPDATE vs lifecycle RPC
+
+Reviewed source SQL at the relevant feature-branch heads: 
+- `20260928_otc_commerce_core_v1.sql`: RLS enabled; `otc_orders_staff_manage` and `otc_order_items_staff_manage` are business-role `FOR ALL` policies. Policies do not restrict individual status transitions. Core SQL itself does not specify client DML grants.
+- `20261120_nortago_order_lifecycle_rpc_v1.sql`: `nortago_update_order_status(uuid,text,text)` is SECURITY DEFINER with fixed search_path; requires `auth.uid()`, membership, outlet/business consistency, allowed transition, row locking, and writes audit. It does not install a status-write trigger.
+- `20261120_nortago_order_release_scope_guard_v1.sql`: scope trigger originally covers INSERT/UPDATE of `order_source` and `fulfillment_type`; it does not enforce lifecycle transition/audit by itself.
+- `20261121_nortago_order_rpc_only_write_privileges_v1.sql` (PR #26): revokes table and column DML from PUBLIC/anon/authenticated on order headers/items; authenticated SELECT remains business-scoped through explicit SELECT policies. Approved SECURITY DEFINER checkout/receipt/lifecycle RPCs remain the write paths.
+- Baseline test `nortago_order_status_direct_write_baseline_smoke.sql` proves direct status update succeeds under simulated Supabase client DML grants plus the broad FOR ALL policy and produces no audit before hardening. Post-hardening test `nortago_order_rpc_only_write_privileges_smoke.sql` asserts table/column privileges, scoped SELECT, direct status update/order insert/item insert-update-delete denial, approved RPC status advance and one audit row, and payment state remains unchanged.
+- PR #30 adds the `POS_INTEGRATED` exclusion to the scope guard and includes `status` in the trigger's UPDATE column list, so RPC status transitions on out-of-scope legacy records are rejected before the lifecycle RPC can complete. CI fixtures prove Dine-In, STAFF_WALK_IN, and POS_INTEGRATED are rejected while online Take Away works.
+
+**Security evidence boundary:** all effective-grant assertions and direct mutation behavior above are disposable PostgreSQL CI fixtures. Real Supabase staging/live effective grants, RLS, auth identity, and tenant roles are not verified. The preview URL cannot be independently opened in the available web verifier; no browser UAT is claimed.
+
+### Related exact-head CI
+- PR #18 head `03ac27ceb0d268826c2b76e49808a923786d9e13`: Run #191 PASS (build + PostgreSQL).
+- PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: Run #216 PASS (build + PostgreSQL security smoke).
+- PR #30 head `751a307185dd99cd8842bc5cd54a4a3ad8352f8e`: Run #250 PASS (build + migration/replay/scope smoke).
+- PR #28 head `3a0738f8733421c8f3d09d763cafff1a83d3dfd5`: Run #252 PASS (build + PostgreSQL migration/security/smoke). This corrects older sections that refer to a previous docs commit or run.
+
+### Release gates remain open
+Customer/owner browser UAT, staging effective grants/RLS/auth and real tenant validation, delivery fee/courier decision, payment-before-fulfillment policy, and commercial sign-off remain open. LinkBayar stays disabled. No merge, production deploy, live/staging migration, payment/webhook activation, secrets/environment change, or destructive action was performed.
