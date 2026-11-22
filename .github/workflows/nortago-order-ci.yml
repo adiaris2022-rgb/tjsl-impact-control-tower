@@ -28,6 +28,8 @@ jobs:
         run: node --test app/otc/owner/inbox-pagination.test.mjs
       - name: Run Owner summary cursor pagination unit tests
         run: node --test app/otc/owner/summary-pagination.test.mjs
+      - name: Run Owner hourly report pagination and aggregation tests
+        run: node --test app/otc/owner-report/hourly-summary.test.mjs
       - name: Production build
         run: npm run build
 
