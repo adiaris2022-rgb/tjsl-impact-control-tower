@@ -110,3 +110,10 @@ Commercial release review may proceed only after all critical checkout/receipt, 
 ## Paid-order fulfillment regression (CI fixture)
 
 The release-first CI now includes `supabase/tests/nortago_order_lifecycle_paid_order_smoke.sql`. It seeds a disposable order with `status=PAID` and `payment_status=PAID` (no provider call or real payment), then advances Takeaway fulfillment through PROCESSING → READY → WAITING_PICKUP → PICKUP_VERIFIED → SUCCESS. It asserts the payment state remains PAID, the five audit transitions are ordered and actor-attributed. This is automated CI coverage only; do not use a live payment to reproduce it in staging.
+
+
+## Hourly owner report pagination regression
+
+- The Owner hourly report must fetch all today's order rows using keyset pagination (created_at DESC, id DESC), not a single PostgREST response that may be capped at 1,000 rows.
+- CI runs `app/otc/owner-report/hourly-summary.test.mjs` to verify multi-page aggregation, duplicate-row handling at a cursor boundary, local-time hour buckets, and that only `payment_status=PAID` contributes to the paid total.
+- For staging UAT, if the fixture has more than one page of orders, confirm the report count and paid total reconcile across all pages. This is a preview/staging test, not a live customer-data test.
