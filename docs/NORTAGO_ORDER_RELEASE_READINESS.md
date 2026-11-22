@@ -21,7 +21,7 @@ All PRs listed remain **open, draft, and unmerged**. Head/base references were r
 | #17 | `feature/nortago-order-owner-inbox` | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` | Run #143 PASS |
 | #18 | `feature/nortago-order-lifecycle-rpc` | `03ac27ceb0d268826c2b76e49808a923786d9e13` | `feature/nortago-order-owner-inbox` | Run #191 PASS |
 | #26 | `fix/nortago-order-rpc-only-write-privileges-20261121` | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | `fix/nortago-order-pagination-release-base-18-20261121` | Run #216 PASS |
-| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `f34455841e66f1801da46309c87cff1205499c6e` (exact current head) | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #244 PASS (exact current head) |
+| #28 | `docs/nortago-order-exact-release-evidence-20261121` | `ed22f0c45939bb67830bf0a1bbe8afa6fa4c9417` (pre-refresh exact head) | `fix/nortago-order-rpc-only-write-privileges-20261121` | Run #257 PASS (pre-refresh exact head) |
 | #29 | `feat/nortago-order-services-20261121` | `d63f3aa9ab0e20b972766b7215db245b8f54cccb` | `fix/nortago-order-rpc-only-write-privileges-20261121` | [Run #238 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44912723538) |
 
 - [PR #18](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/18) remains draft.
@@ -574,3 +574,50 @@ This refresh supersedes the #28 row above and confirms the following exact refs 
 - Effective privileges, function ownership, auth identity, and RLS behavior in real Supabase staging/live are still not verified. Browser UAT and commercial decisions remain open.
 
 All seven primary PRs and PR #18/#26/#28/#30 remain open/draft/unmerged at refresh. No merge, production deploy, live/staging migration, payment/webhook activation, secret/environment changes, or destructive actions were performed. LinkBayar remains disabled.
+
+
+## Release-first automation snapshot — 22 Nov 2026, 13:25 WIB
+
+This snapshot supersedes prior exact-ref/status entries above for PRs #1/#12–#17 and related release/security PRs where values differ. It is based on freshly fetched GitHub PR metadata, commit-associated workflow runs, combined commit statuses, and job results.
+
+
+### Primary release PRs
+
+| PR | Head SHA | Base branch / SHA | Exact CI | Build job | PostgreSQL job | Vercel |
+|---|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` / `545f4953368d0e85d7573c609bf4abf96b041c80` | [#69](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | PASS | PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` / `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | [#183](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | PASS | PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` / `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | [#136](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | PASS | PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` / `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | [#138](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | PASS | PASS | failure — Vercel build-rate limit |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` / `f3a86754461b06b10250b073a38fae906bfd2777` | [#140](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | PASS | PASS | failure — Vercel build-rate limit |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | [#141](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | PASS | PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | [#143](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | PASS | PASS | success |
+
+All seven primary PRs are open, draft, unmerged, and mergeable at this refresh. The exact-head run lookup returned the matching SHA for each workflow; both jobs passed, totaling 7/7 workflows and 14/14 jobs. PR #16/#17 were specifically rechecked: #141/#143 PASS.
+
+### Related security/release PRs
+
+| PR | Head SHA | Exact CI | Vercel |
+|---|---|---|---|
+| #18 lifecycle RPC | `03ac27ceb0d268826c2b76e49808a923786d9e13` | [#191](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44832208699) PASS | success |
+| #26 RPC-only write hardening | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | [#216](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219) PASS | success |
+| #28 release-readiness docs, pre-refresh | `ed22f0c45939bb67830bf0a1bbe8afa6fa4c9417` | [#257](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44985666458) PASS | success |
+| #30 POS-integrated scope guard | `751a307185dd99cd8842bc5cd54a4a3ad8352f8e` | [#250](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102) PASS | success |
+
+Both CI jobs (production build and PostgreSQL migration/replay/smoke) passed on these refs. This documentation update creates a new PR #28 head; its exact SHA and CI will be recorded in the PR comment after the run is checked. Older #28 rows and references are historical, not evidence for the new commit.
+
+### Lifecycle security evidence (source + disposable CI)
+
+- The core migration's business-membership `FOR ALL` policies do not enforce lifecycle transitions. Under the simulated client DML grants in CI, a direct `UPDATE otc_orders.status` succeeds without a lifecycle audit row; the baseline fixture reproduces that bypass.
+- The lifecycle RPC `nortago_update_order_status` is SECURITY DEFINER, authenticates `auth.uid()`, checks business role and outlet/business consistency, row-locks, validates allowed transitions, and writes the status/audit transactionally. The lifecycle migration does not install a trigger that forces all direct status writes through this RPC.
+- PR #26's migration revokes table-level and explicit column-level INSERT/UPDATE/DELETE on order headers/items from PUBLIC, anon, authenticated, and restores authenticated SELECT with scoped read policies. Regression smoke verifies direct status/order/item mutations are denied while approved RPC advances status, appends one audit record, and leaves payment state unchanged.
+- PR #30 adds `POS_INTEGRATED` rejection in the scope guard. The trigger includes `status` updates so legacy POS rows cannot advance through lifecycle; disposable tests assert no status/audit change and preserve online Take Away.
+- These grants, RLS and auth checks are PostgreSQL CI simulations only. Real Supabase staging effective grants, function owner, auth identity, tenant membership, and RLS evaluation remain unverified.
+
+### Readiness evidence and remaining decisions
+
+- CI coverage for checkout-to-receipt, idempotency, tenant isolation, monthly/yearly per-outlet subscriptions, plan-change staging, cursor pagination, lifecycle edge paths, audit, and scope restrictions is green on the referenced test commits.
+- Browser UAT for customer checkout/receipt and owner inbox/lifecycle/audit has not been completed or evidenced.
+- The lifecycle RPC currently permits `NEW → PROCESSING` while `payment_status=PENDING`. Owner must decide which payment methods allow fulfillment before settlement. Until decided, do not offer a prepayment-required flow or treat PENDING as paid; payment-provider settlement/webhook remains disabled. This is a release-policy gate, not a CI assertion.
+- Delivery fee/courier responsibility, real staging role/tenant checks, rollback plan, and commercial sign-off remain open.
+- PR #28 new documentation head: CI exact-SHA verification pending. No merge, production deploy, staging/live migration, payment/webhook activation, secrets/environment changes, or destructive actions. LinkBayar stays disabled.
