@@ -543,7 +543,7 @@ All seven are open, draft, unmerged, and reported mergeable at refresh time. CI 
 |---|---|---|
 | #18 lifecycle RPC | `03ac27ceb0d268826c2b76e49808a923786d9e13` | [#191](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44832208699) PASS |
 | #26 RPC-only write privileges | `99ca6c1b461ef267789a6eecf9ed18807b75a9f5` | [#216](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219) PASS |
-| #28 release-readiness docs | `b2338bdb6f7c4e7ffc42a9c27f8ee0e249b6d0d5` | [#255](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44973322081) PASS |
+| #28 release-readiness docs | `abeb66e63d75dbd9eee539c4c9c8fff715b01698` | [#256](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44981210633) PASS |
 | #30 POS-integrated scope guard | `751a307185dd99cd8842bc5cd54a4a3ad8352f8e` | [#250](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44960942102) PASS |
 
 Both jobs (production build and PostgreSQL migration/smoke) passed for these exact run heads.
@@ -559,3 +559,18 @@ Migration `20261121_nortago_order_rpc_only_write_privileges_v1.sql` explicitly r
 - Delivery fee/courier responsibility and payment-before-fulfillment policy need an explicit operational decision.
 - LinkBayar webhook and payment activation remain disabled.
 - No merge, production deployment, live migration, environment/secrets change, or destructive operation is authorized by this evidence refresh.
+
+### Fresh security and exact-head verification — 22 Nov 2026 11:33 WIB
+
+This refresh supersedes the #28 row above and confirms the following exact refs without applying changes to live/staging systems:
+- PR #1 and #12–#17 head/base metadata is unchanged. All seven exact-head CI runs are completed PASS, with both jobs (production build and PostgreSQL migrations/smoke) successful: 14/14 jobs. PR #16/#17 are specifically Run #141/#143 PASS.
+- Current Vercel commit status: #1/#12/#13/#16/#17 success; #14/#15 fail only due to build-rate limit.
+- PR #18 head `03ac27ceb0d268826c2b76e49808a923786d9e13`: Run #191 PASS, both jobs; Vercel success.
+- PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: Run #216 PASS, both jobs; Vercel success.
+- PR #28 head `abeb66e63d75dbd9eee539c4c9c8fff715b01698`: Run #256 PASS, both jobs; Vercel success.
+- PR #30 head `751a307185dd99cd8842bc5cd54a4a3ad8352f8e`: Run #250 PASS, both jobs; Vercel success.
+- Actual migration source review: core migration has business-membership `FOR ALL` order policies; lifecycle RPC is SECURITY DEFINER, validates auth/membership/outlet/status transition and appends audit, but there is no status-transition/audit trigger forcing direct updates through that RPC. Scope guard trigger validates excluded source/fulfillment types; it does not itself enforce lifecycle transitions.
+- PR #26 hardening explicitly revokes table and column INSERT/UPDATE/DELETE from PUBLIC, anon, authenticated on `otc_orders` and `otc_order_items`, then restores authenticated SELECT. Disposable CI first reproduces the bypass under broad simulated client DML grants, then verifies direct mutation denial and successful approved RPC transition with one audit row and unchanged payment status.
+- Effective privileges, function ownership, auth identity, and RLS behavior in real Supabase staging/live are still not verified. Browser UAT and commercial decisions remain open.
+
+All seven primary PRs and PR #18/#26/#28/#30 remain open/draft/unmerged at refresh. No merge, production deploy, live/staging migration, payment/webhook activation, secret/environment changes, or destructive actions were performed. LinkBayar remains disabled.
