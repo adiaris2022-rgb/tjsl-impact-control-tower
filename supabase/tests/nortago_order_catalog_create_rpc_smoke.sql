@@ -6,9 +6,11 @@ declare
   v_actor uuid := '00000000-0000-0000-0000-000000000001';
   v_business_a uuid := '81000000-0000-4000-8000-000000000001';
   v_business_b uuid := '81000000-0000-4000-8000-000000000002';
+  v_business_c uuid := '81000000-0000-4000-8000-000000000003';
   v_outlet_a uuid := '82000000-0000-4000-8000-000000000001';
   v_outlet_b uuid := '82000000-0000-4000-8000-000000000002';
   v_outlet_inactive uuid := '82000000-0000-4000-8000-000000000003';
+  v_outlet_c uuid := '82000000-0000-4000-8000-000000000004';
 begin
   if has_function_privilege('anon','public.nortago_create_catalog_item_for_outlet(uuid,text,text,text,text,numeric,text)','execute') then
     raise exception 'Catalog-create RPC must not be executable by anon';
@@ -24,12 +26,15 @@ begin
     raise exception 'Authenticated must be granted catalog-create RPC execute';
   end if;
 
-  insert into public.businesses(id) values(v_business_a),(v_business_b);
+  insert into public.businesses(id) values(v_business_a),(v_business_b),(v_business_c);
   insert into public.otc_outlets(id,business_id,name,is_active) values
     (v_outlet_a,v_business_a,'Catalog RPC Outlet A',true),
     (v_outlet_b,v_business_b,'Catalog RPC Outlet B',true),
-    (v_outlet_inactive,v_business_a,'Catalog RPC Inactive Outlet',false);
-  insert into public.business_users(business_id,user_id,role) values(v_business_a,v_actor,'OWNER');
+    (v_outlet_inactive,v_business_a,'Catalog RPC Inactive Outlet',false),
+    (v_outlet_c,v_business_c,'Catalog RPC Outlet C',true);
+  insert into public.business_users(business_id,user_id,role) values
+    (v_business_a,v_actor,'OWNER'),
+    (v_business_b,v_actor,'STAFF');
 end $$;
 
 create or replace function auth.uid() returns uuid language sql stable as $$ select '00000000-0000-0000-0000-000000000001'::uuid $$;
@@ -38,6 +43,7 @@ do $$
 declare
   v_service jsonb;
   v_product jsonb;
+  v_staff_item jsonb;
   v_error text;
 begin
   v_service := public.nortago_create_catalog_item_for_outlet(
@@ -54,10 +60,16 @@ begin
   if v_product->>'product_type' <> 'PRODUCT' or (v_product->>'price')::numeric <> 25000 then
     raise exception 'PRODUCT RPC response is incorrect';
   end if;
+  v_staff_item := public.nortago_create_catalog_item_for_outlet(
+    '82000000-0000-4000-8000-000000000002','Staff Created Item',null,null,null,500,'PRODUCT'
+  );
+  if v_staff_item->>'business_id' <> '81000000-0000-4000-8000-000000000002' then
+    raise exception 'STAFF role should be able to create catalog item within its own business';
+  end if;
 
   begin
     perform public.nortago_create_catalog_item_for_outlet(
-      '82000000-0000-4000-8000-000000000002','Cross Business Item',null,null,null,100,'PRODUCT'
+      '82000000-0000-4000-8000-000000000004','Cross Business Item',null,null,null,100,'PRODUCT'
     );
     raise exception 'Expected non-member business denial';
   exception when others then
