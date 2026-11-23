@@ -32,7 +32,8 @@ begin
   -- Outlet override deliberately differs from the product base price.
   insert into public.otc_outlet_products(outlet_id,product_id,price,is_available)
     values (v_outlet_id,v_product_id,25000,true);
-  v_items := jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',2));
+  -- Include forged client price fields: checkout must ignore them and use outlet price.
+  v_items := jsonb_build_array(jsonb_build_object('product_id',v_product_id,'quantity',2,'price',1,'unit_price',1));
 
   v_first := public.nortago_create_customer_order_idempotent(
     v_outlet_id,v_key,'Smoke Customer','081234567890','TAKE_AWAY',
