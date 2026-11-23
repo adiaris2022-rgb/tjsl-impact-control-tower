@@ -64,6 +64,7 @@ jobs:
           create role anon nologin;
           create role authenticated nologin;
           create role service_role nologin;
+          create role nortago_order_status_writer_ci nologin inherit;
           create schema auth;
           create function auth.uid() returns uuid language sql stable as $$ select '00000000-0000-0000-0000-000000000001'::uuid $$;
           create table public.businesses (id uuid primary key default gen_random_uuid());
@@ -181,6 +182,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261121_nortago_order_rpc_only_write_privileges_v1.sql
+      - name: Apply order status RPC owner guard
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261123_nortago_order_status_rpc_owner_guard_v1.sql
+      - name: Replay order status RPC owner guard (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261123_nortago_order_status_rpc_owner_guard_v1.sql
       - name: Run subscription billing security smoke checks
         env:
           PGPASSWORD: postgres
@@ -201,6 +210,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_rpc_only_write_privileges_smoke.sql
+      - name: Run inherited status privilege RPC owner guard smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_status_rpc_owner_guard_smoke.sql
       - name: Run order lifecycle audit RLS smoke checks
         env:
           PGPASSWORD: postgres
