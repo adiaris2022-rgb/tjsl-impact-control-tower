@@ -56,7 +56,7 @@ declare
 begin
   begin
     update public.otc_orders
-      set status='PROCESSING', updated_at=now()
+      set status='PROCESSING'
     where id='30000000-0000-4000-8000-000000000033';
     raise exception 'Direct status write unexpectedly succeeded';
   exception when insufficient_privilege then
