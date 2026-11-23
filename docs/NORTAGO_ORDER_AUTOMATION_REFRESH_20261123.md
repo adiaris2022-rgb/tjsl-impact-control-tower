@@ -65,3 +65,32 @@ No merge, deployment, Supabase staging/live migration, payment/webhook activatio
 - [Run #264 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45060353097) was confirmed on that exact SHA. Both jobs completed: production build + pagination unit tests; PostgreSQL migration/replay/security/checkout/tenant/subscription/lifecycle/scope smoke.
 - Vercel exact commit status on the snapshot was success.
 - This evidence update is documentation-only and requires its own exact-head CI check.
+
+
+## Fresh exact-head refresh — 23 Nov 2026, 18:11 WIB
+
+This refresh supersedes earlier snapshots above. GitHub PR metadata and commit workflow/status endpoints were queried for PR #1 and #12–#17. All seven PRs remain open, draft, and unmerged.
+
+| PR | Head SHA | Base SHA | Exact-head CI | Vercel |
+|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | #136 PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | provider build-rate-limit |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | provider build-rate-limit |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | success |
+
+Each commit-associated workflow run and combined status was queried again. Seven runs and fourteen jobs passed. PR #16/#17 runs #141/#143 remain green on their exact current commits. The #14/#15 provider failures are Vercel build-rate limits; GitHub Actions CI passed.
+
+
+## Consolidated release candidate refresh
+
+- PR #34 metadata: head `e2793462c6e297f36cf77ef83a4b6309dca923e`, base `c58c841b11ef35a0a6c82ef2bc4d351681c82edb`; Open/Draft/Unmerged/Mergeable.
+- [Run #284](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45156977713) jobs endpoint returned both jobs completed successfully: PostgreSQL migrations/replay/security/checkout/tenant/subscription/lifecycle/scope suite and production build/pagination tests.
+- Exact head combined status: Vercel success. The commit-associated workflow-runs lookup returned no run entry, so exact SHA association for #284 is supported by the PR's recorded run/head but could not be independently re-confirmed through that endpoint in this refresh. Browser opening the GitHub run was unavailable.
+- PR #28 pre-update head `37e3f9fecbd76266370358c4116054ad2f512fcc`: Run #286 PASS (2/2 jobs), Vercel success. This documentation update creates a new head and requires its own CI verification.
+
+## Release gates remain unchanged
+
+Actual Supabase staging effective grants/role inheritance/BYPASSRLS, real auth/RLS and applied migrations remain unverified. Customer/Owner browser UAT, delivery fee/courier responsibility, payment-before-fulfillment decision, rollback/recovery and commercial acceptance remain pending. No merge, staging/live migration, production deployment, payment/webhook activation, secrets/environment changes, or destructive action. LinkBayar remains disabled; NORTAGO ORDER-only scope and BOS deferral remain in force.
