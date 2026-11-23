@@ -69,7 +69,14 @@ The green PR #1/#12–#17 chain does not contain all later security/release work
 - Base exact SHA: `c58c841b11ef35a0a6c82ef2bc4d351681c82edb` (PR #31 head)
 - Head exact SHA: `9372fbaabb710e09504d8036a7a2a2eeca969ed0`
 - Contains PR #26 RPC-only DML hardening, PR #30 Order-only POS source guard, PR #31 pagination, and PR #33 status-owner trigger + CI regression (migration apply/replay and test).
-- PR #34 remains Draft/Open/Unmerged. CI workflow has not yet been returned for this newly created head; Vercel is pending. Do not claim this consolidated candidate passes until exact-head CI completes.
+- PR #34 remains Draft/Open/Unmerged. Exact-head [Run #275 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45138396571) completed 2/2 jobs; pagination unit tests, production build, PostgreSQL migrations/replay and security/checkout/tenant/subscription/lifecycle/scope smokes all passed. Vercel exact-head status is success.
 
 ### Staging boundary
 All current security proofs are disposable PostgreSQL CI. Actual Supabase staging effective grants, inherited role membership, RLS, function ownership, auth identities, tenant/outlet behavior, and browser UAT are still unverified. No staging/live migration or deployment was performed.
+
+
+### PR #28 documentation exact-head CI follow-up
+- Head before this correction: `5cbb1eb6677138a7c431f7fdb499c883fb8585d9`.
+- [Run #276 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45138447603), both production-build/pagination and PostgreSQL migration/replay/security jobs completed successfully.
+- Vercel status for that exact head: success.
+- This correction supersedes the earlier in-progress wording in this snapshot and requires its own CI run on the new commit.
