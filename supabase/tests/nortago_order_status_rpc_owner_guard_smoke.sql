@@ -46,7 +46,25 @@ begin
   if v_rpc_owner is null or v_rpc_owner in ('anon','authenticated') then
     raise exception 'Lifecycle RPC must have a trusted non-client owner';
   end if;
-end $$;
+  if not exists (
+    select 1
+    from pg_catalog.pg_trigger t
+    join pg_catalog.pg_proc p on p.oid = t.tgfoid
+    where t.tgrelid = 'public.otc_orders'::regclass
+      and t.tgname = 'otc_orders_status_rpc_owner_guard'
+      and not t.tgisinternal
+      and t.tgenabled in ('O','A')
+      and p.oid = pg_catalog.to_regprocedure('public.nortago_order_status_rpc_owner_guard()')
+      and not p.prosecdef
+      and pg_catalog.pg_get_triggerdef(t.oid) ilike '%before update of status%'
+  ) then
+    raise exception 'Enabled BEFORE UPDATE OF status SECURITY INVOKER guard trigger is missing';
+  end if;
+  if has_function_privilege('anon','public.nortago_order_status_rpc_owner_guard()','execute')
+    or has_function_privilege('authenticated','public.nortago_order_status_rpc_owner_guard()','execute') then
+    raise exception 'Client roles must not execute the status guard trigger function';
+  end if;
+end $;
 
 set local role authenticated;
 do $$
