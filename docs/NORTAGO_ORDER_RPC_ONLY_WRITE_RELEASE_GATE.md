@@ -180,3 +180,57 @@ No live migration, production deploy, payment activation, or webhook enablement 
 - PR #18/#26/#32/#33 exact-head CI #191/#216/#266/#268 PASS; Vercel statuses Success.
 
 These are repository-source and disposable CI results only. No effective Supabase staging privilege/RLS/auth inspection has been performed. Exact-preview browser UAT, delivery/payment policy, rollback, commercial acceptance, and explicit production approval remain release gates. No merge, migration, production deployment, payment/webhook activation, secrets/environment change, or destructive action. LinkBayar stays disabled.
+
+
+## Fresh exact-head and security audit — 23 Nov 2026, 17:27 WIB
+
+This section supersedes the stale exact-head references in the earlier refresh above.
+
+### Exact PR metadata and CI
+
+| PR | Head (full SHA) | Base (full SHA) | CI run | Vercel |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | Success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | Success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | #136 PASS | Success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | Vercel build-rate-limit failure |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | Vercel build-rate-limit failure |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | Success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | Success |
+
+The exact commit workflow-run and combined-status API results were refreshed. PR #16/#17 Runs #141/#143 are still PASS on current head commits. The #14/#15 failures are provider build-rate-limit status; their GitHub Actions workflow runs themselves passed.
+
+### Migration and policy audit — source evidence, not names
+
+Migration-tree inventory on the lifecycle branch (PR #18) contained 15 migration files; the RPC-only branch (PR #26) contained 16; the current consolidated PR #34 branch contained 18. Relevant actual source files were read from the branches:
+
+- `20260928_otc_commerce_core_v1.sql`: RLS enabled on `otc_orders` and `otc_order_items`. The order and item mutation policies are `FOR ALL` for authenticated business roles using `has_business_role`; these policies do not validate lifecycle transitions.
+- `20261120_nortago_order_lifecycle_rpc_v1.sql`: `nortago_update_order_status(uuid,text,text)` is SECURITY DEFINER; checks `auth.uid()`, business-role membership, outlet/business consistency and allowed status/fulfillment transitions; locks the order row; updates status and appends an audit record. This migration does **not** install a trigger forcing every status mutation through the RPC.
+- `20261120_nortago_order_only_scope_lock_v1.sql`: revokes client execution of reservation RPCs; it is not an order-status guard.
+- `20261120_nortago_order_release_scope_guard_v1.sql`: trigger rejects Dine-In and STAFF_WALK_IN order types. It does not validate the transition or create lifecycle audit. Later release hardening adds `status` to the trigger's watched columns so excluded legacy order types cannot advance through that scope guard.
+- `20261121_nortago_order_rpc_only_write_privileges_v1.sql` (PR #26): revokes all table and explicit column INSERT/UPDATE/DELETE privileges on both order tables from PUBLIC, anon and authenticated; restores authenticated SELECT and business-scoped read policies.
+- `20261123_nortago_order_status_rpc_owner_guard_v1.sql` (PR #33): SECURITY INVOKER trigger rejects changed status unless `current_user` matches the current lifecycle RPC owner, with SQLSTATE 42501 and `NORTAGO_ORDER_STATUS_RPC_ONLY`. It does not change checkout, payment_status, or business RLS.
+
+### Bypass and prevention evidence
+
+PR #26's CI workflow explicitly simulates client table and column DML grants after the core migration and before hardening. The rollback-only baseline test verifies that the broad business-role FOR ALL policy permits a direct `status='PROCESSING'` UPDATE and that it produces no lifecycle audit. This is the bypass reproduced in disposable PostgreSQL—not a claim about the live project's effective grants.
+
+PR #34 Run #279 on exact head `cee234e27c3df791670be5216f21a3490d9260ad` passed both jobs. The database job applied/replayed RPC-only and status-owner migrations and completed:
+- direct-status bypass baseline,
+- RPC-only mutation privilege smoke,
+- inherited `UPDATE(status)` plus narrow-RLS status-owner guard smoke,
+- approved lifecycle RPC transition, exactly one audit row, unchanged `payment_status`,
+- checkout idempotency/tenant isolation, per-outlet subscription, lifecycle edge/paid-order/scope checks.
+The build job passed Owner Inbox/summary/hourly-report pagination tests and production build. Exact-head Vercel status was Success.
+
+PR #26 Run #216, PR #32 Run #266, PR #33 Run #268 and PR #34 Run #279 were also rechecked on their exact current heads; each completed successfully. PR #28 before this update had head `459b0206b49d057e26be20386f097619d935e9eb`, Run #280 PASS (2/2), and Vercel Success. PR #18 current head `03ac27ceb0d268826c2b76e49808a923786d9e13`, Run #191 PASS, Vercel Success.
+
+### Owner-guard limitation and precise decision
+
+The PR #33 guard is defense-in-depth, not a PostgreSQL mechanism that identifies one specific calling function. It compares `current_user` with the owner of `nortago_update_order_status`; a future SECURITY DEFINER function owned by that same role that changes `otc_orders.status` could also pass. Source migration inventory currently found `nortago_update_order_status` as the only migration-defined status writer. The existing guard is retained as a safe feature-branch restriction and the test proves it rejects a direct inherited column grant while allowing the approved RPC.
+
+**Decision required before staging:** if strict “only this RPC” enforcement is required beyond the current source inventory, use a dedicated non-client function-owner role (or equivalent owner-approved trust boundary) for the lifecycle writer, ensure no other status-writing SECURITY DEFINER function shares it, and validate migration-owner privileges/role setup in disposable staging first. Do not create/grant broad owner roles or assume the migration executor can change ownership. This run does not make that role change.
+
+### Current release gates
+
+Actual Supabase staging effective grants, inherited role memberships/BYPASSRLS, applied migrations, real auth identity/RLS, and tenant/outlet behavior remain unverified. Browser UAT, delivery fee/courier responsibility, payment-before-fulfillment decision, rollback/recovery, and commercial acceptance are still required. CI results above are disposable PostgreSQL only. No merge, staging/live migration, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed. LinkBayar remains disabled; Order-only scope and BOS deferral remain unchanged.
