@@ -621,3 +621,34 @@ Both CI jobs (production build and PostgreSQL migration/replay/smoke) passed on 
 - The lifecycle RPC currently permits `NEW → PROCESSING` while `payment_status=PENDING`. Owner must decide which payment methods allow fulfillment before settlement. Until decided, do not offer a prepayment-required flow or treat PENDING as paid; payment-provider settlement/webhook remains disabled. This is a release-policy gate, not a CI assertion.
 - Delivery fee/courier responsibility, real staging role/tenant checks, rollback plan, and commercial sign-off remain open.
 - PR #28 new documentation head: CI exact-SHA verification pending. No merge, production deploy, staging/live migration, payment/webhook activation, secrets/environment changes, or destructive actions. LinkBayar stays disabled.
+
+
+## Latest exact-head automation refresh — 23 Nov 2026, 16:29 WIB (supersedes older snapshots)
+
+### Primary PR #1/#12–#17
+Fresh GitHub PR metadata, exact head/base refs, commit-associated workflow runs, commit statuses, and both CI jobs were verified. All seven remain Open/Draft/Unmerged/Mergeable. Exact workflow runs: #69, #183, #136, #138, #140, #141, #143; **7/7 runs and 14/14 jobs PASS**. PR #16/#17 rechecked on exact heads with Run #141/#143 PASS. Vercel: #1/#12/#13/#16/#17 Success; #14/#15 failure due provider build-rate-limit (GitHub CI remains green).
+
+| PR | Head SHA | Base SHA | CI | Vercel |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | #69 PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | #183 PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | #136 PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | #138 PASS | rate-limit failure |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | #140 PASS | rate-limit failure |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | #141 PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | #143 PASS | success |
+
+### Related exact-head security/release PRs
+
+- PR #18 lifecycle RPC: head `03ac27ceb0d268826c2b76e49808a923786d9e13`, Run #191 PASS, Vercel success.
+- PR #26 RPC-only client DML hardening: head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`, Run #216 PASS, Vercel success.
+- PR #28 release evidence docs: head `67cce4dfe0128c33f93f7406adb1063678c0bd9d`, Run #277 PASS (2/2 jobs), Vercel success.
+- PR #32 privilege-completeness test: head `de479e6b7c5bbb9cbf6b4097e0b067a49ad65cb4`, Run #266 PASS, Vercel success.
+- PR #33 lifecycle RPC-owner guard: head `09eea46dfb5926ccf0508d73e379c44fa0901868`, Run #268 PASS, Vercel success.
+- PR #34 consolidated candidate: base `c58c841b11ef35a0a6c82ef2bc4d351681c82edb`, head `cee234e27c3df791670be5216f21a3490d9260ad`, Run #279 PASS (2/2 jobs), Vercel success. PR #34 integrates PR #32's 12 effective-privilege assertions for TRUNCATE, REFERENCES, and TRIGGER on both OTC order tables and both client roles.
+
+### Migration/security source audit (branch inventory)
+Migration tree counts: PR #18 lifecycle branch 15; PR #26 RPC-only branch 16; PR #34 release candidate 18. The source review found the core business-membership `FOR ALL` order policy; lifecycle RPC transition/auth/business/outlet/audit validation; checkout/idempotency SECURITY DEFINER inserts; Order-only and POS-integrated scope triggers; PR #26 client table/column DML revokes with authenticated SELECT-only policies; and PR #33 SECURITY INVOKER status guard. Disposable CI reproduces the baseline direct-status bypass and rejects direct status UPDATE under inherited `UPDATE(status)` plus narrow RLS while approved lifecycle RPC succeeds. Effective privileges, role inheritance, auth identity, RLS and applied migrations in actual Supabase staging remain unverified.
+
+### Release gates remain open
+Staging effective grants/RLS/auth/tenant/outlet audit; exact-preview Customer and Owner browser UAT; delivery fee/courier policy; owner payment-before-fulfillment decision; rollback and commercial acceptance. No live/staging migration or deployment, merge, payment/webhook activation, secrets/environment changes, or destructive actions. LinkBayar remains disabled; Order-only scope remains; BOS deferred.
