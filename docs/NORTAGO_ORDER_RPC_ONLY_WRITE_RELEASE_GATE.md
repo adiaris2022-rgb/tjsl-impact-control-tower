@@ -234,3 +234,10 @@ The PR #33 guard is defense-in-depth, not a PostgreSQL mechanism that identifies
 ### Current release gates
 
 Actual Supabase staging effective grants, inherited role memberships/BYPASSRLS, applied migrations, real auth identity/RLS, and tenant/outlet behavior remain unverified. Browser UAT, delivery fee/courier responsibility, payment-before-fulfillment decision, rollback/recovery, and commercial acceptance are still required. CI results above are disposable PostgreSQL only. No merge, staging/live migration, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed. LinkBayar remains disabled; Order-only scope and BOS deferral remain unchanged.
+
+
+## PR #34 test metadata follow-up — 23 Nov 2026
+
+- PR #34 test head now includes assertions that the `otc_orders_status_rpc_owner_guard` trigger is installed and enabled, is `BEFORE UPDATE OF status`, uses a SECURITY INVOKER trigger function, and the guard function is not executable by anon/authenticated.
+- Current PR #34 test head: `e2793462c6e297f36cf77ef83a4b6309dca923e`. The prior malformed-delimiter test-edit commit `1191dca0fb823f90d1264c0906d8e2523a56f3d0` was superseded; its Run #282 was cancelled. The delimiter was corrected and fetched back from GitHub with two dollar-quotes intact.
+- At this evidence refresh, no Actions run was returned for the current PR #34 head, and its Vercel status was pending. Run #279 PASS and Vercel Success validate the previous head `cee234e27c3df791670be5216f21a3490d9260ad` only, not this additional trigger-metadata test.
