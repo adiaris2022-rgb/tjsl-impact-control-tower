@@ -50,3 +50,26 @@ For #33 exact-head Run #268, job inspection confirms:
 Customer/Owner browser UAT on exact preview SHA; read-only staging security and tenant verification; delivery fee/courier responsibility; owner-approved payment-before-fulfillment policy; commercial sign-off and rollback approval remain open. Checkout is order submission, not payment settlement. LinkBayar remains disabled.
 
 No merge, production deployment, Supabase staging/live migration, payment/webhook activation, secrets/environment changes, or destructive actions. Scope remains Order-only; BOS is deferred until Order is live and stable.
+
+## Fresh verification and release-stack topology — 23 Nov 2026, 15:22 WIB
+
+### Exact current refs rechecked
+PR #1/#12/#13/#14/#15/#16/#17 remain Open, Draft, Unmerged, and Mergeable. Commit-associated CI runs and combined statuses were fetched again for each exact head. No CI changes: all 7 workflow runs and 14 jobs PASS. PR #16 Run #141 and PR #17 Run #143 were rechecked and are exact-head PASS. Vercel remains success on #1/#12/#13/#16/#17 and build-rate-limit failure on #14/#15.
+
+### Important branch-topology finding
+The green PR #1/#12–#17 chain does not contain all later security/release work. Compare endpoints confirm:
+- PR #26 RPC-only security head is 82 commits ahead of PR #15 head.
+- PR #26 base branch `fix/nortago-order-pagination-release-base-18` is 8 commits ahead of PR #18 lifecycle head, 0 behind; this security stack includes later lifecycle/pagination work.
+- PR #30 stacks on PR #26 and adds the POS-integrated source guard.
+- PR #31 stacks on PR #30 and adds Owner pagination/hourly aggregation.
+- PR #33 stacks on PR #30 and adds the status RPC-owner guard; it is a sibling to #31, so #31 alone does not contain that guard and #33 alone does not contain #31's pagination.
+
+### New consolidated draft candidate
+- [PR #34 — paginated release stack with lifecycle status guard](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/34)
+- Base exact SHA: `c58c841b11ef35a0a6c82ef2bc4d351681c82edb` (PR #31 head)
+- Head exact SHA: `9372fbaabb710e09504d8036a7a2a2eeca969ed0`
+- Contains PR #26 RPC-only DML hardening, PR #30 Order-only POS source guard, PR #31 pagination, and PR #33 status-owner trigger + CI regression (migration apply/replay and test).
+- PR #34 remains Draft/Open/Unmerged. CI workflow has not yet been returned for this newly created head; Vercel is pending. Do not claim this consolidated candidate passes until exact-head CI completes.
+
+### Staging boundary
+All current security proofs are disposable PostgreSQL CI. Actual Supabase staging effective grants, inherited role membership, RLS, function ownership, auth identities, tenant/outlet behavior, and browser UAT are still unverified. No staging/live migration or deployment was performed.
