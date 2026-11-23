@@ -168,3 +168,15 @@ Record UTC timestamp, exact preview SHA, staging project ref (not credentials), 
 - Owner approval of the cash-at-pickup/COD versus payment-before-fulfillment policy; no active payment gateway is assumed.
 
 No live migration, production deploy, payment activation, or webhook enablement is authorized by this document. LinkBayar remains disabled. NORTAGO ORDER only; Dine-In, Reservation, Walk-In/POS, queue, table/seating/capacity, sessions, Control Tower, and BOS are excluded.
+
+
+## Exact release-candidate refresh — 23 Nov 2026
+
+- PR #34 candidate head is now `cee234e27c3df791670be5216f21a3490d9260ad`, base PR #31 head `c58c841b11ef35a0a6c82ef2bc4d351681c82edb`.
+- Exact head [Run #279 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45147788112), 2/2 jobs. Vercel exact-head Success.
+- Integrated PR #32's 12 effective-privilege assertions into the candidate's RPC-only write test: authenticated and anon must lack TRUNCATE, REFERENCES, and TRIGGER on both `otc_orders` and `otc_order_items`, in addition to DML and column INSERT/UPDATE checks. This avoids leaving the privilege-completeness test as a separate branch.
+- Exact primary PR #1/#12–#17 refresh: 7/7 workflow runs, 14/14 jobs PASS; #16/#17 exact Run #141/#143 PASS. Vercel #14/#15 remains build-rate-limit failure; the other five are Success.
+- PR #28 current doc head `67cce4dfe0128c33f93f7406adb1063678c0bd9d`, Run #277 PASS (2/2 jobs), Vercel Success.
+- PR #18/#26/#32/#33 exact-head CI #191/#216/#266/#268 PASS; Vercel statuses Success.
+
+These are repository-source and disposable CI results only. No effective Supabase staging privilege/RLS/auth inspection has been performed. Exact-preview browser UAT, delivery/payment policy, rollback, commercial acceptance, and explicit production approval remain release gates. No merge, migration, production deployment, payment/webhook activation, secrets/environment change, or destructive action. LinkBayar stays disabled.
