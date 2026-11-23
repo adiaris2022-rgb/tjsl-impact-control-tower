@@ -143,3 +143,43 @@ Pending commercial gates: actual staging audit, customer browser UAT, owner brow
 ## 6. Safety boundaries
 
 No merge, production deployment, Supabase staging/live migration, payment/webhook activation, secrets/environment changes, or destructive action without explicit user approval. LinkBayar remains disabled. NORTAGO ORDER only; BOS deferred until Order is live and stable.
+
+
+## 7. Fresh exact-head reconciliation — 24 Nov 2026, 02:05 WIB
+
+Fresh GitHub PR metadata and commit-associated Actions run lookups were performed for PR #1 and #12–#17. Each exact head run is completed-success; the individual job API shows both `Install and production build` and `Validate PostgreSQL migrations and smoke tests` completed-success (7/7 runs, 14/14 jobs). Exact current head/base refs:
+
+| PR | Head SHA | Base SHA | Run | Jobs |
+|---|---|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | [#69](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | 2/2 PASS |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | [#183](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | 2/2 PASS |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | [#136](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | 2/2 PASS |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | [#138](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | 2/2 PASS |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | [#140](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | 2/2 PASS |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#141](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | 2/2 PASS |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#143](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | 2/2 PASS |
+
+Vercel exact-head statuses: #1/#12/#13/#16/#17 success; #14/#15 failed only due provider build-rate-limit. GitHub Actions for #14/#15 is green.
+
+## 8. Lifecycle security cross-branch audit — source-level conclusion
+
+The migration tree was enumerated at the current heads of PR #18, #26, #33, and #34: 15, 16, 18, and 18 migration files respectively. All 18 migration files on consolidated PR #34 head `e2793462c6e297f36cf77ef83a4b6309dca923e` were fetched and statically scanned for `otc_orders`, `status`, `SECURITY DEFINER`, and order mutations.
+
+
+- **PR #18 alone is not safe as a release candidate:** its branch contains the core `otc_orders_staff_manage FOR ALL` business-membership policy and lifecycle RPC, but it does not yet include the PR #26 RPC-only DML revocation or PR #33 owner guard. The baseline test explicitly proves that direct authenticated status update can succeed under simulated client DML grants and the broad policy, with no lifecycle audit.
+- **PR #26** adds client table/column DML revocations for order header/items and business-scoped SELECT policies. Exact head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`; [Run #216 PASS, 2/2](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44881451219); Vercel Success.
+- **PR #33** adds the SECURITY INVOKER status-owner trigger guard and a regression test that deliberately grants inherited `UPDATE(status)` plus a narrow RLS UPDATE policy, then verifies direct update rejection and approved RPC success. Exact head `09eea46dfb5926ccf0508d73e379c44fa0901868`; [Run #268 PASS, 2/2](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45113627096); Vercel Success.
+- **PR #34 consolidated candidate** contains both RPC-only revokes and owner guard. Exact head `e2793462c6e297f36cf77ef83a4b6309dca923e`; [Run #284 PASS, 2/2](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45156977713); Vercel Success.
+- The migration-source scan found only the lifecycle RPC function directly issuing `UPDATE public.otc_orders SET status`; other order SECURITY DEFINER code in these migrations inserts initial checkout orders or reads receipts. Scope-guard trigger functions do not themselves update status. This is static migration evidence, not a live catalog query.
+- The owner guard compares `current_user` with the lifecycle RPC owner; this is a trusted-owner boundary, not exclusive function-identity proof. A future same-owner SECURITY DEFINER status writer could pass. Current scanned migration source contains no other status writer, but actual staging catalog must be inspected before sign-off.
+
+Effective live/staging grants, role inheritance, `BYPASSRLS`, authenticated identity, trigger state, function owners/ACL, and applied migration state remain unverified. The read-only SQL in Section 4 is the required owner-approved staging audit. Do not apply migrations or alter ownership as part of this check.
+
+## 9. Release evidence PR verification
+
+- PR #26 head `99ca6c1b461ef267789a6eecf9ed18807b75a9f5`: Run #216 2/2 PASS; Vercel success.
+- PR #33 head `09eea46dfb5926ccf0508d73e379c44fa0901868`: Run #268 2/2 PASS; Vercel success.
+- PR #34 head `e2793462c6e297f36cf77ef83a4b6309dca923e`: Run #284 2/2 PASS; Vercel success.
+- PR #28 documentation head `dc048c5a648aa5a2ec896174b89095b5504ff9f6`: Run #291 2/2 PASS; Vercel success. [Run #291](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45236703744).
+
+Release gates remain: actual Supabase staging security audit; exact-current-preview browser UAT for customer checkout/receipt and owner inbox/lifecycle/audit; delivery/courier and payment policy; rollback/recovery; and owner commercial acceptance.
