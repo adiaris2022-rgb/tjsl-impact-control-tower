@@ -64,7 +64,7 @@ begin
     or has_function_privilege('authenticated','public.nortago_order_status_rpc_owner_guard()','execute') then
     raise exception 'Client roles must not execute the status guard trigger function';
   end if;
-end $;
+end $$;
 
 set local role authenticated;
 do $$
