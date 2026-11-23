@@ -187,3 +187,33 @@ join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
   and (p.prosrc ilike '%otc_orders%' or p.prosrc ilike '%otc_order_items%')
 order by p.oid::regprocedure::text;
+-- 11) Inventory every SECURITY DEFINER function sharing the lifecycle RPC owner,
+-- across non-system schemas. The status guard trusts owner identity, so any
+-- same-owner SECURITY DEFINER function is inside that trust boundary. Review
+-- definitions for indirect/dynamic writes, grants, and caller reachability.
+with lifecycle_owner as (
+  select proowner
+  from pg_proc
+  where oid = pg_catalog.to_regprocedure('public.nortago_update_order_status(uuid,text,text)')
+)
+select
+  n.nspname as schema_name,
+  p.oid::regprocedure as function_signature,
+  pg_get_userbyid(p.proowner) as function_owner,
+  owner_role.rolsuper as owner_is_superuser,
+  owner_role.rolbypassrls as owner_bypasses_rls,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  p.proacl as function_acl,
+  has_function_privilege('anon', p.oid, 'execute') as anon_can_execute,
+  has_function_privilege('authenticated', p.oid, 'execute') as authenticated_can_execute,
+  has_function_privilege('service_role', p.oid, 'execute') as service_role_can_execute,
+  pg_get_functiondef(p.oid) as function_definition
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+join pg_roles owner_role on owner_role.oid = p.proowner
+join lifecycle_owner lo on lo.proowner = p.proowner
+where p.prosecdef
+  and n.nspname not in ('pg_catalog', 'information_schema')
+  and n.nspname not like 'pg_toast%'
+order by n.nspname, p.oid::regprocedure::text;
