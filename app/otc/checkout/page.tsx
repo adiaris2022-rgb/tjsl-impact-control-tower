@@ -11,7 +11,9 @@ function CheckoutContent(){const q=useSearchParams();const rawMode=q.get("mode")
   if(!cart.length||!outletId)return;
   setSaving(true);setError("");
   try{
-   const scheduledAt=mode==="PRE_ORDER"&&date&&time?new Date(date+"T"+time+":00").toISOString():null;
+   const localSchedule=mode==="PRE_ORDER"&&date&&time?new Date(date+"T"+time+":00"):null;
+   if(mode==="PRE_ORDER"&&(!localSchedule||localSchedule.getTime()<=Date.now()))throw new Error("Jadwal Pre-Order harus menggunakan waktu yang masih akan datang.");
+   const scheduledAt=localSchedule?localSchedule.toISOString():null;
    const checkoutItems=cart.map(item=>({product_id:item.product.id,quantity:item.qty}));
    const checkoutPayload=JSON.stringify({
     outlet_id:outletId,
