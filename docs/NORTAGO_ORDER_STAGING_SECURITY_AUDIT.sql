@@ -172,3 +172,18 @@ select to_regclass('supabase_migrations.schema_migrations') as migration_ledger;
 -- * role inheritance/BYPASSRLS/function ownership is unexplained;
 -- * applied migration ledger differs from the reviewed release stack.
 -- service_role is privileged by design; review its actual grants/role attributes separately.
+
+-- 10) Inventory public functions that reference OTC order/item tables.
+-- Review all SECURITY DEFINER candidates and follow indirect calls manually.
+-- This is a source inventory, not a complete dynamic-SQL or indirect-call detector.
+select
+  p.oid::regprocedure as function_signature,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proacl as function_acl,
+  pg_get_functiondef(p.oid) as function_definition
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and (p.prosrc ilike '%otc_orders%' or p.prosrc ilike '%otc_order_items%')
+order by p.oid::regprocedure::text;
