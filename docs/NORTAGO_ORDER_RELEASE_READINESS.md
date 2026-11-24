@@ -291,3 +291,16 @@ This closes the source-level tenant mapping gap in the candidate release branch.
 - The OTC core migration comment references another project ref (`tdpupelhvzxwhbqnnlxk`), which the connected account could not inspect (permission denied). Do not apply migrations to the empty connected project; identify the populated staging target first.
 - Supabase Security Advisor flags `public.rls_auto_enable()` as SECURITY DEFINER and executable by anon/authenticated; the `ensure_rls` event trigger is enabled. No ACL change was made; review this platform-level finding on the confirmed target.
 - No staging/live migration, merge, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed.
+
+## Default ACL and RLS event-trigger finding — 24 Nov 2026
+
+Read-only inspection of the connected project NORTAGO-ORDER-STAGING (aakhinaryzidzpsjeewp, ACTIVE_HEALTHY, PostgreSQL 17.12) found no application tables or migrations, so these are environment defaults, not effective grants on otc_orders:
+
+- pg_default_acl contains a supabase_admin creator-role default for public tables that grants arwdDxtm to anon, authenticated, and service_role; sequences receive rwU; functions receive EXECUTE (X). These defaults apply to objects created by that creator role, not automatically to objects created by postgres.
+- The stored postgres creator-role default for public tables grants Dxtm to anon/authenticated/service_role (TRUNCATE, REFERENCES, TRIGGER, and PostgreSQL 17 MAINTAIN; not table SELECT/INSERT/UPDATE/DELETE). Its stored sequence/function defaults are owner-only.
+- Existing public.rls_auto_enable() is owned by postgres, returns event_trigger, is SECURITY DEFINER with search_path=pg_catalog, and has proacl=NULL; effective privilege checks show anon and authenticated can EXECUTE it. Event trigger ensure_rls is enabled for ddl_command_end. Its body enables RLS on newly created public tables; this does not itself grant row access.
+- Supabase Security Advisor independently flags the client EXECUTE exposure. No ACL, default-privilege, or event-trigger change was made on this project.
+
+PR #39 adds a conditional feature-branch migration that revokes PUBLIC/anon/authenticated EXECUTE on this exact helper only when it exists, is SECURITY DEFINER, returns event_trigger, and is attached to an enabled event trigger. It leaves the event trigger and its function body intact. Disposable CI proves the event trigger still enables RLS after client EXECUTE is revoked. The migration has not been applied to staging or production.
+
+The connected project remains empty and is not proven to be the populated NORTAGO database; the OTC core migration still references inaccessible project ref tdpupelhvzxwhbqnnlxk. Do not apply migrations until the correct staging target is identified and separately approved.
