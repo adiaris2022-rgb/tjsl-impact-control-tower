@@ -62,6 +62,8 @@ begin
   ) then
     raise exception 'OWNER_PAYMENT_TERMS_RPC_DID_NOT_UPDATE_OUTLET_MAPPING';
   end if;
+  update public.otc_outlet_products set allow_full_payment=true,allow_dp=false,dp_value=50
+  where outlet_id=v_outlet and product_id=v_service_full_only;
 
   begin
     perform public.nortago_update_service_payment_terms(
