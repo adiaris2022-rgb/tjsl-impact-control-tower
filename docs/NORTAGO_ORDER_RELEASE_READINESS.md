@@ -279,3 +279,15 @@ This closes the source-level tenant mapping gap in the candidate release branch.
 - [Vercel preview status](https://vercel.com/nortago/nortago-order-staging/CGfwdTWzxSAWFii5SLNwdm9pgvkk): Success; preview provider status is not browser UAT.
 - The exact-head CI run covers Product/SERVICE catalog, cross-business outlet/product guard, seller-configurable service DP/full-payment migration and replay, Owner-only payment configuration RPC/trigger, DP percentage/fixed calculations, mixed cart, digital receipt amounts, changed-payment-option idempotency conflict, checkout-to-receipt, subscription, lifecycle security, pagination, and read-only staging audit SQL.
 - Supabase staging remains unverified. No live/staging migration, production deployment, payment/webhook activation, or secrets/environment changes were performed. The candidate stores payment obligations but does not record actual money received, balance collection, refunds, or settlement events; checkout remains PENDING until a separately approved settlement workflow exists.
+
+
+## Latest exact-head validation — 24 Nov 2026, 13:39 WIB
+
+- PR #38 remains Open / Draft / Unmerged. Exact head `924af2923e154ceca023370c5bf18943bd6f4f9f`; exact base `be598ef1ea6437f4854785b07c65b95f57226df3` (PR #37 dedicated lifecycle-owner branch).
+- [CI Run #369](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45342651041) PASS on that exact head. PostgreSQL migration/security checks and production build/pagination tests both completed successfully.
+- Vercel combined status is success for the exact head, but the bot's preview alias still contains commit prefix `90d2f9`, not `924af`. Preview and inspector URLs are inaccessible to the verification browser; exact-head browser UAT remains unverified.
+- Checkout and private receipt now explicitly disclose that Delivery fees are not calculated or included in the displayed total and must be confirmed with the seller before payment/processing. This is disclosure only; fee calculation, collection, and courier dispatch remain unimplemented.
+- Read-only Supabase inspection of connected project NORTAGO-ORDER-STAGING (`aakhinaryzidzpsjeewp`, ACTIVE_HEALTHY, PostgreSQL 17.12) found an empty `public` schema and no app migrations. `auth.uid()` exists, but OTC tables, `business_users`, `has_business_role`, lifecycle RPC, status audit, and app migration ledger are absent. Effective OTC grants/RLS/triggers therefore cannot be verified on this project.
+- The OTC core migration comment references another project ref (`tdpupelhvzxwhbqnnlxk`), which the connected account could not inspect (permission denied). Do not apply migrations to the empty connected project; identify the populated staging target first.
+- Supabase Security Advisor flags `public.rls_auto_enable()` as SECURITY DEFINER and executable by anon/authenticated; the `ensure_rls` event trigger is enabled. No ACL change was made; review this platform-level finding on the confirmed target.
+- No staging/live migration, merge, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed.
