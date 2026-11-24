@@ -36,6 +36,41 @@ alter table public.otc_orders
   add constraint otc_orders_payment_option_check check (payment_option in ('FULL','DP')),
   add constraint otc_orders_payment_amounts_check check (payment_amount_due >= 0 and payment_balance_due >= 0 and payment_amount_due + payment_balance_due = total);
 
+create or replace function public.nortago_guard_service_payment_terms_owner()
+returns trigger
+language plpgsql
+security invoker
+set search_path = pg_catalog, public, pg_temp
+as $
+declare
+  v_business_id uuid;
+begin
+  if old.allow_full_payment is distinct from new.allow_full_payment
+     or old.allow_dp is distinct from new.allow_dp
+     or old.dp_type is distinct from new.dp_type
+     or old.dp_value is distinct from new.dp_value then
+    select o.business_id into v_business_id
+    from public.otc_outlets o
+    join public.otc_products p on p.business_id=o.business_id
+    where o.id=new.outlet_id and p.id=new.product_id and p.product_type='SERVICE';
+    if not found then
+      raise exception 'SERVICE_PAYMENT_TERMS_ITEM_NOT_FOUND';
+    end if;
+    if not public.has_business_role(v_business_id, array['OWNER','PROGRAM_MANAGER','PARTNER']::text[]) then
+      raise exception 'SERVICE_PAYMENT_TERMS_FORBIDDEN';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+revoke all on function public.nortago_guard_service_payment_terms_owner() from public, anon, authenticated;
+drop trigger if exists otc_outlet_products_service_payment_terms_owner_guard on public.otc_outlet_products;
+create trigger otc_outlet_products_service_payment_terms_owner_guard
+before update of allow_full_payment,allow_dp,dp_type,dp_value
+on public.otc_outlet_products
+for each row execute function public.nortago_guard_service_payment_terms_owner();
+
 create or replace function public.nortago_update_service_payment_terms(
   p_outlet_id uuid,
   p_product_id uuid,
