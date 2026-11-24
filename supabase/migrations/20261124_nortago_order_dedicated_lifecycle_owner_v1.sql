@@ -11,6 +11,7 @@ declare
   v_helper pg_catalog.pg_proc%rowtype;
   v_role pg_catalog.pg_roles%rowtype;
   v_current_role pg_catalog.pg_roles%rowtype;
+  v_relation record;
 begin
   if to_regclass('public.otc_orders') is null
      or to_regclass('public.otc_outlets') is null
@@ -98,8 +99,28 @@ begin
   end if;
 
   select * into v_current_role from pg_roles where rolname = current_user;
-  if not found or not v_current_role.rolsuper then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_TRANSFER_REQUIRES_DATABASE_SUPERUSER';
+  if not found or (not v_current_role.rolsuper and not v_current_role.rolcreaterole) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_REQUIRES_CREATEROLE';
+  end if;
+  if current_user in ('anon','authenticated') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_MUST_BE_TRUSTED';
+  end if;
+  if not has_schema_privilege(current_user, 'public', 'create with grant option') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_CANNOT_TEMPORARILY_GRANT_SCHEMA_CREATE';
+  end if;
+  if not has_schema_privilege(current_user, 'auth', 'usage')
+     or not has_function_privilege(current_user, 'auth.uid()', 'execute') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_CANNOT_RESOLVE_AUTH_UID';
+  end if;
+  if to_regprocedure('public.nortago_order_auth_actor()') is not null then
+    if not exists (
+      select 1 from pg_proc p
+      where p.oid = to_regprocedure('public.nortago_order_auth_actor()')
+        and (p.proowner = v_current_role.oid
+          or v_current_role.rolsuper)
+    ) then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_AUTH_ACTOR_HELPER_OWNER_MISMATCH';
+    end if;
   end if;
 
   select oid into v_role_oid
@@ -107,22 +128,40 @@ begin
   where rolname = 'nortago_order_lifecycle_owner';
 
   if v_role_oid is null then
-    execute 'create role nortago_order_lifecycle_owner nologin noinherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls';
-    select oid into v_role_oid from pg_roles where rolname = 'nortago_order_lifecycle_owner';
-  else
-    select * into v_role from pg_roles where oid = v_role_oid;
-    if v_role.rolcanlogin or v_role.rolinherit or v_role.rolsuper
-       or v_role.rolcreatedb or v_role.rolcreaterole
-       or v_role.rolreplication or v_role.rolbypassrls then
-      raise exception 'NORTAGO_LIFECYCLE_OWNER_EXISTING_ROLE_ATTRIBUTES_UNSAFE';
-    end if;
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_ROLE_MUST_BE_PREPROVISIONED_BY_DATABASE_OWNER';
   end if;
 
+  select * into v_role from pg_roles where oid = v_role_oid;
+  if v_role.rolcanlogin or v_role.rolinherit or v_role.rolsuper
+     or v_role.rolcreatedb or v_role.rolcreaterole
+     or v_role.rolreplication or v_role.rolbypassrls then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_EXISTING_ROLE_ATTRIBUTES_UNSAFE';
+  end if;
+
+  -- The database owner must explicitly provision this short-lived ADMIN OPTION
+  -- membership. CREATEROLE alone does not authorize the executor to grant itself
+  -- membership in a pre-existing role. Keep the owner role otherwise unassigned.
   if exists (
     select 1 from pg_auth_members
-    where member = v_role_oid or roleid = v_role_oid
+    where member = v_role_oid
   ) then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_ROLE_MEMBERSHIP_MUST_BE_EMPTY';
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MUST_NOT_BE_MEMBER_OF_OTHER_ROLES';
+  end if;
+  if exists (
+    select 1 from pg_auth_members
+    where roleid = v_role_oid and member <> v_current_role.oid
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_HAS_UNEXPECTED_MEMBERS';
+  end if;
+  if not exists (
+    select 1 from pg_auth_members m
+    where m.roleid = v_role_oid
+      and m.member = v_current_role.oid
+      and m.admin_option
+      and m.set_option
+      and not m.inherit_option
+  ) or not pg_has_role(current_user, v_role_oid, 'SET') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_REQUIRES_OWNER_PREGRANTED_ADMIN_SET_MEMBERSHIP';
   end if;
 
   if exists (select 1 from pg_class where relowner = v_role_oid)
@@ -139,16 +178,70 @@ begin
 
   select proowner into v_current_owner from pg_proc where oid = v_rpc_oid;
   if v_current_owner <> v_role_oid
-     and not v_current_role.rolsuper
-     and not pg_has_role(current_user, v_current_owner, 'MEMBER') then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_CANNOT_TRANSFER_RPC';
+     and v_current_owner <> v_current_role.oid
+     and not v_current_role.rolsuper then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_MUST_OWN_RPC';
+  end if;
+
+  for v_relation in
+    select c.relname, c.relowner
+    from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public'
+      and c.relname = any(array[
+        'otc_orders','otc_order_items','otc_outlets','nortago_order_status_audit'
+      ])
+  loop
+    if v_relation.relowner <> v_current_role.oid and not v_current_role.rolsuper then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_MUST_OWN_TABLE: %', v_relation.relname;
+    end if;
+  end loop;
+
+  if not has_schema_privilege('nortago_order_lifecycle_owner', 'public', 'usage') then
+    if has_schema_privilege(current_user, 'public', 'usage with grant option') then
+      execute 'grant usage on schema public to nortago_order_lifecycle_owner';
+    else
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_PUBLIC_SCHEMA_USAGE_UNAVAILABLE';
+    end if;
   end if;
 end
 $$;
 
-grant usage on schema public, auth to nortago_order_lifecycle_owner;
-grant execute on function auth.uid() to nortago_order_lifecycle_owner;
-grant execute on function public.has_business_role(uuid,text[]) to nortago_order_lifecycle_owner;
+-- Keep auth schema access with the trusted migration executor. The dedicated
+-- lifecycle owner receives only a narrow SECURITY DEFINER bridge that returns
+-- auth.uid(); it does not receive USAGE on auth or direct EXECUTE on auth.uid().
+create or replace function public.nortago_order_auth_actor()
+returns uuid
+language sql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+  select auth.uid()
+$$;
+
+revoke all on function public.nortago_order_auth_actor() from public, anon, authenticated;
+grant execute on function public.nortago_order_auth_actor() to nortago_order_lifecycle_owner;
+
+do $$
+begin
+  if not has_function_privilege(
+    'nortago_order_lifecycle_owner',
+    'public.has_business_role(uuid,text[])',
+    'execute'
+  ) then
+    if has_function_privilege(
+      current_user,
+      'public.has_business_role(uuid,text[])',
+      'execute with grant option'
+    ) then
+      execute 'grant execute on function public.has_business_role(uuid,text[]) to nortago_order_lifecycle_owner';
+    else
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_CANNOT_EXECUTE_BUSINESS_ROLE_HELPER';
+    end if;
+  end if;
+end
+$$;
 
 -- Clear any previous grants only from this dedicated role. Do not alter PUBLIC,
 -- anon, authenticated, service_role, or unrelated application roles.
@@ -235,6 +328,40 @@ with check (public.has_business_role(business_id, array['OWNER','PROGRAM_MANAGER
 
 -- The RPC only reads these five order columns. Avoid SELECT * so the function can
 -- run with the exact column-level privileges granted above.
+
+
+-- A managed Supabase migration executor may have CREATEROLE and ownership of
+-- the existing RPC without being a database superuser. Temporarily grant it SET
+-- membership in the dedicated owner so PostgreSQL's ALTER FUNCTION OWNER rule is
+-- satisfied. INHERIT and ADMIN remain false; membership is revoked immediately.
+grant create on schema public to nortago_order_lifecycle_owner;
+
+do $$
+declare
+  v_current_owner oid;
+  v_lifecycle_role oid;
+begin
+  select oid into v_lifecycle_role
+  from pg_roles
+  where rolname='nortago_order_lifecycle_owner';
+
+  if v_lifecycle_role is null
+     or not pg_has_role(current_user, v_lifecycle_role, 'SET') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_SET_MEMBERSHIP_REQUIRED';
+  end if;
+
+  select proowner into v_current_owner
+  from pg_proc
+  where oid = to_regprocedure('public.nortago_update_order_status(uuid,text,text)');
+
+  if v_current_owner <> v_lifecycle_role then
+    execute 'alter function public.nortago_update_order_status(uuid,text,text) owner to nortago_order_lifecycle_owner';
+  end if;
+end
+$$;
+
+set role nortago_order_lifecycle_owner;
+
 create or replace function public.nortago_update_order_status(
   p_order_id uuid,
   p_next_status text,
@@ -255,7 +382,7 @@ declare
   v_outlet_business_id uuid;
   v_allowed boolean := false;
 begin
-  v_actor := auth.uid();
+  v_actor := public.nortago_order_auth_actor();
   if v_actor is null then
     raise exception 'NORTAGO_ORDER_AUTH_REQUIRED';
   end if;
@@ -335,15 +462,17 @@ begin
 end;
 $$;
 
--- Temporarily grant CREATE only to satisfy ALTER FUNCTION ownership requirements,
--- then remove it immediately. The dedicated role never retains schema CREATE.
-grant create on schema public to nortago_order_lifecycle_owner;
-alter function public.nortago_update_order_status(uuid,text,text)
-  owner to nortago_order_lifecycle_owner;
-revoke create on schema public from nortago_order_lifecycle_owner;
-
 revoke all on function public.nortago_update_order_status(uuid,text,text) from public, anon;
 grant execute on function public.nortago_update_order_status(uuid,text,text) to authenticated;
+
+reset role;
+
+-- The temporary role membership was granted by the database owner. PostgreSQL
+-- permits a role to revoke only membership grants recorded as granted by itself;
+-- the migration executor must not claim or silently attempt to remove the owner's
+-- grant. The same database-owner principal must revoke that membership after this
+-- migration completes and before authenticated-session UAT.
+revoke create on schema public from nortago_order_lifecycle_owner;
 
 do $$
 begin

@@ -60,3 +60,55 @@ LinkBayar remains disabled. No staging/live migration, production deploy, paymen
 A dedicated-owner migration candidate is now proposed on feature branch `fix/nortago-order-dedicated-lifecycle-owner-20261124` (PR #37). It adds a database preflight that aborts unless the actual `auth.uid()`, SECURITY DEFINER `has_business_role(uuid,text[])` with a `pg_catalog`-first search path, required tables, and RLS are present. It creates a NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS role with no memberships, transfers only the lifecycle RPC, and grants only the required order/outlet/audit columns plus helper EXECUTE.
 
 The RPC body is narrowed from `SELECT *` to the five columns it actually consumes (`id`, `business_id`, `outlet_id`, `status`, `fulfillment_type`), so the proposed owner does not need access to customer PII, payment fields, checkout keys, or order items. The CI candidate also checks exact column privileges, role attributes/memberships, RLS policy presence, and the existing direct-write rejection/approved-RPC regression. This is still feature-branch/disposable-CI evidence only. It has not been applied to Supabase staging or production. If the actual staging helper is not SECURITY DEFINER with a safe search path, the migration deliberately aborts; redesign must follow the observed helper and membership relation rather than weakening grants.
+
+
+## Managed Supabase migration-executor compatibility — 24 Nov 2026
+
+A read-only catalog audit was run against the connected Supabase project `NORTAGO-ORDER-STAGING` (`aakhinaryzidzpsjeewp`). This project is ACTIVE_HEALTHY on PostgreSQL 17.12, but it is empty for the application: no public OTC tables, no `business_users`, no `has_business_role`, no lifecycle RPC, no status audit table, and no application migration ledger. It is not proven to be the populated staging target; the OTC core migration comment references `tdpupelhvzxwhbqnnlxk`, which this connection cannot inspect.
+
+The actual managed-role catalog on the connected project shows:
+
+- Current role `postgres`: `rolsuper=false`, `rolcreaterole=true`, `rolbypassrls=true`, `rolcanlogin=true`. It is not a database superuser.
+- `public` schema owner is `pg_database_owner`; `postgres` has USAGE and CREATE with grant option.
+- `auth` schema owner is `supabase_admin`; `postgres` has USAGE but no CREATE or grant option.
+- `auth.uid()` owner is `supabase_auth_admin`; EXECUTE is available to `postgres` through PUBLIC, but is not grantable by `postgres`.
+- `postgres` is not a member of `supabase_admin`; its catalog memberships do not confer ownership of the auth schema/function.
+
+This makes the previous superuser-only lifecycle-owner migration path incompatible with the connected managed-role shape. Directly granting auth schema USAGE or auth.uid EXECUTE to the dedicated lifecycle owner is also not available to this executor. No attempt was made to change these platform ACLs.
+
+### PR #39 feature-branch adjustment
+
+PR #39 updates the candidate migration without broadening client or platform grants:
+
+1. Require a trusted migration executor with `CREATEROLE` (or superuser), public-schema CREATE grant option, access to `auth.uid()`, and ownership/membership sufficient to transfer the existing lifecycle RPC. Fail closed if any observed prerequisite is missing.
+2. Keep auth schema access with the trusted migration executor. Add `public.nortago_order_auth_actor()`, a SECURITY DEFINER bridge owned by that executor, with `search_path=pg_catalog`; it returns only `auth.uid()`. Revoke EXECUTE from PUBLIC/anon/authenticated and grant it only to `nortago_order_lifecycle_owner`. The dedicated owner receives neither USAGE on `auth` nor a direct auth.uid grant.
+3. The database owner must pre-provision `nortago_order_lifecycle_owner` as NOLOGIN/NOINHERIT/NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOREPLICATION/NOBYPASSRLS, then grant the trusted migration executor a temporary membership with `ADMIN TRUE`, `SET TRUE`, and `INHERIT FALSE`. A managed `CREATEROLE` executor cannot grant itself membership in a pre-existing role without ADMIN OPTION; the migration must fail closed if the owner has not provided this grant. The executor uses the membership only to transfer/replace the lifecycle RPC and revokes only the temporary `public CREATE` privilege it granted itself. Because PostgreSQL records the membership grant under the database-owner grantor, the executor cannot revoke that owner-issued membership; the **same database-owner principal that pregranted ADMIN OPTION must revoke it after the migration** (or a database superuser must do so). Verify zero memberships before authenticated UAT. The dedicated role must finish with no memberships and no schema CREATE.
+4. Keep the dedicated lifecycle owner NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS, with only its reviewed column-level order/outlet/audit grants and RLS policies. The bridge is a separate, narrowly scoped trust boundary and is not a status writer.
+
+CI now prepares a NOLOGIN, non-superuser CREATEROLE executor and a database-owner-preprovisioned lifecycle role. It first runs the migration without ADMIN OPTION and asserts the exact fail-closed error, then simulates the owner pregrant, applies the migration as the executor, simulates owner-side revocation of the owner-issued membership, re-pregrants for replay, replays, revokes again as the owner, and checks zero memberships, helper ACL/owner, minimal grants/RLS, direct status-write rejection, and approved RPC transition/audit. This remains disposable PostgreSQL evidence only.
+
+### Owner decision and remaining preconditions
+
+The preferred path is a managed-role-compatible migration using the restricted auth-actor bridge, **not** granting the dedicated lifecycle owner access to the auth schema and **not** broadening authenticated/service_role privileges. The migration executor must own the OTC tables and lifecycle RPC, have CREATEROLE (or be superuser), public-schema USAGE/CREATE grant option, access to `auth.uid()`, and EXECUTE/GRANT OPTION on the actual SECURITY DEFINER `has_business_role(uuid,text[])` helper (or the dedicated role must already have the required EXECUTE). Separately, the database owner must pre-provision the dedicated NOLOGIN role and grant the executor temporary `ADMIN TRUE, SET TRUE, INHERIT FALSE` membership. CREATEROLE alone is not sufficient to grant membership in an existing role. PostgreSQL records that membership under the owner grantor, so the same owner must revoke it after migration; the executor can revoke only grants it recorded itself. CI proves the migration rejects the missing-ADMIN case and verifies that owner-side cleanup is required and effective. Inspect the real helper body/owner/ACL and its membership-table RLS first. If any prerequisite is unavailable, stop and require an explicitly approved migration principal or redesign the bridge from the observed schema.
+
+The connected project remains empty, so actual effective grants on `otc_orders.status`, actual OTC RLS policies/triggers, and authenticated-session behavior remain **unverified**. Do not apply migrations to `aakhinaryzidzpsjeewp` merely because it is named staging. The separate `ensure_rls` event trigger invokes `public.rls_auto_enable()`; the function is SECURITY DEFINER with default PUBLIC EXECUTE on this project. This platform-level finding is documented for review on the confirmed target; no ACL change was made.
+
+
+
+### PR #39 CI failure and owner-membership correction — 24 Nov 2026
+
+The first PR #39 exact-head run (#382) exposed a real PostgreSQL privilege rule: a non-superuser CREATEROLE executor cannot grant itself membership in a pre-existing `nortago_order_lifecycle_owner` role without ADMIN OPTION. The initial fixture incorrectly attempted that self-grant and failed at setup with `permission denied to grant role`. The migration candidate has been corrected to require a database-owner-preprovisioned ADMIN/SET membership, verify `ADMIN TRUE`, `SET TRUE`, and `INHERIT FALSE` from `pg_auth_members`, use it only for the function ownership transfer, and revoke it at the end. CI now tests both the expected fail-closed case without the owner pregrant and the successful apply/replay case after the pregrant. This is a precise owner policy, not a broad client or platform grant.
+
+
+The second PR #39 exact-head CI run (#386) reached the post-migration security verification and exposed that the migration executor cannot remove the membership row granted by `postgres`: PostgreSQL tracks role-membership grantors, and a role can revoke only the membership grant it made. The migration now leaves the owner-issued temporary ADMIN OPTION intact and the CI fixture has an explicit owner-side cleanup step (run by the same grantor) before the final no-membership assertion. This is required operationally in the real managed project; do not begin authenticated UAT until the database owner has revoked the temporary membership and the catalog audit confirms zero members.
+
+
+### Owner-side cleanup procedure for the temporary ADMIN OPTION grant
+
+After the lifecycle-owner migration completes, do not begin authenticated UAT until the temporary migration-executor membership has been removed by the same database-owner grantor that issued it. First inspect the exact grantor/member/options with Query 14 in `NORTAGO_ORDER_STAGING_SECURITY_AUDIT.sql`. Then, in an owner-approved SQL session authenticated as that grantor (or a database superuser), execute the matching statement using the actual member role returned by the audit:
+
+```sql
+REVOKE nortago_order_lifecycle_owner FROM <actual_migration_executor_role>;
+```
+
+Re-run Query 14 and verify there are zero rows where either `member_role` or `granted_role` is `nortago_order_lifecycle_owner`. Do not substitute `postgres`, `supabase_admin`, or another role by assumption. The CI fixture performs this cleanup as the same grantor that issued the pregrant; it is not an automatic production/staging action.

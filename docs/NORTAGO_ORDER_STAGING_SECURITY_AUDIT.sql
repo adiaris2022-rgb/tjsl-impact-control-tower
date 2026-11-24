@@ -289,13 +289,16 @@ where r.rolname = 'nortago_order_lifecycle_owner';
 select
   member_role.rolname as member_role,
   granted_role.rolname as granted_role,
-  m.admin_option
+  pg_get_userbyid(m.grantor) as membership_grantor,
+  m.admin_option,
+  m.inherit_option,
+  m.set_option
 from pg_auth_members m
 join pg_roles member_role on member_role.oid = m.member
 join pg_roles granted_role on granted_role.oid = m.roleid
 where member_role.rolname = 'nortago_order_lifecycle_owner'
    or granted_role.rolname = 'nortago_order_lifecycle_owner'
-order by member_role.rolname, granted_role.rolname;
+order by member_role.rolname, granted_role.rolname, membership_grantor;
 
 select
   n.nspname as schema_name,
@@ -475,3 +478,43 @@ select
 from public.otc_outlet_products op
 join public.otc_products p on p.id=op.product_id
 where p.product_type='SERVICE';
+
+
+-- 19) Managed Supabase migration-executor preflight. This is read-only and does not
+-- prove the executor owns OTC tables/RPC; compare these capabilities with the
+-- migration's explicit ownership and grant-option preconditions.
+select
+  current_user as migration_executor,
+  session_user as session_login,
+  r.rolsuper as executor_is_superuser,
+  r.rolcreaterole as executor_can_create_roles,
+  r.rolbypassrls as executor_bypasses_rls,
+  r.rolcanlogin as executor_can_login,
+  has_schema_privilege(current_user,'public','usage') as public_schema_usage,
+  has_schema_privilege(current_user,'public','create with grant option') as public_create_grantable,
+  has_schema_privilege(current_user,'auth','usage') as auth_schema_usage,
+  coalesce(has_function_privilege(current_user,to_regprocedure('auth.uid()'),'execute'),false) as auth_uid_execute,
+  coalesce(has_function_privilege(current_user,to_regprocedure('auth.uid()'),'execute with grant option'),false) as auth_uid_execute_grantable,
+  coalesce(has_function_privilege(current_user,to_regprocedure('public.has_business_role(uuid,text[])'),'execute'),false) as business_role_execute,
+  coalesce(has_function_privilege(current_user,to_regprocedure('public.has_business_role(uuid,text[])'),'execute with grant option'),false) as business_role_execute_grantable,
+  (select pg_get_userbyid(n.nspowner) from pg_namespace n where n.nspname='public') as public_schema_owner,
+  (select pg_get_userbyid(n.nspowner) from pg_namespace n where n.nspname='auth') as auth_schema_owner,
+  (select pg_get_userbyid(p.proowner) from pg_proc p where p.oid=to_regprocedure('auth.uid()')) as auth_uid_owner
+from pg_roles r
+where r.rolname=current_user;
+
+-- 20) Verify the restricted auth-actor bridge, if the candidate migration is present.
+-- The dedicated lifecycle owner must not receive auth schema USAGE or direct client EXECUTE.
+select
+  pg_get_userbyid(p.proowner) as bridge_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  p.proacl as function_acl,
+  has_function_privilege('nortago_order_lifecycle_owner',p.oid,'execute') as lifecycle_owner_can_execute,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  has_schema_privilege('nortago_order_lifecycle_owner','auth','usage') as lifecycle_owner_has_auth_schema_usage,
+  pg_get_functiondef(p.oid) as function_definition
+from pg_proc p
+where p.oid=to_regprocedure('public.nortago_order_auth_actor()');
+
