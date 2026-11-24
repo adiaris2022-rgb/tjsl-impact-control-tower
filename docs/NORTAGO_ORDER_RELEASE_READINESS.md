@@ -195,3 +195,25 @@ PR #18 Run #179 jobs (production build and PostgreSQL migration/replay + lifecyc
 - Current Vercel status check for this branch head is **success**; the deployment page remains inaccessible to independent browser inspection. Current-head customer UAT remains unverified.
 - PR #12 exact head `31e517eed0c280ed25e57c144405bbd2fcb0178b` still has no PR workflow run returned by exact-commit lookup; its CI remains unverified (not promoted from historical Run #131). Vercel check is failure due to build-rate-limit.
 - Outlet-specific staff assignment remains a schema/authorization design blocker if the release requires per-outlet restriction. Current lifecycle authorization is business membership with a business/outlet consistency guard; do not claim outlet-level staff isolation.
+
+
+## Exact release-first refresh — 24 Nov 2026, 10:47 WIB
+
+GitHub metadata was refreshed for PR #1 and #12–#17. All seven remain **Open / Draft / Unmerged / Mergeable**. Current exact head/base references and commit-associated workflow runs:
+
+| PR | Exact head SHA | Exact base SHA | CI run on exact head | Build job | PostgreSQL job | Vercel exact-head status |
+|---|---|---|---:|---|---|---|
+| #1 | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `545f4953368d0e85d7573c609bf4abf96b041c80` | [#69](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | PASS | PASS | success |
+| #12 | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | [#183](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | PASS | PASS | success |
+| #13 | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | [#136](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | PASS | PASS | success |
+| #14 | `f3a86754461b06b10250b073a38fae906bfd2777` | `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | [#138](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | PASS | PASS | failure: Vercel provider build-rate-limit |
+| #15 | `e16260f8147e3b55255be6bf5163a32774abe280` | `f3a86754461b06b10250b073a38fae906bfd2777` | [#140](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | PASS | PASS | failure: Vercel provider build-rate-limit |
+| #16 | `db3e6a43edc4edc4d3338504d87da11163594e42` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#141](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | PASS | PASS | success |
+| #17 | `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `e16260f8147e3b55255be6bf5163a32774abe280` | [#143](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | PASS | PASS | success |
+
+Job-level status was fetched for all seven exact-head runs: **7/7 workflow runs and 14/14 jobs completed successfully**. PR #16 Run #141 and PR #17 Run #143 were explicitly rechecked on the current exact head SHAs. The Vercel failure for #14/#15 is a provider build-rate-limit status, not a GitHub Actions failure. A successful Vercel status is deployment-provider evidence, not browser UAT.
+
+## Lifecycle owner-boundary decision
+
+See [NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md](./NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md). The current owner guard is useful defense-in-depth but trusts a shared function-owner identity. A dedicated non-login lifecycle owner, with no memberships and minimal column/RLS grants, is the proposed production boundary. It is **not implemented or applied** until the actual Supabase `has_business_role`, `auth.uid()`, role attributes, RLS, and migration-executor permissions are inspected in an owner-approved staging session.
+
