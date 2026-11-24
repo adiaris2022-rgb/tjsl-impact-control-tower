@@ -81,8 +81,8 @@ grant select, update on public.otc_products to authenticated;
 grant select, update on public.otc_outlets to authenticated;
 
 create or replace function auth.uid() returns uuid language sql stable
-as $ select '00000000-0000-0000-0000-000000000001'::uuid $;
-set local role authenticated;
+create or replace function auth.uid() returns uuid language sql stable
+as $auth$ select '00000000-0000-0000-0000-000000000001'::uuid $auth$;
 
 do $$
 declare
