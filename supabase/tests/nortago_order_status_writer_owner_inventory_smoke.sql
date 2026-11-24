@@ -35,6 +35,7 @@ begin
     into v_other_status_writers
   from pg_catalog.pg_proc p
   where p.proowner = v_rpc_owner
+    and p.prokind in ('f','p')
     and p.prosecdef
     and p.oid <> v_rpc_oid
     and regexp_replace(
