@@ -10,6 +10,7 @@ declare
   v_auth_actor_owner name;
   v_auth_actor_config text[];
   v_auth_actor_security_definer boolean;
+  v_auth_actor_definition text;
   v_count integer;
   v_col record;
   v_priv text;
@@ -62,15 +63,18 @@ begin
     raise exception 'NORTAGO_LIFECYCLE_OWNER_MUST_OWN_EXACTLY_ONE_SECURITY_DEFINER_FUNCTION: %',v_count;
   end if;
 
-  select p.oid, pg_get_userbyid(p.proowner), p.proconfig, p.prosecdef
-    into v_auth_actor_oid, v_auth_actor_owner, v_auth_actor_config, v_auth_actor_security_definer
+  select p.oid, pg_get_userbyid(p.proowner), p.proconfig, p.prosecdef, pg_get_functiondef(p.oid)
+    into v_auth_actor_oid, v_auth_actor_owner, v_auth_actor_config, v_auth_actor_security_definer, v_auth_actor_definition
   from pg_proc p
   where p.oid=to_regprocedure('public.nortago_order_auth_actor()');
 
   if v_auth_actor_oid is null
      or v_auth_actor_owner in ('anon','authenticated')
      or not v_auth_actor_security_definer
-     or not ('search_path=pg_catalog' = any(coalesce(v_auth_actor_config, array[]::text[]))) then
+     or not ('search_path=pg_catalog' = any(coalesce(v_auth_actor_config, array[]::text[])))
+     or position('auth.uid()' in coalesce(v_auth_actor_definition,'')) = 0
+     or not has_schema_privilege(v_auth_actor_owner,'auth','usage')
+     or not has_function_privilege(v_auth_actor_owner,'auth.uid()','execute') then
     raise exception 'NORTAGO_LIFECYCLE_AUTH_ACTOR_BRIDGE_UNSAFE';
   end if;
 
