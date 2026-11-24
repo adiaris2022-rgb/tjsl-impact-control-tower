@@ -208,7 +208,7 @@ export default function Owner() {
     </section>
     {error ? <div className="info-box wide">{error}</div> : null}
     {loading ? <div className="loading">Memuat data bisnis…</div> : <>
-      <section className="metric-grid otc-metrics">{[[String(metrics.count), "Transaksi hari ini"], [money(metrics.total), "Pembayaran terverifikasi"], [String(metrics.outlets), "Outlet"], [currentTime, "Waktu laporan"]].map(([value, label]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section>
+      <section className="metric-grid otc-metrics">{[[String(metrics.count), "Transaksi hari ini"], [money(metrics.total), "Pelunasan terverifikasi"], [String(metrics.outlets), "Outlet"], [currentTime, "Waktu laporan"]].map(([value, label]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section>
       <section className="data-panel"><div className="section-toolbar"><div><span className="eyebrow">TODAY BY OUTLET</span><h2>Ringkasan outlet</h2></div><Link className="otc-secondary" href="/otc/owner-report">Lihat laporan per jam</Link></div>
         {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pelunasan terverifikasi</th><th>DP pending</th><th>Sisa tagihan DP</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td>{money(row.partialDue)}</td><td>{money(row.balanceDue)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
       </section>
@@ -223,7 +223,7 @@ export default function Owner() {
         {filteredInboxOrders.length===0?<div className="muted">Tidak ada pesanan yang sesuai.</div>:<div className="table-wrap"><table><thead><tr><th>Order / Customer</th><th>Outlet</th><th>Mode</th><th>Total</th><th>Status</th><th>Detail</th></tr></thead><tbody>
           {filteredInboxOrders.map(order=><tr key={order.id}>
             <td><strong>{order.order_no}</strong><div>{order.customer_name}</div><small>{order.created_at?new Date(order.created_at).toLocaleString("id-ID"):""}</small></td>
-            <td>{order.outlet_name}</td><td>{order.fulfillment_type}</td><td>{money(Number(order.total||0))}{order.payment_option === "DP" ? <small style={{display:"block"}}>DP awal {money(Number(order.payment_amount_due||0))} · Sisa {money(Number(order.payment_balance_due||0))}</small> : null}</td><td><span className="status-badge">{order.status} · {order.payment_status}</span></td>
+            <td>{order.outlet_name}</td><td>{order.fulfillment_type}</td><td>{money(Number(order.total||0))}{order.payment_option === "DP" ? <small style={{display:"block"}}>Tagihan awal {money(Number(order.payment_amount_due||0))} · Sisa {money(Number(order.payment_balance_due||0))}</small> : null}</td><td><span className="status-badge">{order.status} · {order.payment_status}</span></td>
             <td><button type="button" className="otc-secondary" onClick={()=>setExpandedOrderId(expandedOrderId===order.id?"":order.id)}>{expandedOrderId===order.id?"Tutup":"Lihat"}</button></td>
           </tr>)}
           {filteredInboxOrders.filter(order=>order.id===expandedOrderId).map(order=><tr key={order.id+"-detail"}><td colSpan={6}><div style={{padding:12,display:"grid",gap:6}}>
