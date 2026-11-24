@@ -8,8 +8,9 @@ begin
     raise exception 'RLS_EVENT_HELPER_FIXTURE_MISSING';
   end if;
   if has_function_privilege('anon',v_function,'execute')
-     or has_function_privilege('authenticated',v_function,'execute') then
-    raise exception 'RLS_EVENT_HELPER_CLIENT_EXECUTE_MUST_BE_REVOKED';
+     or has_function_privilege('authenticated',v_function,'execute')
+     or has_function_privilege('service_role',v_function,'execute') then
+    raise exception 'RLS_EVENT_HELPER_CLIENT_AND_SERVICE_EXECUTE_MUST_BE_REVOKED';
   end if;
   if not exists (
     select 1 from pg_event_trigger e
