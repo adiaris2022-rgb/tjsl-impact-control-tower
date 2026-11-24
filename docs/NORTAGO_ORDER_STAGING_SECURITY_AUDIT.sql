@@ -376,7 +376,8 @@ where not t.tgisinternal
   and t.tgname in (
     'otc_outlet_products_business_match_guard',
     'otc_products_business_reassignment_guard',
-    'otc_outlets_business_reassignment_guard'
+    'otc_outlets_business_reassignment_guard',
+    'otc_outlet_products_service_payment_terms_owner_guard'
   )
 order by t.tgname;
 
@@ -423,7 +424,8 @@ where not t.tgisinternal
   and t.tgname in (
     'otc_outlet_products_business_match_guard',
     'otc_products_business_reassignment_guard',
-    'otc_outlets_business_reassignment_guard'
+    'otc_outlets_business_reassignment_guard',
+    'otc_outlet_products_service_payment_terms_owner_guard'
   )
 order by c.relname,t.tgname;
 
@@ -434,3 +436,42 @@ from public.otc_outlet_products op
 join public.otc_outlets o on o.id=op.outlet_id
 join public.otc_products p on p.id=op.product_id
 where o.business_id is distinct from p.business_id;
+
+
+-- 18. Seller-configurable service payment terms: owner RPC, trigger, and stored outlet configuration.
+select
+  p.oid::regprocedure as function_name,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute
+from pg_proc p
+where p.oid in (
+  to_regprocedure('public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)'),
+  to_regprocedure('public.nortago_guard_service_payment_terms_owner()')
+)
+order by p.oid::regprocedure::text;
+
+select
+  t.tgname as trigger_name,
+  t.tgenabled as trigger_enabled,
+  p.prosecdef as trigger_function_security_definer,
+  p.proconfig as trigger_function_configuration,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  pg_get_functiondef(p.oid) as trigger_function_definition
+from pg_trigger t
+join pg_proc p on p.oid=t.tgfoid
+where t.tgrelid='public.otc_outlet_products'::regclass
+  and t.tgname='otc_outlet_products_service_payment_terms_owner_guard'
+  and not t.tgisinternal;
+
+select
+  count(*) as service_outlet_mappings,
+  count(*) filter (where allow_full_payment) as full_payment_enabled,
+  count(*) filter (where allow_dp) as dp_enabled,
+  count(*) filter (where not allow_full_payment and not allow_dp) as invalid_payment_option_rows
+from public.otc_outlet_products op
+join public.otc_products p on p.id=op.product_id
+where p.product_type='SERVICE';
