@@ -32,6 +32,8 @@ jobs:
         run: node --test app/otc/owner-report/hourly-summary.test.mjs
       - name: Assert Reservation remains outside the Order release in both apps
         run: node --test tests/nortago_order_scope_boundary.test.mjs
+      - name: Assert legacy standalone OTC demo cannot render transaction routes
+        run: node --test tests/nortago_legacy_otc_disabled.test.mjs
       - name: Production build
         run: npm run build
 
