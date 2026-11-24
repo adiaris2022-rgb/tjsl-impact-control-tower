@@ -496,7 +496,9 @@ select
   coalesce(has_function_privilege(current_user,to_regprocedure('public.has_business_role(uuid,text[])'),'execute with grant option'),false) as business_role_execute_grantable,
   (select pg_get_userbyid(n.nspowner) from pg_namespace n where n.nspname='public') as public_schema_owner,
   (select pg_get_userbyid(n.nspowner) from pg_namespace n where n.nspname='auth') as auth_schema_owner,
-  (select pg_get_userbyid(p.proowner) from pg_proc p where p.oid=to_regprocedure('auth.uid()')) as auth_uid_owner;
+  (select pg_get_userbyid(p.proowner) from pg_proc p where p.oid=to_regprocedure('auth.uid()')) as auth_uid_owner
+from pg_roles r
+where r.rolname=current_user;
 
 -- 20) Verify the restricted auth-actor bridge, if the candidate migration is present.
 -- The dedicated lifecycle owner must not receive auth schema USAGE or direct client EXECUTE.
