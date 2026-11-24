@@ -28,13 +28,20 @@ begin
 
   if not found
      or not v_helper.prosecdef
-     or coalesce(array_to_string(v_helper.proconfig, ','), '') not like '%search_path=pg_catalog%' then
+     or not exists (select 1 from unnest(v_helper.proconfig) as cfg where cfg ~ '^search_path=pg_catalog(,|$)') then
     raise exception 'NORTAGO_LIFECYCLE_OWNER_UNVERIFIED_BUSINESS_ROLE_HELPER';
   end if;
 
   v_rpc_oid := to_regprocedure('public.nortago_update_order_status(uuid,text,text)');
   if v_rpc_oid is null then
     raise exception 'NORTAGO_LIFECYCLE_OWNER_RPC_MISSING';
+  end if;
+  if not exists (
+    select 1 from pg_proc p
+    where p.oid=v_rpc_oid and p.prosecdef
+      and exists (select 1 from unnest(p.proconfig) as cfg where cfg ~ '^search_path=pg_catalog(,|$)')
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_RPC_SECURITY_CONFIGURATION_UNSAFE';
   end if;
 
   if not exists (
@@ -51,8 +58,8 @@ begin
   end if;
 
   select * into v_current_role from pg_roles where rolname = current_user;
-  if not found or (not v_current_role.rolsuper and not v_current_role.rolcreaterole) then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_ROLE_CREATION_REQUIRES_PRIVILEGED_MIGRATOR';
+  if not found or not v_current_role.rolsuper then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_TRANSFER_REQUIRES_DATABASE_SUPERUSER';
   end if;
 
   select oid into v_role_oid
