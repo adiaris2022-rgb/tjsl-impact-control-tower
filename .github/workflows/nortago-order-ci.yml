@@ -216,6 +216,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_status_rpc_owner_guard_smoke.sql
+      - name: Run same-owner SECURITY DEFINER status-writer inventory smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_status_writer_owner_inventory_smoke.sql
       - name: Run order lifecycle audit RLS smoke checks
         env:
           PGPASSWORD: postgres
