@@ -123,14 +123,14 @@ export default function Owner() {
         const grouped = [...new Set(orderRows.map((order) => order.outlet_id))].map((id) => {
           const matching = orderRows.filter((order) => order.outlet_id === id);
           return { outlet: names.get(id) || id, transactions: matching.length,
-            nominal: matching.filter((order) => order.payment_status === "PAID" && order.payment_option !== "DP").reduce((sum, order) => sum + Number(order.total || 0), 0),
+            nominal: matching.filter((order) => order.payment_status === "PAID").reduce((sum, order) => sum + Number(order.total || 0), 0),
             partialDue: matching.filter((order) => order.payment_option === "DP" && order.payment_status !== "PAID").reduce((sum, order) => sum + Number(order.payment_amount_due || 0), 0),
             balanceDue: matching.filter((order) => order.payment_option === "DP" && order.payment_status !== "PAID").reduce((sum, order) => sum + Number(order.payment_balance_due || 0), 0),
             attention: matching.filter((order) => !["SUCCESS", "PO_SUCCESS"].includes(order.status)).length,
           };
         }).sort((a, b) => b.nominal - a.nominal);
         setRows(grouped);
-        setMetrics({ count: orderRows.length, total: orderRows.filter((order) => order.payment_status === "PAID" && order.payment_option !== "DP").reduce((sum, order) => sum + Number(order.total || 0), 0), outlets: outletRows.length });
+        setMetrics({ count: orderRows.length, total: orderRows.filter((order) => order.payment_status === "PAID").reduce((sum, order) => sum + Number(order.total || 0), 0), outlets: outletRows.length });
         const mappedInboxRows = inboxRows.map((order) => ({ ...order, outlet_name: names.get(order.outlet_id) || order.outlet_id }));
         const nextCursor = cursorFromPage(inboxRows);
         setInboxNextCursor(nextCursor);
@@ -210,7 +210,7 @@ export default function Owner() {
     {loading ? <div className="loading">Memuat data bisnis…</div> : <>
       <section className="metric-grid otc-metrics">{[[String(metrics.count), "Transaksi hari ini"], [money(metrics.total), "Pelunasan terverifikasi"], [String(metrics.outlets), "Outlet"], [currentTime, "Waktu laporan"]].map(([value, label]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section>
       <section className="data-panel"><div className="section-toolbar"><div><span className="eyebrow">TODAY BY OUTLET</span><h2>Ringkasan outlet</h2></div><Link className="otc-secondary" href="/otc/owner-report">Lihat laporan per jam</Link></div>
-        {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pelunasan terverifikasi</th><th>DP pending</th><th>Sisa tagihan DP</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td>{money(row.partialDue)}</td><td>{money(row.balanceDue)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
+        {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pelunasan terverifikasi</th><th>Tagihan awal DP</th><th>Sisa tagihan</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td>{money(row.partialDue)}</td><td>{money(row.balanceDue)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="data-panel">
         <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} cocok · {inboxOrders.length} dimuat</span></div>
