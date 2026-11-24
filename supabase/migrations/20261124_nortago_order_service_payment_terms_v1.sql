@@ -44,11 +44,23 @@ set search_path = pg_catalog, public, pg_temp
 as $$
 declare
   v_business_id uuid;
+  v_requires_owner boolean := false;
 begin
-  if old.allow_full_payment is distinct from new.allow_full_payment
-     or old.allow_dp is distinct from new.allow_dp
-     or old.dp_type is distinct from new.dp_type
-     or old.dp_value is distinct from new.dp_value then
+  if tg_op = 'INSERT' then
+    -- Default FULL-only rows are safe for the existing staff catalog-create flow.
+    -- Any non-default DP/full setting is reserved for owner-level actors.
+    v_requires_owner := new.allow_dp
+      or not new.allow_full_payment
+      or new.dp_type is distinct from 'PERCENT'
+      or new.dp_value is distinct from 50;
+  else
+    v_requires_owner := old.allow_full_payment is distinct from new.allow_full_payment
+      or old.allow_dp is distinct from new.allow_dp
+      or old.dp_type is distinct from new.dp_type
+      or old.dp_value is distinct from new.dp_value;
+  end if;
+
+  if v_requires_owner then
     select o.business_id into v_business_id
     from public.otc_outlets o
     join public.otc_products p on p.business_id=o.business_id
@@ -67,7 +79,7 @@ $$;
 revoke all on function public.nortago_guard_service_payment_terms_owner() from public, anon, authenticated;
 drop trigger if exists otc_outlet_products_service_payment_terms_owner_guard on public.otc_outlet_products;
 create trigger otc_outlet_products_service_payment_terms_owner_guard
-before update of allow_full_payment,allow_dp,dp_type,dp_value
+before insert or update of allow_full_payment,allow_dp,dp_type,dp_value
 on public.otc_outlet_products
 for each row execute function public.nortago_guard_service_payment_terms_owner();
 
