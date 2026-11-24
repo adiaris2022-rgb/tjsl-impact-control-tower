@@ -50,7 +50,7 @@ begin
     raise exception 'LEGACY_CHECKOUT_RPC_OVERLOAD_MUST_BE_REMOVED';
   end if;
 
-  insert into public.businesses(id) values(v_business);
+  insert into public.businesses(id) values(v_business),(v_other_business);
   insert into public.otc_outlets(id,business_id,name,is_active) values
     (v_outlet,v_business,'Payment Terms Outlet',true),
     (v_other_outlet,v_other_business,'Other Payment Terms Outlet',true);
