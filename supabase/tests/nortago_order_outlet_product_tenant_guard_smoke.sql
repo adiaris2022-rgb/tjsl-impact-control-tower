@@ -72,10 +72,16 @@ begin
     (v_business_a,v_actor,'OWNER'),
     (v_business_b,v_actor,'OWNER');
 end
-$$;
+$;
+
+-- The fixture simulates Supabase's authenticated table grants. RLS and the
+-- server-side triggers, not missing SQL privileges, must reject cross-business writes.
+grant select, insert, update on public.otc_outlet_products to authenticated;
+grant select, update on public.otc_products to authenticated;
+grant select, update on public.otc_outlets to authenticated;
 
 create or replace function auth.uid() returns uuid language sql stable
-as $$ select '00000000-0000-0000-0000-000000000001'::uuid $$;
+as $ select '00000000-0000-0000-0000-000000000001'::uuid $;
 set local role authenticated;
 
 do $$
