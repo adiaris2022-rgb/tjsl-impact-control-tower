@@ -271,3 +271,11 @@ This closes the source-level tenant mapping gap in the candidate release branch.
 - The core OTC migration comment refers to a different Supabase project ref (`tdpupelhvzxwhbqnnlxk`). The connected `aakhinaryzidzpsjeewp` project is therefore not proven to be the populated database behind this release candidate. Do not apply NORTAGO migrations to it until the correct staging target is identified and owner-approved.
 - Supabase security advisor flags `public.rls_auto_enable()` as a SECURITY DEFINER event-trigger function executable by PUBLIC/anon/authenticated; the event trigger `ensure_rls` is enabled. Revoke client/PUBLIC EXECUTE in a reviewed migration on the confirmed target, then re-run security advisors. No live/staging ACL change was made during this audit.
 - This staging read-only inspection is distinct from disposable PostgreSQL CI and does not establish real application RLS/Auth/tenant behavior.
+
+## Latest exact-head validation — 24 Nov 2026
+
+- PR #38 head: `91668c813b5be65c9d7ddc37de5ab845811e1f13`; base PR #37 head: `be598ef1ea6437f4854785b07c65b95f57226df3`.
+- [NORTAGO Order CI Run #366](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45336773426): PASS, both production build and PostgreSQL validation jobs completed successfully on the exact PR head.
+- [Vercel preview status](https://vercel.com/nortago/nortago-order-staging/3nCdZsao9Vvkhi8fBuLoaWVHASVt): Success; preview status is not browser UAT.
+- The exact-head CI run covers Product/SERVICE catalog, cross-business outlet/product guard, seller-configurable service DP/full-payment migration and replay, owner-only payment configuration RPC/trigger, DP percentage/fixed calculations, mixed cart, digital receipt amounts, changed-option idempotency conflict, checkout-to-receipt, subscription, lifecycle security, pagination, and read-only staging audit SQL.
+- Supabase staging remains unverified. No live/staging migration, production deployment, payment/webhook activation, or secrets/environment changes were performed. The candidate stores payment obligations but does not record actual money received, balance collection, refunds, or settlement events; checkout remains PENDING until a separately approved settlement workflow exists.
