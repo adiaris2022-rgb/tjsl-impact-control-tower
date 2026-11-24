@@ -4,7 +4,7 @@ begin;
 create or replace function auth.uid() returns uuid
 language sql stable
 as $ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $;
-do $
+do $$
 declare
   v_actor uuid := '00000000-0000-0000-0000-000000000001';
   v_staff uuid := '00000000-0000-0000-0000-000000000002';
