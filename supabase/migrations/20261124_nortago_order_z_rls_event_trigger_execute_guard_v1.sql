@@ -50,6 +50,11 @@ begin
   if to_regrole('authenticated') is not null then
     execute 'revoke all on function public.rls_auto_enable() from authenticated';
   end if;
+  -- service_role is server-only, but the event-trigger helper is not an RPC.
+  -- Remove any explicit grant too; PostgreSQL invokes it through the event trigger.
+  if to_regrole('service_role') is not null then
+    execute 'revoke all on function public.rls_auto_enable() from service_role';
+  end if;
 
   if to_regrole('anon') is not null
      and has_function_privilege('anon',v_function,'execute') then
@@ -58,6 +63,10 @@ begin
   if to_regrole('authenticated') is not null
      and has_function_privilege('authenticated',v_function,'execute') then
     raise exception 'NORTAGO_RLS_EVENT_HELPER_AUTHENTICATED_EXECUTE_STILL_EFFECTIVE';
+  end if;
+  if to_regrole('service_role') is not null
+     and has_function_privilege('service_role',v_function,'execute') then
+    raise exception 'NORTAGO_RLS_EVENT_HELPER_SERVICE_ROLE_EXECUTE_STILL_EFFECTIVE';
   end if;
 
   if not exists (
