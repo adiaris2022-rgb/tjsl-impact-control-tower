@@ -177,3 +177,10 @@ CI regression uses disposable PostgreSQL only. Staging catalog/data inspection r
 
 
 - [ ] For SERVICE items, verify whether the seller requires DP or full payment. Current schema/UI supports a single price and PENDING payment only; no DP/full-payment selection or balance tracking exists. Do not launch deposit-based services until the seller's DP amount/rule and balance collection flow are implemented and tested.
+
+
+## Read-only catalog tenant-guard audit evidence
+
+- [ ] Run security audit Query 15 and record authenticated SELECT/INSERT/UPDATE grants on `otc_outlet_products`, SELECT and UPDATE (required for `FOR SHARE`) on `otc_outlets`/`otc_products`, and the specific business-key column SELECT grants.
+- [ ] Run Query 16 and verify the exact `otc_outlet_products_staff_manage` policy `USING`/`WITH CHECK`, enabled tenant-guard triggers, SECURITY INVOKER mode, function owners/configuration, and no direct anon/authenticated EXECUTE.
+- [ ] Run Query 17 and require `cross_business_mapping_count = 0` before applying the tenant-guard migration. Any existing mismatch requires owner review; never delete or auto-repair rows.
