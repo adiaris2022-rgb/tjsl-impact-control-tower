@@ -117,3 +117,20 @@ The release-first CI now includes `supabase/tests/nortago_order_lifecycle_paid_o
 - The Owner hourly report must fetch all today's order rows using keyset pagination (created_at DESC, id DESC), not a single PostgREST response that may be capped at 1,000 rows.
 - CI runs `app/otc/owner-report/hourly-summary.test.mjs` to verify multi-page aggregation, duplicate-row handling at a cursor boundary, local-time hour buckets, and that only `payment_status=PAID` contributes to the paid total.
 - For staging UAT, if the fixture has more than one page of orders, confirm the report count and paid total reconcile across all pages. This is a preview/staging test, not a live customer-data test.
+
+
+## 7. Lifecycle owner-boundary preflight (read-only)
+
+Before accepting the lifecycle guard for staging:
+
+- [ ] Run `docs/NORTAGO_ORDER_STAGING_SECURITY_AUDIT.sql` in an owner-approved staging SQL session.
+- [ ] Inspect the actual `public.has_business_role(uuid,text[])` owner, SECURITY DEFINER/INVOKER mode, function configuration, ACL, effective EXECUTE, and full definition. The repository CI helper is only a test fixture.
+- [ ] Inspect the actual `auth.uid()` function and verify request identity under the staging authenticated session.
+- [ ] Inspect `business_users` only if the observed helper definition uses it; record actual RLS, policies, grants, and owner. Do not infer its production schema from CI fixtures.
+- [ ] Inspect all same-owner SECURITY DEFINER functions and their EXECUTE reachability. The PR #35 static test detects common explicit direct UPDATE patterns, not dynamic SQL or indirect calls.
+- [ ] Review the dedicated lifecycle owner decision in `docs/NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md`.
+- [ ] Confirm the proposed owner role is NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS, has no memberships, owns only the lifecycle RPC, and has no schema CREATE privilege.
+- [ ] Confirm only the lifecycle RPC has the minimum data privileges and role-specific RLS policies; authenticated/anon remain read-only for order headers/items.
+- [ ] If any precondition is unknown or fails, stop. Do not grant broader client privileges or apply an owner migration to compensate.
+
+No owner-boundary migration is applied by this runbook. Staging migration requires separate explicit owner approval.
