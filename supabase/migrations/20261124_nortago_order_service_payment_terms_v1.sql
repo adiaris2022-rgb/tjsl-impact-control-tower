@@ -41,7 +41,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = pg_catalog, public, pg_temp
-as $
+as $$
 declare
   v_business_id uuid;
 begin
@@ -62,7 +62,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 revoke all on function public.nortago_guard_service_payment_terms_owner() from public, anon, authenticated;
 drop trigger if exists otc_outlet_products_service_payment_terms_owner_guard on public.otc_outlet_products;
@@ -83,7 +83,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = pg_catalog, public, pg_temp
-as $
+as $$
 declare
   v_actor uuid;
   v_business_id uuid;
@@ -146,7 +146,7 @@ begin
     'dp_value',p_dp_value
   );
 end;
-$;
+$$;
 
 revoke all on function public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric) from public, anon, authenticated;
 grant execute on function public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric) to authenticated;
