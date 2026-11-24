@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 type Mode = "TAKE_AWAY" | "PRE_ORDER" | "DELIVERY";
-type Product = { id: string; name: string; price: number; product_type: "PRODUCT" | "SERVICE"; cat?: string; desc?: string; image_url?: string | null };
+type Product = { id: string; name: string; price: number; product_type: "PRODUCT" | "SERVICE"; allow_full_payment: boolean; allow_dp: boolean; dp_type: "PERCENT" | "FIXED"; dp_value: number; cat?: string; desc?: string; image_url?: string | null };
 type Outlet = { id: string; business_id: string; name: string };
 type CartItem = { key: string; product: Product; qty: number; variant: string; addons: { name: string; price: number }[] };
 
@@ -64,7 +64,7 @@ export default function CustomerOrder() {
         const supabase = await getSupabase();
         const { data, error: queryError } = await supabase
           .from("otc_outlet_products")
-          .select("price,is_available,product:otc_products(id,name,description,category,image_url,base_price,product_type)")
+          .select("price,is_available,allow_full_payment,allow_dp,dp_type,dp_value,product:otc_products(id,name,description,category,image_url,base_price,product_type)")
           .eq("outlet_id", outletId)
           .eq("is_available", true)
           .eq("product.is_active", true);
@@ -79,6 +79,10 @@ export default function CustomerOrder() {
             desc: row.product.description || undefined,
             image_url: row.product.image_url || null,
             product_type: (row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT") as Product["product_type"],
+            allow_full_payment: row.product.product_type === "SERVICE" ? row.allow_full_payment !== false : true,
+            allow_dp: row.product.product_type === "SERVICE" && Boolean(row.allow_dp),
+            dp_type: row.dp_type === "FIXED" ? "FIXED" : "PERCENT",
+            dp_value: Number(row.dp_value ?? 50),
           }));
         if (alive) setProducts(mapped);
       } catch (cause: unknown) {
