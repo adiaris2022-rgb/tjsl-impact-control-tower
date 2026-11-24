@@ -6,18 +6,25 @@ declare
   v_business_a uuid := gen_random_uuid();
   v_business_b uuid := gen_random_uuid();
   v_outlet_a uuid := gen_random_uuid();
+  v_outlet_c uuid := gen_random_uuid();
   v_outlet_b uuid := gen_random_uuid();
   v_monthly jsonb;
   v_monthly_retry jsonb;
   v_yearly_switch jsonb;
+  v_monthly_c jsonb;
   v_yearly_b jsonb;
   v_monthly_plan uuid;
   v_yearly_plan uuid;
+  v_subscription_id_a uuid;
+  v_subscription_id_c uuid;
   v_plan_id_a uuid;
   v_pending_plan_id_a uuid;
+  v_plan_id_c uuid;
+  v_pending_plan_id_c uuid;
   v_plan_id_b uuid;
   v_pending_plan_id_b uuid;
   v_status_a text;
+  v_status_c text;
   v_status_b text;
   v_count integer;
 begin
@@ -35,6 +42,7 @@ begin
   insert into public.businesses(id) values(v_business_a),(v_business_b);
   insert into public.otc_outlets(id,business_id,name,is_active) values
     (v_outlet_a,v_business_a,'Subscription Smoke Outlet A',true),
+    (v_outlet_c,v_business_a,'Subscription Smoke Outlet C',true),
     (v_outlet_b,v_business_b,'Subscription Smoke Outlet B',true);
 
   v_monthly := public.nortago_prepare_subscription_invoice(v_business_a,v_outlet_a,'NORTAGO_OUTLET_MONTHLY');
@@ -51,6 +59,16 @@ begin
     raise exception 'Repeated invoice preparation must reuse the same open invoice/payment';
   end if;
 
+  -- A second outlet in the same business must get an independent subscription.
+  -- Switching outlet A to yearly must not mutate outlet C's monthly subscription.
+  v_monthly_c := public.nortago_prepare_subscription_invoice(v_business_a,v_outlet_c,'NORTAGO_OUTLET_MONTHLY');
+  if v_monthly_c->>'amount_idr' <> '50000'
+    or v_monthly_c->>'plan_code' <> 'NORTAGO_OUTLET_MONTHLY'
+    or v_monthly_c->>'outlet_id' <> v_outlet_c::text
+    or v_monthly_c->>'subscription_id' is not distinct from v_monthly->>'subscription_id' then
+    raise exception 'Outlet C in the same business must have a separate monthly subscription: %',v_monthly_c;
+  end if;
+
   v_yearly_switch := public.nortago_prepare_subscription_invoice(v_business_a,v_outlet_a,'NORTAGO_OUTLET_YEARLY');
   if v_yearly_switch->>'amount_idr' <> '500000'
     or v_yearly_switch->>'plan_code' <> 'NORTAGO_OUTLET_YEARLY'
@@ -65,12 +83,21 @@ begin
     raise exception 'Outlet B must receive a separate yearly subscription and invoice';
   end if;
 
-  select plan_id,pending_plan_id,status into v_plan_id_a,v_pending_plan_id_a,v_status_a
+  select id,plan_id,pending_plan_id,status into v_subscription_id_a,v_plan_id_a,v_pending_plan_id_a,v_status_a
   from public.outlet_subscriptions where outlet_id=v_outlet_a;
   if v_plan_id_a is distinct from v_monthly_plan
     or v_pending_plan_id_a is distinct from v_yearly_plan
     or v_status_a <> 'PENDING' then
     raise exception 'Outlet A plan change must remain staged and unpaid';
+  end if;
+
+  select id,plan_id,pending_plan_id,status into v_subscription_id_c,v_plan_id_c,v_pending_plan_id_c,v_status_c
+  from public.outlet_subscriptions where outlet_id=v_outlet_c;
+  if v_subscription_id_c is not distinct from v_subscription_id_a
+    or v_plan_id_c is distinct from v_monthly_plan
+    or v_pending_plan_id_c is not null
+    or v_status_c <> 'PENDING' then
+    raise exception 'Outlet C must retain its own independent monthly subscription';
   end if;
 
   select plan_id,pending_plan_id,status into v_plan_id_b,v_pending_plan_id_b,v_status_b
@@ -82,24 +109,29 @@ begin
   end if;
 
   select count(*) into v_count from public.outlet_subscriptions
-    where outlet_id in (v_outlet_a,v_outlet_b);
-  if v_count <> 2 then raise exception 'Expected exactly one subscription per outlet, got %',v_count; end if;
+    where outlet_id in (v_outlet_a,v_outlet_c);
+  if v_count <> 2 then raise exception 'Two outlets in one business must have two independent subscriptions, got %',v_count; end if;
+  select count(*) into v_count from public.outlet_subscriptions where outlet_id=v_outlet_b;
+  if v_count <> 1 then raise exception 'Outlet B must have its own subscription, got %',v_count; end if;
 
   select count(*) into v_count from public.subscription_invoices
     where outlet_id=v_outlet_a and status='OPEN';
   if v_count <> 2 then raise exception 'Outlet A should have monthly and yearly open invoices, got %',v_count; end if;
+  select count(*) into v_count from public.subscription_invoices
+    where outlet_id=v_outlet_c and status='OPEN';
+  if v_count <> 1 then raise exception 'Outlet C should have one open monthly invoice, got %',v_count; end if;
   select count(*) into v_count from public.subscription_invoices
     where outlet_id=v_outlet_b and status='OPEN';
   if v_count <> 1 then raise exception 'Outlet B should have one open invoice, got %',v_count; end if;
 
   select count(*) into v_count from public.subscription_payments p
     join public.subscription_invoices i on i.id=p.invoice_id
-    where i.outlet_id in (v_outlet_a,v_outlet_b) and p.status='PENDING';
-  if v_count <> 3 then raise exception 'Expected three pending invoice payment records, got %',v_count; end if;
+    where i.outlet_id in (v_outlet_a,v_outlet_c,v_outlet_b) and p.status='PENDING';
+  if v_count <> 4 then raise exception 'Expected four pending invoice payment records across three outlets, got %',v_count; end if;
 
   if exists (select 1 from public.subscription_payments p
     join public.subscription_invoices i on i.id=p.invoice_id
-    where i.outlet_id in (v_outlet_a,v_outlet_b) and p.status <> 'PENDING') then
+    where i.outlet_id in (v_outlet_a,v_outlet_c,v_outlet_b) and p.status <> 'PENDING') then
     raise exception 'Subscription smoke test must not verify payment or activate billing';
   end if;
   if exists (select 1 from public.subscription_webhook_deliveries) then
