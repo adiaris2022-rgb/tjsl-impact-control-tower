@@ -184,3 +184,16 @@ CI regression uses disposable PostgreSQL only. Staging catalog/data inspection r
 - [ ] Run security audit Query 15 and record authenticated SELECT/INSERT/UPDATE grants on `otc_outlet_products`, SELECT and UPDATE (required for `FOR SHARE`) on `otc_outlets`/`otc_products`, and the specific business-key column SELECT grants.
 - [ ] Run Query 16 and verify the exact `otc_outlet_products_staff_manage` policy `USING`/`WITH CHECK`, enabled tenant-guard triggers, SECURITY INVOKER mode, function owners/configuration, and no direct anon/authenticated EXECUTE.
 - [ ] Run Query 17 and require `cross_business_mapping_count = 0` before applying the tenant-guard migration. Any existing mismatch requires owner review; never delete or auto-repair rows.
+
+## Seller-configurable service DP/full-payment UAT
+
+- [ ] For each SERVICE at each outlet, verify the seller can enable FULL only, DP only, or both; the UI must not allow both options to be disabled.
+- [ ] Verify DP can be configured as PERCENT (1-99%) or FIXED IDR amount. The fixed amount is per service unit and must be positive; the seller UI prevents setting it above the current outlet price.
+- [ ] Verify FULL checkout charges all PRODUCT and SERVICE lines at authoritative outlet prices.
+- [ ] Verify DP checkout charges PRODUCT lines in full and SERVICE lines at the seller-configured DP amount. Mixed-cart total, initial amount due, and remaining balance must reconcile exactly.
+- [ ] Verify checkout RPC recalculates DP from database outlet settings; forged client price or DP amount fields must not affect the result.
+- [ ] Verify DP option is rejected for product-only carts and whenever any SERVICE in the cart has DP disabled. Verify FULL is rejected when a SERVICE in the cart has full payment disabled.
+- [ ] Retry with the same idempotency key and identical payment option; the same order, receipt token, initial due, and remaining balance must be returned. Reusing the key with a changed payment option must be rejected.
+- [ ] Digital Receipt must clearly show total order, initial amount due, remaining balance, payment option, and PENDING status.
+
+**Important accounting limitation:** the current DP design stores the payment option, amount initially due, remaining balance, and a single payment status. It does not yet record each actual amount received, balance collection, payment receipts, refunds, or partial settlement events. Do not mark a DP order fully PAID or include its full order total in paid revenue until a separate, audited payment-receipt/settlement workflow is implemented. Current Owner Dashboard reports exclude DP orders from full-settlement totals and display DP pending and remaining balances separately; this is an informational split, not proof that money was collected.
