@@ -22,6 +22,9 @@ type ReceiptData = {
     status: string;
     payment_status: string;
     payment_method: string | null;
+    payment_option: "FULL" | "DP";
+    payment_amount_due: number;
+    payment_balance_due: number;
     scheduled_at: string | null;
     subtotal: number;
     delivery_fee: number;
@@ -86,6 +89,7 @@ function Receipt() {
           <span>Fulfillment</span><b>{order.fulfillment_type}</b>
           <span>Status</span><b>{order.status}</b>
           <span>Payment</span><b>{order.payment_status} · {order.payment_method || "—"}</b>
+          <span>Skema pembayaran</span><b>{order.payment_option === "DP" ? "DP" : "Pembayaran penuh"}</b>
           {order.scheduled_at ? <><span>Scheduled</span><b>{new Date(order.scheduled_at).toLocaleString("id-ID")}</b></> : null}
         </div>
         <div className="receipt-items">
@@ -96,7 +100,9 @@ function Receipt() {
             </div>
           ))}
         </div>
-        <div className="total-line"><span>Total</span><strong>Rp {money(order.total)}</strong></div>
+        <div className="total-line"><span>Total pesanan</span><strong>Rp {money(order.total)}</strong></div>
+        <div className="total-line"><span>Tagihan awal</span><strong>Rp {money(order.payment_amount_due ?? order.total)}</strong></div>
+        {(order.payment_balance_due ?? 0) > 0 ? <div className="total-line"><span>Sisa tagihan</span><strong>Rp {money(order.payment_balance_due)}</strong></div> : null}
         {order.pickup_code ? <div className="info-box">Pickup Pass: <b>{order.pickup_code}</b></div> : null}
         <p className="muted">Receipt diakses menggunakan tautan privat khusus pesanan ini.</p>
       </section>
