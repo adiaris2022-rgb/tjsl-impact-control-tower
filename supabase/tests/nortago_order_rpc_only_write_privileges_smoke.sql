@@ -73,7 +73,7 @@ begin
     raise exception 'Business-scoped item SELECT policy is missing';
   end if;
 
-  if not exists (select 1 from pg_proc where oid=to_regprocedure('public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text)') and prosecdef) then
+  if not exists (select 1 from pg_proc where oid=to_regprocedure('public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text)') and prosecdef) then
     raise exception 'Idempotent customer checkout must remain SECURITY DEFINER';
   end if;
   if not exists (select 1 from pg_proc where oid=to_regprocedure('public.nortago_get_customer_receipt(uuid)') and prosecdef) then
@@ -82,7 +82,7 @@ begin
   if not exists (select 1 from pg_proc where oid=to_regprocedure('public.nortago_update_order_status(uuid,text,text)') and prosecdef) then
     raise exception 'Order lifecycle RPC must remain SECURITY DEFINER';
   end if;
-  if not has_function_privilege('anon','public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text)','execute')
+  if not has_function_privilege('anon','public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text)','execute')
     or not has_function_privilege('anon','public.nortago_get_customer_receipt(uuid)','execute')
     or not has_function_privilege('authenticated','public.nortago_update_order_status(uuid,text,text)','execute') then
     raise exception 'Required RPC execution grants are missing';
