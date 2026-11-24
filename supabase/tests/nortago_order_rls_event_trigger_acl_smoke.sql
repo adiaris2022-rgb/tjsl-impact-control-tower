@@ -13,6 +13,14 @@ begin
     raise exception 'RLS_EVENT_HELPER_CLIENT_AND_SERVICE_EXECUTE_MUST_BE_REVOKED';
   end if;
   if not exists (
+    select 1 from pg_proc p
+    where p.oid=v_function
+      and p.prosecdef
+      and p.proconfig @> array['search_path=pg_catalog']
+  ) then
+    raise exception 'RLS_EVENT_HELPER_SECURITY_DEFINER_SEARCH_PATH_MUST_BE_PRESERVED';
+  end if;
+  if not exists (
     select 1 from pg_event_trigger e
     where e.evtname='ensure_rls'
       and e.evtfoid=v_function
