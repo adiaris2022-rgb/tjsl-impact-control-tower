@@ -41,7 +41,7 @@ begin
     )
   loop
     if not v_fn.prosecdef or v_fn.function_owner is distinct from v_fn.table_owner
-       or coalesce(array_to_string(v_fn.proconfig, ','),'') not like '%search_path=pg_catalog, public, pg_temp%' then
+       or coalesce(array_to_string(v_fn.proconfig, ','),'') not like '%search_path=pg_catalog, pg_temp%' then
       raise exception 'TENANT_GUARD_FUNCTION_MUST_BE_TABLE_OWNER_SECURITY_DEFINER_WITH_FIXED_SEARCH_PATH: %',v_fn.signature;
     end if;
   end loop;
