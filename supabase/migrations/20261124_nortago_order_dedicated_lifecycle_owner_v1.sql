@@ -11,6 +11,7 @@ declare
   v_helper pg_catalog.pg_proc%rowtype;
   v_role pg_catalog.pg_roles%rowtype;
   v_current_role pg_catalog.pg_roles%rowtype;
+  v_relation record;
 begin
   if to_regclass('public.otc_orders') is null
      or to_regclass('public.otc_outlets') is null
