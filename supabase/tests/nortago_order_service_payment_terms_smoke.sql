@@ -11,8 +11,10 @@ declare
   v_service_full_only uuid := gen_random_uuid();
   v_result jsonb;
   v_retry jsonb;
+  v_receipt jsonb;
   v_error text;
   v_key uuid := gen_random_uuid();
+  v_token uuid;
   v_items jsonb;
 begin
   if not has_function_privilege('anon','public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text)','execute')
@@ -58,6 +60,13 @@ begin
      or (v_result->>'payment_amount_due')::numeric <> 60000
      or (v_result->>'payment_balance_due')::numeric <> 140000 then
     raise exception 'Percent DP must be 30 percent of authoritative outlet total';
+  end if;
+  v_token := (v_result->>'receipt_token')::uuid;
+  v_receipt := public.nortago_get_customer_receipt(v_token);
+  if v_receipt->'order'->>'payment_option' <> 'DP'
+     or (v_receipt->'order'->>'payment_amount_due')::numeric <> 60000
+     or (v_receipt->'order'->>'payment_balance_due')::numeric <> 140000 then
+    raise exception 'Private receipt must expose the stored DP amount and remaining balance';
   end if;
   v_retry := public.nortago_create_customer_order_idempotent(
     v_outlet,v_key,'Payment Smoke','081234567890','TAKE_AWAY',v_items,'Cash',null,null,null,'DP'
