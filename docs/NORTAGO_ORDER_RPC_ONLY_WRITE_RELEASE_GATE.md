@@ -85,3 +85,12 @@ Record UTC timestamp, exact preview SHA, staging project ref (not credentials), 
 - Browser UAT/staging evidence on exact preview SHA.
 
 No live migration, production deploy, payment activation, or webhook enablement is authorized by this document. LinkBayar remains disabled. NORTAGO ORDER only; Dine-In, Reservation, Walk-In/POS, queue, table/seating/capacity, sessions, Control Tower, and BOS are excluded.
+
+
+## Owner policy decisions — explicit release sign-off required
+
+- **STAFF scope:** current authorization is business-wide membership; the lifecycle RPC verifies business membership and that the order's outlet belongs to that same business. It does not enforce a staff-to-outlet assignment. The owner must choose one of two release policies: (a) explicitly accept business-wide STAFF access for Order v1, or (b) require outlet-specific staff membership, in which case STAFF access must remain blocked until the membership model and tests are implemented. Do not silently treat the current model as outlet-scoped.
+- **Audit retention:** `nortago_order_status_audit.order_id` and `business_id` currently use parent foreign keys with `ON DELETE CASCADE`. Deleting an order/business therefore deletes its audit history; append-only privileges do not prevent parent-driven cascade deletion. The owner must either accept that retention behavior for v1 or require a retention-preserving design (for example, soft deletion or an archival model) before applying migrations. No schema change is made without that decision.
+- **Delivery operations:** confirm the fee calculation/display and who owns courier handoff/customer communication. If not confirmed, exclude Delivery from the initial commercial offer or disclose the operational limitation.
+
+These are policy/operations decisions, not reasons to weaken the RPC-only table privilege boundary.
