@@ -368,3 +368,18 @@ PR #41 adds a simulated postgres default-ACL baseline, trigger-only SECURITY DEF
 - The tenant consistency trigger functions now use the narrower fixed search_path `pg_catalog, pg_temp`; all application table references remain schema-qualified.
 - The database CI service uses PostgreSQL 17 and models the observed postgres-creator MAINTAIN default ACL. The post-migration checks verify MAINTAIN is absent for anon/authenticated and the direct service_role default grant remains.
 - This remains feature-branch/disposable-CI evidence. The connected Supabase project has no OTC tables or migration history; the populated target referenced by the core migration remains inaccessible. No staging migration or browser UAT was performed.
+
+
+## Default ACL audit acceptance phrase
+
+The read-only audit distinguishes the public-schema additive TABLE ACL from global/built-in defaults by creator role. After the approved event-helper migration, **effective EXECUTE is false** for PUBLIC, anon, authenticated, and service_role; verify this only on the correctly identified populated staging target.
+
+
+## Integrated sibling security and subscription regression — candidate PR #48
+
+The candidate integration branch based on PR #47 carries both previously sibling release-readiness changes:
+
+- The PR #40 conditional `rls_auto_enable()` ACL migration, fixture, apply/replay, and regression. The migration revokes EXECUTE from PUBLIC, anon, authenticated, and service_role only when the exact SECURITY DEFINER event-trigger function is present and attached to an enabled event trigger; the event trigger remains enabled. The acceptance condition after the migration is that effective EXECUTE is false for all four grantees. The migration fails closed on a contract or ownership mismatch and does not change global default privileges.
+- The PR #44 subscription smoke test with two outlets in the same business, independent subscription IDs, and a plan change staged for only one outlet. All four invoice payment records remain PENDING; no settlement or webhook is called.
+
+The connected Supabase project currently still has effective EXECUTE on `public.rls_auto_enable()` for anon, authenticated, and service_role. This candidate migration has only been exercised in disposable PostgreSQL CI; it has not been applied to the connected project or the inaccessible populated OTC target.
