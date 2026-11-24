@@ -30,6 +30,8 @@ jobs:
         run: node --test app/otc/owner/summary-pagination.test.mjs
       - name: Run Owner hourly report pagination and aggregation tests
         run: node --test app/otc/owner-report/hourly-summary.test.mjs
+      - name: Assert Reservation remains outside the Order release in both apps
+        run: node --test tests/nortago_order_scope_boundary.test.mjs
       - name: Production build
         run: npm run build
 
