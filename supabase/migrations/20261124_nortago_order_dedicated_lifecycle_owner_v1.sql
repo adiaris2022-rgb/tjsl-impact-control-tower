@@ -467,12 +467,12 @@ grant execute on function public.nortago_update_order_status(uuid,text,text) to 
 
 reset role;
 
-do $$
-begin
-  execute format('revoke nortago_order_lifecycle_owner from %I', current_user);
-  revoke create on schema public from nortago_order_lifecycle_owner;
-end
-$$;
+-- The temporary role membership was granted by the database owner. PostgreSQL
+-- permits a role to revoke only membership grants recorded as granted by itself;
+-- the migration executor must not claim or silently attempt to remove the owner's
+-- grant. The same database-owner principal must revoke that membership after this
+-- migration completes and before authenticated-session UAT.
+revoke create on schema public from nortago_order_lifecycle_owner;
 
 do $$
 begin
