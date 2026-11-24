@@ -49,7 +49,7 @@ begin
   select count(*) into v_count from public.otc_orders where checkout_idempotency_key=v_bad_key_a;
   if v_count <> 0 then raise exception 'Rejected cross-business checkout created an order'; end if;
 
-  -- Outlet B has a mapping for Product A, but the product's business still must match.
+  -- Outlet B must reject Product A because no same-business outlet mapping exists.
   v_rejected := false;
   begin
     perform public.nortago_create_customer_order_idempotent(
