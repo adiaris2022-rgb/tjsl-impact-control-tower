@@ -89,6 +89,7 @@ jobs:
                 and bu.role = any(p_roles)
             )
           $membership$;
+          revoke all on function public.has_business_role(uuid, text[]) from public;
           grant execute on function public.has_business_role(uuid, text[]) to authenticated;
           SQL
       - name: Apply existing OTC commerce schema
