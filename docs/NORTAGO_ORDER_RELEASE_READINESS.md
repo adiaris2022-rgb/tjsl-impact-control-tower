@@ -291,3 +291,47 @@ This closes the source-level tenant mapping gap in the candidate release branch.
 - The OTC core migration comment references another project ref (`tdpupelhvzxwhbqnnlxk`), which the connected account could not inspect (permission denied). Do not apply migrations to the empty connected project; identify the populated staging target first.
 - Supabase Security Advisor flags `public.rls_auto_enable()` as SECURITY DEFINER and executable by anon/authenticated; the `ensure_rls` event trigger is enabled. No ACL change was made; review this platform-level finding on the confirmed target.
 - No staging/live migration, merge, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed.
+
+## Default ACL and RLS event-trigger finding — corrected read-only catalog evidence, 24 Nov 2026
+
+Read-only catalog inspection of connected project NORTAGO-ORDER-STAGING (`aakhinaryzidzpsjeewp`, ACTIVE_HEALTHY, PostgreSQL 17.12) found zero public application tables and no application migration ledger. These results describe environment defaults and the platform event helper; they are **not effective grants on `otc_orders`**, because that table does not exist in this project.
+
+### Default ACLs by object creator role
+
+The expanded Query 19 output distinguishes global/built-in defaults from additive `public`-schema defaults:
+
+- For objects created by `supabase_admin`, the **public-schema additive TABLE ACL** grants anon, authenticated, and service_role SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, and PostgreSQL 17 MAINTAIN. Its public-schema SEQUENCE ACL grants SELECT, UPDATE, USAGE; its public-schema FUNCTION ACL grants EXECUTE to those same roles. The global/built-in FUNCTION default also grants EXECUTE to PUBLIC. The broad table/sequence/function rows are schema-additive defaults, not a global table ACL.
+- For objects created by `postgres`, the **public-schema additive TABLE ACL** grants only TRUNCATE, REFERENCES, TRIGGER, and MAINTAIN to anon/authenticated/service_role; it does not grant table SELECT, INSERT, UPDATE, or DELETE. No public-schema additive SEQUENCE/FUNCTION rows were returned for postgres; its built-in FUNCTION default grants EXECUTE to PUBLIC.
+- The result is creator-role-specific. A `supabase_admin` default does not prove what a `postgres`-created object receives, and neither default ACL is an effective grant on an already-created table. Do not alter global or schema-level defaults without a separate owner-approved impact analysis.
+
+The connected project's read-only session reported `current_user=postgres`; that is evidence only for this empty connected project, not proof of the migration executor or ACLs on the populated NORTAGO database.
+
+### Actual event-helper catalog result on the connected project
+
+- `public.rls_auto_enable()` exists, is owned by `postgres`, returns `event_trigger`, is SECURITY DEFINER, and has `search_path=pg_catalog`.
+- `proacl=NULL`; effective EXECUTE is true for anon, authenticated, and service_role through the default PUBLIC EXECUTE privilege.
+- Enabled event trigger `ensure_rls` invokes the function on `ddl_command_end`. Its body enables RLS on newly created public tables; this does not itself grant row access.
+- `otc_orders`, `otc_order_items`, `otc_outlets`, `otc_products`, `business_users`, `has_business_role(uuid,text[])`, and `nortago_update_order_status(uuid,text,text)` are absent. No OTC RLS policies or OTC triggers can therefore be inspected on this project.
+
+### PR #40 hardening candidate
+
+[PR #40](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/40) adds a conditional, function-specific migration. When the exact helper exists with the expected SECURITY DEFINER/event_trigger contract and is attached to an enabled event trigger, it revokes EXECUTE from PUBLIC, anon, authenticated, and service_role. It does not change global/default ACLs, the function body, or the event trigger definition.
+
+The disposable CI fixture verifies:
+- effective EXECUTE is false for anon, authenticated, and service_role after the revoke;
+- SECURITY DEFINER and fixed `search_path=pg_catalog` remain unchanged;
+- `ensure_rls` remains enabled; and
+- creating a new public table still causes the event trigger to enable RLS.
+
+### Latest exact-head CI — PR #40
+
+- PR #40 remains Open / Draft / Unmerged. Current head: `22c6a2184ca5a735a221fe102875dd5a6b63cf8a`; base: `e783feefea1825d9a1697b8a0084d996f7b44dd2` (PR #38 candidate).
+- [CI Run #398](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45370196843) completed **PASS** on that exact head. Production build and all three pagination unit suites passed; PostgreSQL migration/security validation passed, including the lifecycle owner/direct-write regression and the new client/service EXECUTE plus security-path event-helper regression.
+- Vercel status is failure due to provider build-rate-limit. No Preview/browser UAT is claimed for this head.
+- This is disposable PostgreSQL CI only. The PR #40 migration has not been applied to any Supabase project.
+
+### Staging target mismatch — still blocking real verification
+
+The OTC core migration comment references project ref `tdpupelhvzxwhbqnnlxk`. The current Supabase connection cannot inspect that project (permission denied); the connected `aakhinaryzidzpsjeewp` project is empty and is not proven to be the populated NORTAGO database. Do not apply migrations to the empty connected project. Identify the correct populated staging target and obtain explicit approval before any staging migration or authenticated-session UAT.
+
+No staging/live migration, merge, production deployment, payment/webhook activation, secrets/environment change, or destructive action was performed.

@@ -308,6 +308,27 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_customer_checkout_tenant_isolation_smoke.sql
+      - name: Create disposable RLS event-trigger fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_rls_event_trigger_fixture.sql
+      - name: Apply optional RLS event-trigger client EXECUTE guard
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_z_rls_event_trigger_execute_guard_v1.sql
+      - name: Replay optional RLS event-trigger client EXECUTE guard (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_z_rls_event_trigger_execute_guard_v1.sql
+      - name: Run RLS event-trigger client/service EXECUTE and security-path regression checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_rls_event_trigger_acl_smoke.sql
+      - name: Verify event-helper ACL release documentation stays aligned
+        run: |
+          grep -q "service_role" docs/NORTAGO_ORDER_STAGING_UAT_RUNBOOK.md
+          grep -q "public-schema additive TABLE ACL" docs/NORTAGO_ORDER_RELEASE_READINESS.md
+          grep -q "effective EXECUTE is false" docs/NORTAGO_ORDER_RELEASE_READINESS.md
       - name: Execute read-only release security audit SQL against disposable PostgreSQL
         env:
           PGPASSWORD: postgres
