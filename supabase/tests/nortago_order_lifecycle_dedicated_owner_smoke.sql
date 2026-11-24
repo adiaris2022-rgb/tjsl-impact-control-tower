@@ -82,6 +82,10 @@ begin
        is distinct from (v_col.attname = any(v_allowed_update)) then
       raise exception 'NORTAGO_LIFECYCLE_OWNER_ORDERS_UPDATE_COLUMN_MISMATCH: %',v_col.attname;
     end if;
+    if has_column_privilege('nortago_order_lifecycle_owner','public.otc_orders',v_col.attname,'insert')
+       or has_column_privilege('nortago_order_lifecycle_owner','public.otc_orders',v_col.attname,'references') then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_ORDERS_INSERT_OR_REFERENCE_PRIVILEGE_PRESENT: %',v_col.attname;
+    end if;
   end loop;
 
   foreach v_priv in array array['select','insert','update','delete','truncate','references','trigger'] loop
@@ -104,6 +108,11 @@ begin
        is distinct from (v_col.attname = any(v_allowed_outlet_select)) then
       raise exception 'NORTAGO_LIFECYCLE_OWNER_OUTLET_SELECT_COLUMN_MISMATCH: %',v_col.attname;
     end if;
+    if has_column_privilege('nortago_order_lifecycle_owner','public.otc_outlets',v_col.attname,'insert')
+       or has_column_privilege('nortago_order_lifecycle_owner','public.otc_outlets',v_col.attname,'update')
+       or has_column_privilege('nortago_order_lifecycle_owner','public.otc_outlets',v_col.attname,'references') then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_OUTLET_MUTATION_PRIVILEGE_PRESENT: %',v_col.attname;
+    end if;
   end loop;
 
   for v_col in
@@ -113,6 +122,11 @@ begin
     if has_column_privilege('nortago_order_lifecycle_owner','public.nortago_order_status_audit',v_col.attname,'insert')
        is distinct from (v_col.attname = any(v_allowed_audit_insert)) then
       raise exception 'NORTAGO_LIFECYCLE_OWNER_AUDIT_INSERT_COLUMN_MISMATCH: %',v_col.attname;
+    end if;
+    if has_column_privilege('nortago_order_lifecycle_owner','public.nortago_order_status_audit',v_col.attname,'select')
+       or has_column_privilege('nortago_order_lifecycle_owner','public.nortago_order_status_audit',v_col.attname,'update')
+       or has_column_privilege('nortago_order_lifecycle_owner','public.nortago_order_status_audit',v_col.attname,'references') then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_AUDIT_READ_OR_MUTATION_PRIVILEGE_PRESENT: %',v_col.attname;
     end if;
   end loop;
 
