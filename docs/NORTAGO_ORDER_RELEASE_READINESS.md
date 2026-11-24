@@ -217,3 +217,23 @@ Job-level status was fetched for all seven exact-head runs: **7/7 workflow runs 
 
 See [NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md](./NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md). The current owner guard is useful defense-in-depth but trusts a shared function-owner identity. A dedicated non-login lifecycle owner, with no memberships and minimal column/RLS grants, is the proposed production boundary. It is **not implemented or applied** until the actual Supabase `has_business_role`, `auth.uid()`, role attributes, RLS, and migration-executor permissions are inspected in an owner-approved staging session.
 
+
+
+## Product & Service catalog — ported into release stack, 24 Nov 2026
+
+The Product & Service work previously isolated on PR #29 was not an ancestor of the consolidated PR #34 release branch. It is now being ported as a follow-on to the lifecycle-hardened PR #37 stack (PR #38 candidate):
+
+- Additive `otc_products.product_type` contract: `PRODUCT` or `SERVICE`, default `PRODUCT`.
+- Owner catalog route creates items through the authenticated, business-membership-checked atomic `nortago_create_catalog_item_for_outlet` RPC; outlet price and availability remain outlet-specific.
+- Customer menu filters inactive products and labels PRODUCT/SERVICE; checkout labels product/service lines and rejects Pre-Order times that are not in the future.
+- Disposable SQL tests cover create RPC ACL/auth/business membership/active outlet/invalid type/price/image/name, outlet mapping, and SERVICE checkout-to-receipt using the outlet price. Checkout idempotency test also sends forged client price/unit_price fields and verifies server-side outlet pricing remains authoritative.
+- No product/service changes are applied to Supabase staging or production.
+
+## Concrete commercial gates from current source inspection
+
+1. **Delivery fee is not calculated.** The checkout idempotency migration writes `delivery_fee = 0` and `total = subtotal` for all fulfillment types. The customer menu says delivery fee is not calculated; checkout/receipt still display the returned total. Delivery cannot be represented as a final all-in price until the owner chooses a pricing/collection policy or the customer-facing flow explicitly treats delivery fee as separately confirmed.
+2. **Order payment remains pending.** Checkout offers QRIS/Cash/Other, states the payment gateway is not connected, and creates `payment_status = PENDING`. The Owner page's lifecycle action calls only `nortago_update_order_status` and explicitly says payment status is not changed; paid revenue metrics count only `payment_status = PAID`. No order-payment verification control was found in the reviewed Owner page. A manual verification workflow or a separately approved payment integration is required before paid-order reporting/fulfillment can be relied upon. LinkBayar remains disabled.
+3. **Outlet-level staff isolation is not implemented in the reviewed UI.** Owner/catalog access is checked at business membership; outlet selection is within the business. Staging UAT must decide whether staff must be restricted to assigned outlets before commercial acceptance.
+4. **SERVICE uses the shared order lifecycle.** The catalog distinguishes PRODUCT/SERVICE, but service-specific scheduling/fulfillment rules are not separate. Validate that the shared Take Away/Pre-Order/Delivery workflow matches the service offers being sold.
+
+These are explicit acceptance decisions, not permission to invent fee, payment, or role policy. Keep the relevant flows disabled or clearly disclosed until the owner-approved policy is implemented and tested.
