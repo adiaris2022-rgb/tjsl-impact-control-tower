@@ -34,14 +34,16 @@ declare
 begin
   select o.business_id into v_outlet_business_id
   from public.otc_outlets o
-  where o.id=new.outlet_id;
+  where o.id=new.outlet_id
+  for share;
   if not found then
     raise exception 'NORTAGO_OUTLET_PRODUCT_OUTLET_NOT_FOUND';
   end if;
 
   select p.business_id into v_product_business_id
   from public.otc_products p
-  where p.id=new.product_id;
+  where p.id=new.product_id
+  for share;
   if not found then
     raise exception 'NORTAGO_OUTLET_PRODUCT_PRODUCT_NOT_FOUND';
   end if;
