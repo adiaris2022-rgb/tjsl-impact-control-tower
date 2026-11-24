@@ -197,7 +197,7 @@ export default function Owner() {
   if (error && !businessId) return <main className="otc-page"><div className="info-box wide">{error}</div></main>;
   return <main className="otc-page">
     <header className="otc-head"><div><b>NORTAGO Order</b><small>Owner Dashboard · Order & Sales</small></div>
-      <nav style={{ display: "flex", gap: 12, alignItems: "center" }}><Link href="/otc/owner/subscriptions">Langganan Outlet</Link><Link href="/otc">Home</Link></nav>
+      <nav style={{ display: "flex", gap: 12, alignItems: "center" }}><Link href="/otc/owner/catalog">Kelola Produk & Jasa</Link><Link href="/otc/owner/subscriptions">Langganan Outlet</Link><Link href="/otc">Home</Link></nav>
     </header>
     <section className="customer-title"><span>ORDER & SALES</span><h1>Owner Dashboard</h1><p>Ringkasan transaksi dan penjualan untuk bisnis yang dipilih.</p>
       {businessIds.length > 1 ? <label className="business-switcher">Pilih bisnis
