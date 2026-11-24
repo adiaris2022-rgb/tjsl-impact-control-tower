@@ -26,12 +26,21 @@ begin
     (v_product_b,v_business_b,'Tenant Product B',10000,true);
   insert into public.otc_outlet_products(outlet_id,product_id,price,is_available) values
     (v_outlet_a,v_product_a,25000,true),
-    (v_outlet_b,v_product_b,10000,true),
-    (v_outlet_b,v_product_a,25000,true);
+    (v_outlet_b,v_product_b,10000,true);
+
+  -- The database must reject a cross-business mapping before checkout can see it.
+  begin
+    insert into public.otc_outlet_products(outlet_id,product_id,price,is_available)
+    values(v_outlet_b,v_product_a,25000,true);
+    raise exception 'Expected cross-business outlet/product mapping rejection';
+  exception when others then
+    if sqlerrm <> 'NORTAGO_OUTLET_PRODUCT_BUSINESS_MISMATCH' then raise; end if;
+  end;
+
   v_items_a := jsonb_build_array(jsonb_build_object('product_id',v_product_a,'quantity',1));
   v_items_b := jsonb_build_array(jsonb_build_object('product_id',v_product_b,'quantity',1));
 
-  -- Outlet A must reject business B's product.
+  -- Outlet A must reject business B's product even when no cross-business mapping exists.
   begin
     perform public.nortago_create_customer_order_idempotent(
       v_outlet_a,v_bad_key_a,'Tenant Smoke','081234567890','TAKE_AWAY',
