@@ -36,3 +36,6 @@ CI now simulates the observed postgres creator default ACL before creating OTC t
 ## Release gate / limitation
 
 This is disposable PostgreSQL CI evidence only. The connected Supabase project still has no OTC tables or migration history, and the OTC core migration comment references inaccessible project ref `tdpupelhvzxwhbqnnlxk`. No staging/live migration or ACL change was performed. Identify the populated staging target and verify its real migration executor/default ACL/effective grants before applying anything.
+
+
+The two migrations require the applying principal to own the three OTC catalog tables; the tenant-guard migration also requires RLS enabled but not FORCE RLS so the table-owner SECURITY DEFINER guard can take the reviewed row locks and inspect all linked rows. A superuser who is not the table owner is not silently accepted. If the actual staging owner differs, stop and obtain an owner-approved migration principal rather than changing ownership or broadening grants.

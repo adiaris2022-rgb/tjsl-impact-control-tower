@@ -12,6 +12,18 @@ declare
   v_product_b uuid := '93000000-0000-4000-8000-000000000002';
   v_fn record;
 begin
+  if exists (
+    select 1 from pg_class
+    where oid in (
+      'public.otc_outlets'::regclass,
+      'public.otc_products'::regclass,
+      'public.otc_outlet_products'::regclass
+    )
+      and (not relrowsecurity or relforcerowsecurity)
+  ) then
+    raise exception 'TENANT_GUARD_REQUIRES_ENABLED_NON_FORCED_RLS';
+  end if;
+
   for v_fn in
     select p.oid::regprocedure as signature, p.prosecdef, p.proconfig,
            pg_get_userbyid(p.proowner) as function_owner,

@@ -7,7 +7,6 @@
 do $$
 declare
   v_executor oid := (select oid from pg_roles where rolname=current_user);
-  v_is_super boolean := (select rolsuper from pg_roles where oid=(select oid from pg_roles where rolname=current_user));
 begin
   if to_regclass('public.otc_outlets') is null
      or to_regclass('public.otc_products') is null
@@ -15,7 +14,7 @@ begin
     raise exception 'NORTAGO_TENANT_GUARD_REQUIRED_TABLE_MISSING';
   end if;
 
-  if not v_is_super and exists (
+  if exists (
     select 1 from pg_class
     where oid in (
       'public.otc_outlets'::regclass,
@@ -25,6 +24,18 @@ begin
       and relowner <> v_executor
   ) then
     raise exception 'NORTAGO_TENANT_GUARD_EXECUTOR_MUST_OWN_PARENT_AND_MAPPING_TABLES';
+  end if;
+
+  if exists (
+    select 1 from pg_class
+    where oid in (
+      'public.otc_outlets'::regclass,
+      'public.otc_products'::regclass,
+      'public.otc_outlet_products'::regclass
+    )
+      and (not relrowsecurity or relforcerowsecurity)
+  ) then
+    raise exception 'NORTAGO_TENANT_GUARD_REQUIRES_ENABLED_NON_FORCED_RLS';
   end if;
 
   if exists (

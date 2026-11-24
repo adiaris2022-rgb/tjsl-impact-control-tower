@@ -6,7 +6,6 @@
 do $$
 declare
   v_executor oid := (select oid from pg_roles where rolname=current_user);
-  v_is_super boolean := (select rolsuper from pg_roles where oid=(select oid from pg_roles where rolname=current_user));
 begin
   if to_regclass('public.otc_outlets') is null
      or to_regclass('public.otc_products') is null
@@ -14,7 +13,7 @@ begin
     raise exception 'NORTAGO_PUBLIC_CATALOG_REQUIRED_TABLE_MISSING';
   end if;
 
-  if not v_is_super and exists (
+  if exists (
     select 1 from pg_class
     where oid in (
       'public.otc_outlets'::regclass,
