@@ -65,7 +65,7 @@ jobs:
           create extension if not exists pgcrypto;
           create role anon nologin;
           create role authenticated nologin;
-          create role service_role nologin;
+          create role service_role nologin bypassrls;
           create role nortago_order_status_writer_ci nologin inherit;
           create schema auth;
           create function auth.uid() returns uuid language sql stable as $$ select '00000000-0000-0000-0000-000000000001'::uuid $$;
@@ -161,6 +161,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117_nortago_order_subscription_billing_v1.sql
+      - name: Apply least-privilege subscription table grants
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_subscription_privileges_v1.sql
+      - name: Replay least-privilege subscription table grants (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_subscription_privileges_v1.sql
+      - name: Verify subscription table grants and UI/API access paths
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_subscription_privileges_smoke.sql
       - name: Apply secure customer checkout schema
         env:
           PGPASSWORD: postgres
