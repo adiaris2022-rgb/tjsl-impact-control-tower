@@ -48,6 +48,32 @@ $$;
 revoke all on table public.otc_outlets, public.otc_products, public.otc_outlet_products
   from public, anon, authenticated;
 
+-- Table-level REVOKE does not clear prior column-level grants. Normalize every
+-- existing column privilege for PUBLIC and client roles before adding the reviewed
+-- Owner Catalog update allowlist. Explicit service_role grants remain untouched.
+do $
+declare
+  v_column record;
+begin
+  for v_column in
+    select n.nspname, c.relname, a.attname
+    from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace
+    join pg_attribute a on a.attrelid=c.oid
+    where n.nspname='public'
+      and c.relname = any(array['otc_outlets','otc_products','otc_outlet_products'])
+      and c.relkind in ('r','p')
+      and a.attnum > 0
+      and not a.attisdropped
+  loop
+    execute format(
+      'revoke all privileges (%I) on table %I.%I from public, anon, authenticated',
+      v_column.attname, v_column.nspname, v_column.relname
+    );
+  end loop;
+end
+$;
+
 -- Public customer menu and authenticated Owner catalog reads.
 grant select on table public.otc_outlets, public.otc_products, public.otc_outlet_products
   to anon, authenticated;
