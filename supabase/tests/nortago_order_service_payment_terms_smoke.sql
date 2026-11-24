@@ -160,6 +160,14 @@ begin
      or v_retry->>'payment_balance_due' <> v_result->>'payment_balance_due' then
     raise exception 'Idempotent retry must preserve DP and balance amounts';
   end if;
+  begin
+    perform public.nortago_create_customer_order_idempotent(
+      v_outlet,v_key,'Payment Smoke','081234567890','TAKE_AWAY',v_items,'Cash',null,null,null,'FULL'
+    );
+    raise exception 'CHECKOUT_IDEMPOTENCY_ACCEPTED_CHANGED_PAYMENT_OPTION';
+  exception when others then
+    if sqlerrm <> 'CHECKOUT_IDEMPOTENCY_CONFLICT' then raise; end if;
+  end;
 
   -- Fixed DP is per service unit and cannot exceed the unit price.
   v_key := gen_random_uuid();
