@@ -48,6 +48,7 @@ declare
   v_outlet_id uuid := gen_random_uuid();
   v_dine_in_blocked boolean := false;
   v_walk_in_blocked boolean := false;
+  v_pos_integrated_blocked boolean := false;
   v_allowed_order_id uuid;
 begin
   if not exists (
@@ -77,8 +78,15 @@ begin
     if sqlerrm = 'ORDER_ONLY_WALK_IN_DISABLED' then v_walk_in_blocked := true; else raise; end if;
   end;
 
-  if not v_dine_in_blocked or not v_walk_in_blocked then
-    raise exception 'Order-only guard did not block Dine-In and Walk-In';
+  begin
+    insert into public.otc_orders(business_id,outlet_id,order_no,order_source,fulfillment_type)
+      values (v_business_id,v_outlet_id,'SCOPE-POS-'||replace(v_business_id::text,'-',''),'POS_INTEGRATED','TAKE_AWAY');
+  exception when others then
+    if sqlerrm = 'ORDER_ONLY_POS_DISABLED' then v_pos_integrated_blocked := true; else raise; end if;
+  end;
+
+  if not v_dine_in_blocked or not v_walk_in_blocked or not v_pos_integrated_blocked then
+    raise exception 'Order-only guard did not block Dine-In, Walk-In, and POS-integrated orders';
   end if;
 
   insert into public.otc_orders(business_id,outlet_id,order_no,order_source,fulfillment_type)
@@ -108,7 +116,8 @@ begin
       values
         ('60000000-0000-4000-8000-000000000001',v_business_id,v_outlet_id,'LEGACY-DINE-IN','CUSTOMER_SELF_ORDER','DINE_IN','NEW','PENDING'),
         ('60000000-0000-4000-8000-000000000002',v_business_id,v_outlet_id,'LEGACY-WALK-IN','STAFF_WALK_IN','TAKE_AWAY','NEW','PENDING'),
-        ('60000000-0000-4000-8000-000000000003',v_business_id,v_outlet_id,'VALID-TAKE-AWAY','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING');
+        ('60000000-0000-4000-8000-000000000003',v_business_id,v_outlet_id,'VALID-TAKE-AWAY','CUSTOMER_SELF_ORDER','TAKE_AWAY','NEW','PENDING'),
+        ('60000000-0000-4000-8000-000000000004',v_business_id,v_outlet_id,'LEGACY-POS-INTEGRATED','POS_INTEGRATED','TAKE_AWAY','NEW','PENDING');
   exception when others then
     alter table public.otc_orders enable trigger otc_orders_order_only_scope_guard;
     raise;
@@ -122,6 +131,7 @@ do $$
 declare
   v_dine_in_blocked boolean := false;
   v_walk_in_blocked boolean := false;
+  v_pos_integrated_blocked boolean := false;
   v_status text;
   v_audit_count integer;
 begin
@@ -152,15 +162,27 @@ begin
     end if;
   end;
 
-  if not v_dine_in_blocked or not v_walk_in_blocked then
-    raise exception 'Order-only scope guard did not reject legacy lifecycle transitions';
+  begin
+    perform public.nortago_update_order_status('60000000-0000-4000-8000-000000000004','PROCESSING','legacy POS-integrated order must remain excluded');
+    raise exception 'Legacy POS-integrated lifecycle RPC unexpectedly succeeded';
+  exception when others then
+    if sqlerrm = 'ORDER_ONLY_POS_DISABLED' then v_pos_integrated_blocked := true;
+    elsif sqlerrm = 'Legacy POS-integrated lifecycle RPC unexpectedly succeeded' then raise;
+    else raise;
+    end if;
+  end;
+
+  if not v_dine_in_blocked or not v_walk_in_blocked or not v_pos_integrated_blocked then
+    raise exception 'Order-only scope guard did not reject legacy Dine-In, Walk-In, and POS-integrated lifecycle transitions';
   end if;
   select status into v_status from public.otc_orders where id='60000000-0000-4000-8000-000000000001';
   if v_status <> 'NEW' then raise exception 'Legacy Dine-In status changed'; end if;
   select status into v_status from public.otc_orders where id='60000000-0000-4000-8000-000000000002';
   if v_status <> 'NEW' then raise exception 'Legacy Walk-In status changed'; end if;
+  select status into v_status from public.otc_orders where id='60000000-0000-4000-8000-000000000004';
+  if v_status <> 'NEW' then raise exception 'Legacy POS-integrated status changed'; end if;
   select count(*) into v_audit_count from public.nortago_order_status_audit
-    where order_id in ('60000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000002');
+    where order_id in ('60000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000002','60000000-0000-4000-8000-000000000004');
   if v_audit_count <> 0 then raise exception 'Blocked out-of-scope lifecycle transitions must not create audit events'; end if;
 end;
 $$;
