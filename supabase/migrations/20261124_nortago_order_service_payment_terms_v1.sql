@@ -251,3 +251,47 @@ revoke all on function public.nortago_create_customer_order(uuid,text,text,text,
 drop function if exists public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text);
 revoke all on function public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text) from public, anon, authenticated;
 grant execute on function public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text) to anon, authenticated;
+
+
+-- Keep customer receipt totals and remaining balance explicit for DP orders.
+create or replace function public.nortago_get_customer_receipt(p_receipt_token uuid)
+returns jsonb
+language sql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+  select jsonb_build_object(
+    'order', jsonb_build_object(
+      'order_no', o.order_no,
+      'customer_name', o.customer_name,
+      'fulfillment_type', o.fulfillment_type,
+      'status', o.status,
+      'payment_status', o.payment_status,
+      'payment_method', o.payment_method,
+      'payment_option', o.payment_option,
+      'payment_amount_due', o.payment_amount_due,
+      'payment_balance_due', o.payment_balance_due,
+      'scheduled_at', o.scheduled_at,
+      'subtotal', o.subtotal,
+      'delivery_fee', o.delivery_fee,
+      'discount', o.discount,
+      'total', o.total,
+      'pickup_code', o.pickup_code,
+      'created_at', o.created_at,
+      'outlet_name', outlet.name
+    ),
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'product_name_snapshot', i.product_name_snapshot,
+        'unit_price', i.unit_price,
+        'quantity', i.quantity,
+        'line_total', i.line_total
+      ) order by i.id)
+      from public.otc_order_items i where i.order_id = o.id
+    ), '[]'::jsonb)
+  )
+  from public.otc_orders o
+  join public.otc_outlets outlet on outlet.id = o.outlet_id
+  where o.receipt_access_token = p_receipt_token
+  limit 1;
+$$;
