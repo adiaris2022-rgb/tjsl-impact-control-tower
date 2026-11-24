@@ -1,9 +1,13 @@
 -- NORTAGO Order: seller-configurable service DP/full payment rules.
 -- Disposable PostgreSQL fixtures; all writes are rolled back.
 begin;
-do $$
+create or replace function auth.uid() returns uuid
+language sql stable
+as $ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $;
+do $
 declare
   v_actor uuid := '00000000-0000-0000-0000-000000000001';
+  v_staff uuid := '00000000-0000-0000-0000-000000000002';
   v_business uuid := gen_random_uuid();
   v_other_business uuid := gen_random_uuid();
   v_other_outlet uuid := gen_random_uuid();
@@ -21,6 +25,19 @@ declare
   v_token uuid;
   v_items jsonb;
 begin
+  perform set_config('request.jwt.claim.sub',v_actor::text,true);
+  if has_function_privilege('anon','public.nortago_guard_service_payment_terms_owner()','execute')
+     or has_function_privilege('authenticated','public.nortago_guard_service_payment_terms_owner()','execute')
+     or exists (select 1 from pg_proc where oid='public.nortago_guard_service_payment_terms_owner()'::regprocedure and prosecdef) then
+    raise exception 'SERVICE_PAYMENT_TERMS_TRIGGER_FUNCTION_ACL_OR_MODE_INVALID';
+  end if;
+  if not exists (
+    select 1 from pg_trigger where tgrelid='public.otc_outlet_products'::regclass
+      and tgname='otc_outlet_products_service_payment_terms_owner_guard'
+      and not tgisinternal and tgenabled in ('O','A')
+  ) then
+    raise exception 'SERVICE_PAYMENT_TERMS_OWNER_TRIGGER_MISSING';
+  end if;
   if has_function_privilege('anon','public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)','execute')
      or not has_function_privilege('authenticated','public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)','execute') then
     raise exception 'SERVICE_PAYMENT_TERMS_RPC_ACL_INVALID';
@@ -37,7 +54,9 @@ begin
   insert into public.otc_outlets(id,business_id,name,is_active) values
     (v_outlet,v_business,'Payment Terms Outlet',true),
     (v_other_outlet,v_other_business,'Other Payment Terms Outlet',true);
-  insert into public.business_users(business_id,user_id,role) values(v_business,v_actor,'OWNER');
+  insert into public.business_users(business_id,user_id,role) values
+    (v_business,v_actor,'OWNER'),
+    (v_business,v_staff,'STAFF');
   insert into public.otc_products(id,business_id,name,base_price,is_active,product_type) values
     (v_product,v_business,'Payment Product',20000,true,'PRODUCT'),
     (v_service_percent,v_business,'Percent DP Service',100000,true,'SERVICE'),
@@ -64,6 +83,17 @@ begin
   end if;
   update public.otc_outlet_products set allow_full_payment=true,allow_dp=false,dp_value=50
   where outlet_id=v_outlet and product_id=v_service_full_only;
+
+  -- Direct table writes must not let STAFF bypass the owner-only RPC.
+  perform set_config('request.jwt.claim.sub',v_staff::text,true);
+  begin
+    update public.otc_outlet_products set allow_dp=true
+    where outlet_id=v_outlet and product_id=v_service_full_only;
+    raise exception 'STAFF_DIRECT_PAYMENT_TERMS_WRITE_WAS_ACCEPTED';
+  exception when others then
+    if sqlerrm <> 'SERVICE_PAYMENT_TERMS_FORBIDDEN' then raise; end if;
+  end;
+  perform set_config('request.jwt.claim.sub',v_actor::text,true);
 
   begin
     perform public.nortago_update_service_payment_terms(
