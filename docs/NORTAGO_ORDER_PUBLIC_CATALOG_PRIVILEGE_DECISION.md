@@ -22,14 +22,14 @@ Read-only catalog inspection of connected project `NORTAGO-ORDER-STAGING` (`aakh
 
 This PR adds two migrations:
 
-1. `20261124_nortago_order_tenant_guard_security_definer_v1.sql` makes the three tenant-consistency trigger functions SECURITY DEFINER under the reviewed OTC table owner, with fixed search_path and no client/service EXECUTE. The functions retain `FOR SHARE` row locks without requiring clients to receive UPDATE on `otc_outlets` merely to create/update a mapping. They are trigger-only and do not return cross-tenant data.
+1. `20261124_nortago_order_tenant_guard_security_definer_v1.sql` makes the three tenant-consistency trigger functions SECURITY DEFINER under the reviewed OTC table owner, with fixed search_path (pg_catalog, pg_temp) and no client/service EXECUTE. The functions retain `FOR SHARE` row locks without requiring clients to receive UPDATE on `otc_outlets` merely to create/update a mapping. They are trigger-only and do not return cross-tenant data.
 2. `20261124_nortago_order_public_catalog_privileges_v1.sql` revokes all PUBLIC/anon/authenticated privileges from the three catalog tables, then grants only:
    - SELECT to anon and authenticated on outlets, products, and outlet-product mappings.
    - UPDATE on product name, description, category, image_url, is_active to authenticated.
    - UPDATE on outlet-product price and is_available to authenticated.
    - No client INSERT/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN; no authenticated outlet UPDATE; no product business_id/base_price or mapping-key/payment-term UPDATE.
 
-The migration leaves service_role privileges and all global default ACLs untouched. It checks table ownership and required columns before changing grants. The existing RLS policies remain in force, so the grants do not bypass business-membership predicates.
+The migration leaves explicit service_role grants and all global default ACLs untouched. Any column privilege inherited only through PUBLIC is intentionally removed with the PUBLIC grant. It checks table ownership and required columns before changing grants. The existing RLS policies remain in force, so the grants do not bypass business-membership predicates.
 
 CI now simulates the observed postgres creator default ACL before creating OTC tables, proves those grants reached the new tables, applies the migrations, and verifies the final effective table/column privileges. The tenant-guard smoke now uses actual anon/authenticated roles for public reads and allowed Owner Catalog updates, while privileged server-side writes still exercise cross-business trigger rejection.
 
@@ -39,3 +39,8 @@ This is disposable PostgreSQL CI evidence only. The connected Supabase project s
 
 
 The two migrations require the applying principal to own the three OTC catalog tables; the tenant-guard migration also requires RLS enabled but not FORCE RLS so the table-owner SECURITY DEFINER guard can take the reviewed row locks and inspect all linked rows. A superuser who is not the table owner is not silently accepted. If the actual staging owner differs, stop and obtain an owner-approved migration principal rather than changing ownership or broadening grants.
+
+
+## Additional ACL regression hardening
+
+The PostgreSQL CI service now uses major version 17 to match the connected Supabase project. The baseline fixture models the observed MAINTAIN default privilege and deliberately seeds stale column-level UPDATE/INSERT/REFERENCES grants before the catalog migration. The migration explicitly revokes all column-level privileges from PUBLIC, anon, and authenticated on the three catalog tables before restoring only the approved Owner Catalog update columns. Regression checks verify no stale client column grants survive and that direct service_role default grants remain intact.
