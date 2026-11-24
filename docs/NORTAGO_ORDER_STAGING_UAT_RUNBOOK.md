@@ -1,5 +1,45 @@
 # NORTAGO ORDER — Staging UAT Runbook
 
+## Latest release-first preflight — 24 Nov 2026, 19:36 WIB
+
+This is an evidence refresh, not permission to migrate or deploy. The latest selected code candidate is PR #45 head `e6cccf88c5544ea59eb601466b0e3c8d3a1dc6fb`; its parent PR #43 head is `64e3cd482c0afc1dba5bbe2a6305f8bee0861525`. PR #44 (`ea8f4c242371bed636075cf9445aa4b71d8a2ea0`) is a sibling of PR #45 and contains the two-outlets-within-one-business subscription test; PR #45 does not include it. Do not sign off the integrated candidate until both are represented and CI passes on the resulting exact SHA.
+
+### Exact-head automated evidence
+
+- PR #16 head `db3e6a43edc4edc4d3338504d87da11163594e42`: Run #141 PASS; both database and build jobs completed.
+- PR #17 head `7516e1b22d5cd340b872db4bc516471a81ef74d4`: Run #143 PASS; both database and build jobs completed.
+- PR #42 head `87f74e505af799d8b1c224e6d60238c5b928a1d5`: Run #407 PASS.
+- PR #43 head `64e3cd482c0afc1dba5bbe2a6305f8bee0861525`: Run #408 PASS.
+- PR #44 head `ea8f4c242371bed636075cf9445aa4b71d8a2ea0`: Run #409 PASS.
+- PR #45 head `e6cccf88c5544ea59eb601466b0e3c8d3a1dc6fb`: Run #412 PASS.
+
+All above are GitHub Actions runs against disposable PostgreSQL 17 and production-build/unit-test runners. They do not verify Supabase staging or a deployed browser preview. PR #43–#45 Vercel checks were blocked by the provider build-rate-limit; exact-head browser UAT remains BLOCKED.
+
+### Staging identity and schema gate
+
+The connected Supabase project `aakhinaryzidzpsjeewp` is active but contains zero OTC application tables and zero app migrations. The core OTC migration references `tdpupelhvzxwhbqnnlxk`, which is inaccessible to the current connection. Stop before any migration until the owner confirms the populated disposable staging project and read-only access is available. Do not infer `otc_orders` grants or policies from the empty project.
+
+### Required security evidence once the correct target is available
+
+- [ ] Record project ref and migration ledger; confirm this is the populated disposable staging target.
+- [ ] Inspect actual table owner and effective table/column grants for `otc_orders` and `otc_order_items`.
+- [ ] Inspect every RLS policy's command, roles, USING and WITH CHECK expressions; inspect all triggers and their function owner/security/search_path.
+- [ ] Inspect `nortago_update_order_status`, `has_business_role`, `auth.uid()`, dedicated lifecycle owner memberships/attributes, and all SECURITY DEFINER writers.
+- [ ] Under real authenticated sessions, prove direct status UPDATE is rejected without mutation/audit and approved RPC transitions succeed with exactly one audit event.
+- [ ] Verify tenant A cannot read/mutate tenant B and confirm the actual business/outlet staff policy.
+- [ ] Apply/replay migrations only after separate owner approval and a rollback/recovery plan.
+
+### Current commercial limitations
+
+- Delivery fee is not calculated (stored as zero); do not describe the order total as all-in.
+- Payment/DP state is not a complete collection ledger; PENDING remains pending until a verified settlement workflow is approved and tested.
+- LinkBayar remains disabled; do not enable provider/webhook or change secrets in this run.
+- Staff access is business-level, not outlet-assignment scoped; confirm the owner policy before launch.
+- Audit deletion currently follows the schema's cascade behavior; retention policy remains open.
+
+No staging/live migration, merge, production deployment, payment/webhook activation, secrets/environment change, or destructive action is authorized by this runbook.
+
+
 This runbook is for owner-approved testing in a disposable Supabase staging project and a preview deployment that matches the reviewed commit. It is not permission to migrate, deploy, enable payments, or change secrets.
 
 ## Preconditions (stop if any is missing)
