@@ -51,7 +51,7 @@ revoke all on table public.otc_outlets, public.otc_products, public.otc_outlet_p
 -- Table-level REVOKE does not clear prior column-level grants. Normalize every
 -- existing column privilege for PUBLIC and client roles before adding the reviewed
 -- Owner Catalog update allowlist. Explicit service_role grants remain untouched.
-do $
+do $nortago_column_acl$
 declare
   v_column record;
 begin
@@ -72,7 +72,7 @@ begin
     );
   end loop;
 end
-$;
+$nortago_column_acl$;
 
 -- Public customer menu and authenticated Owner catalog reads.
 grant select on table public.otc_outlets, public.otc_products, public.otc_outlet_products
