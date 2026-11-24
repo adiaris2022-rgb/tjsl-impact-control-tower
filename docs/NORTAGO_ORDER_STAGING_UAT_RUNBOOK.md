@@ -144,3 +144,57 @@ No owner-boundary migration is applied by this runbook. Staging migration requir
 - [ ] Run direct authenticated status-write rejection and approved RPC transition using real staging authenticated sessions only after separate migration approval.
 
 PR #37 is not staging approval. No staging/live migration is authorized by this checklist.
+
+
+## Product & Service catalog UAT (PR #38 candidate)
+
+- [ ] Owner can create a PRODUCT and a SERVICE for an active outlet through the atomic catalog RPC.
+- [ ] Non-member business and inactive outlet catalog creation are rejected; anon/PUBLIC cannot execute the create RPC.
+- [ ] Outlet-specific price and availability are reflected in the customer menu; inactive business products are not shown.
+- [ ] Customer menu and checkout clearly label PRODUCT vs SERVICE.
+- [ ] SERVICE uses the standard checkout and receipt path with the outlet price snapshot; retry/idempotency remains intact.
+- [ ] Pre-Order rejects past/current local pickup time.
+- [ ] Verify Owner/catalog role access with actual Owner, Program Manager, Partner and Staff sessions; current checks are business-level, not outlet-assignment isolation.
+
+## Delivery and payment acceptance gates — source-backed
+
+- [ ] Confirm Delivery fee policy. Current checkout migration stores delivery_fee=0 and total=subtotal; no fee calculation exists. Do not present the total as all-in unless the owner explicitly chooses free delivery or a separately confirmed fee flow is implemented.
+- [ ] Confirm order payment policy. Checkout currently records QRIS/Cash/Other, gateway-not-connected notice, and PENDING payment. Lifecycle status updates do not change payment_status. Verify the manual payment verification path or keep paid-only reporting/fulfillment gated; do not activate LinkBayar in this run.
+- [ ] Confirm whether staff require outlet-specific access restrictions. Current source checks business membership only.
+
+No staging/live migration or payment activation is authorized by this runbook.
+
+
+## Outlet/product tenant consistency UAT (PR #38 candidate)
+
+- [ ] Confirm the migration preflight reports no existing outlet/product mappings where `otc_outlets.business_id <> otc_products.business_id`; do not auto-delete or auto-repair any rows.
+- [ ] With an authenticated member of a business, valid same-business outlet/product mappings remain writable.
+- [ ] Cross-business mapping INSERT and UPDATE are rejected by the server-side trigger and policy.
+- [ ] Reassigning a mapped product or outlet to another business is rejected until its mappings are removed through an owner-approved workflow.
+- [ ] Confirm anon/authenticated cannot directly EXECUTE trigger functions.
+
+CI regression uses disposable PostgreSQL only. Staging catalog/data inspection remains read-only until separately approved.
+
+
+- [ ] For SERVICE items, verify whether the seller requires DP or full payment. Current schema/UI supports a single price and PENDING payment only; no DP/full-payment selection or balance tracking exists. Do not launch deposit-based services until the seller's DP amount/rule and balance collection flow are implemented and tested.
+
+
+## Read-only catalog tenant-guard audit evidence
+
+- [ ] Run security audit Query 15 and record authenticated SELECT/INSERT/UPDATE grants on `otc_outlet_products`, SELECT and UPDATE (required for `FOR SHARE`) on `otc_outlets`/`otc_products`, and the specific business-key column SELECT grants.
+- [ ] Run Query 16 and verify the exact `otc_outlet_products_staff_manage` policy `USING`/`WITH CHECK`, enabled tenant-guard triggers, SECURITY INVOKER mode, function owners/configuration, and no direct anon/authenticated EXECUTE.
+- [ ] Run Query 17 and require `cross_business_mapping_count = 0` before applying the tenant-guard migration. Any existing mismatch requires owner review; never delete or auto-repair rows.
+
+## Seller-configurable service DP/full-payment UAT
+
+- [ ] For each SERVICE at each outlet, verify the seller can enable FULL only, DP only, or both; the UI must not allow both options to be disabled.
+- [ ] Verify DP can be configured as PERCENT (1-99%) or FIXED IDR amount. The fixed amount is per service unit and must be positive; the seller UI prevents setting it above the current outlet price.
+- [ ] Verify FULL checkout charges all PRODUCT and SERVICE lines at authoritative outlet prices.
+- [ ] Verify DP checkout charges PRODUCT lines in full and SERVICE lines at the seller-configured DP amount. Mixed-cart total, initial amount due, and remaining balance must reconcile exactly.
+- [ ] Verify checkout RPC recalculates DP from database outlet settings; forged client price or DP amount fields must not affect the result.
+- [ ] Verify DP option is rejected for product-only carts and whenever any SERVICE in the cart has DP disabled. Verify FULL is rejected when a SERVICE in the cart has full payment disabled.
+- [ ] Verify the Owner-only payment-terms RPC denies non-members and the SECURITY INVOKER trigger rejects direct STAFF table writes; anon/PUBLIC cannot execute the RPC or trigger function.
+- [ ] Retry with the same idempotency key and identical payment option; the same order, receipt token, initial due, and remaining balance must be returned. Reusing the key with a changed payment option must be rejected.
+- [ ] Digital Receipt must clearly show total order, initial amount due, remaining balance, payment option, and PENDING status.
+
+**Important accounting limitation:** the DP implementation stores the payment option, initial amount due, remaining balance, and a single payment status. It does not record actual amounts received, balance collection, payment receipts, refunds, or partial settlement events. All newly created orders remain PENDING. The Owner Dashboard's paid-only metrics exclude PENDING orders and its per-outlet summary displays DP pending amount and remaining DP balance. Those figures are order obligations, not proof of money received; this implementation does not yet provide a verified DP settlement/collection ledger. Do not mark a DP order fully PAID or include its full order total in paid revenue until a separate, audited payment-receipt/settlement workflow is implemented.

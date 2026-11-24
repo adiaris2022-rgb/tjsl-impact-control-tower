@@ -7,7 +7,7 @@ import { INBOX_PAGE_SIZE, buildInboxCursorFilter, cursorFromPage, type InboxCurs
 import { fetchAllSummaryRows, SUMMARY_PAGE_SIZE } from "./summary-pagination.mjs";
 
 type Outlet = { id: string; name: string };
-type Order = { id: string; outlet_id: string; order_no: string; customer_name: string; customer_whatsapp: string; fulfillment_type: string; payment_method: string; scheduled_at: string | null; delivery_address: string | null; delivery_note: string | null; total: number | string; status: string; payment_status: string; created_at: string };
+type Order = { id: string; outlet_id: string; order_no: string; customer_name: string; customer_whatsapp: string; fulfillment_type: string; payment_method: string; scheduled_at: string | null; delivery_address: string | null; delivery_note: string | null; total: number | string; payment_option?: "FULL" | "DP"; payment_amount_due?: number | string; payment_balance_due?: number | string; status: string; payment_status: string; created_at: string };
 async function getSupabase() {
   const response = await fetch("/api/supabase-config", { cache: "no-store" });
   const config = await response.json().catch(() => ({}));
@@ -56,7 +56,7 @@ function lifecycleActions(order: Order): LifecycleAction[] {
 export default function Owner() {
   const [businessIds, setBusinessIds] = useState<string[]>([]);
   const [businessId, setBusinessId] = useState("");
-  const [rows, setRows] = useState<{ outlet: string; transactions: number; nominal: number; attention: number }[]>([]);
+  const [rows, setRows] = useState<{ outlet: string; transactions: number; nominal: number; partialDue: number; balanceDue: number; attention: number }[]>([]);
   const [inboxOrders, setInboxOrders] = useState<(Order & { outlet_name: string })[]>([]);
   const [metrics, setMetrics] = useState({ count: 0, total: 0, outlets: 0 });
   const [inboxSearch, setInboxSearch] = useState("");
@@ -100,10 +100,10 @@ export default function Owner() {
       try {
         const supabase = await getSupabase();
         const start = new Date(); start.setHours(0, 0, 0, 0);
-        const inboxQuery = supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(INBOX_PAGE_SIZE);
+        const inboxQuery = supabase.from("otc_orders").select("id,outlet_id,order_no,customer_name,customer_whatsapp,fulfillment_type,payment_method,scheduled_at,delivery_address,delivery_note,total,payment_option,payment_amount_due,payment_balance_due,status,payment_status,created_at").eq("business_id", businessId).gte("created_at", start.toISOString()).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(INBOX_PAGE_SIZE);
         const startIso = start.toISOString();
         const summaryPromise = fetchAllSummaryRows((cursor, pageSize) => {
-          let query = supabase.from("otc_orders").select("id,outlet_id,total,status,payment_status,created_at")
+          let query = supabase.from("otc_orders").select("id,outlet_id,total,payment_option,payment_amount_due,payment_balance_due,status,payment_status,created_at")
             .eq("business_id", businessId).gte("created_at", startIso)
             .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(pageSize);
           return cursor ? query.or(buildInboxCursorFilter(cursor)) : query;
@@ -124,6 +124,8 @@ export default function Owner() {
           const matching = orderRows.filter((order) => order.outlet_id === id);
           return { outlet: names.get(id) || id, transactions: matching.length,
             nominal: matching.filter((order) => order.payment_status === "PAID").reduce((sum, order) => sum + Number(order.total || 0), 0),
+            partialDue: matching.filter((order) => order.payment_option === "DP" && order.payment_status !== "PAID").reduce((sum, order) => sum + Number(order.payment_amount_due || 0), 0),
+            balanceDue: matching.filter((order) => order.payment_option === "DP" && order.payment_status !== "PAID").reduce((sum, order) => sum + Number(order.payment_balance_due || 0), 0),
             attention: matching.filter((order) => !["SUCCESS", "PO_SUCCESS"].includes(order.status)).length,
           };
         }).sort((a, b) => b.nominal - a.nominal);
@@ -197,7 +199,7 @@ export default function Owner() {
   if (error && !businessId) return <main className="otc-page"><div className="info-box wide">{error}</div></main>;
   return <main className="otc-page">
     <header className="otc-head"><div><b>NORTAGO Order</b><small>Owner Dashboard · Order & Sales</small></div>
-      <nav style={{ display: "flex", gap: 12, alignItems: "center" }}><Link href="/otc/owner/subscriptions">Langganan Outlet</Link><Link href="/otc">Home</Link></nav>
+      <nav style={{ display: "flex", gap: 12, alignItems: "center" }}><Link href="/otc/owner/catalog">Kelola Produk & Jasa</Link><Link href="/otc/owner/subscriptions">Langganan Outlet</Link><Link href="/otc">Home</Link></nav>
     </header>
     <section className="customer-title"><span>ORDER & SALES</span><h1>Owner Dashboard</h1><p>Ringkasan transaksi dan penjualan untuk bisnis yang dipilih.</p>
       {businessIds.length > 1 ? <label className="business-switcher">Pilih bisnis
@@ -206,9 +208,9 @@ export default function Owner() {
     </section>
     {error ? <div className="info-box wide">{error}</div> : null}
     {loading ? <div className="loading">Memuat data bisnis…</div> : <>
-      <section className="metric-grid otc-metrics">{[[String(metrics.count), "Transaksi hari ini"], [money(metrics.total), "Pembayaran terverifikasi"], [String(metrics.outlets), "Outlet"], [currentTime, "Waktu laporan"]].map(([value, label]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section>
+      <section className="metric-grid otc-metrics">{[[String(metrics.count), "Transaksi hari ini"], [money(metrics.total), "Pelunasan terverifikasi"], [String(metrics.outlets), "Outlet"], [currentTime, "Waktu laporan"]].map(([value, label]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section>
       <section className="data-panel"><div className="section-toolbar"><div><span className="eyebrow">TODAY BY OUTLET</span><h2>Ringkasan outlet</h2></div><Link className="otc-secondary" href="/otc/owner-report">Lihat laporan per jam</Link></div>
-        {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pembayaran terverifikasi</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
+        {rows.length === 0 ? <div className="muted">Belum ada order hari ini.</div> : <div className="table-wrap"><table><thead><tr><th>Outlet</th><th>Transaksi</th><th>Pelunasan terverifikasi</th><th>Tagihan awal DP</th><th>Sisa tagihan</th><th>Attention</th></tr></thead><tbody>{rows.map((row) => <tr key={row.outlet}><td>{row.outlet}</td><td>{row.transactions}</td><td>{money(row.nominal)}</td><td>{money(row.partialDue)}</td><td>{money(row.balanceDue)}</td><td><span className="status-badge">{row.attention} open</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="data-panel">
         <div className="section-toolbar"><div><span className="eyebrow">ORDER INBOX · STATUS MANAGEMENT</span><h2>Pesanan hari ini</h2></div><span className="status-badge">{filteredInboxOrders.length} cocok · {inboxOrders.length} dimuat</span></div>
@@ -221,11 +223,11 @@ export default function Owner() {
         {filteredInboxOrders.length===0?<div className="muted">Tidak ada pesanan yang sesuai.</div>:<div className="table-wrap"><table><thead><tr><th>Order / Customer</th><th>Outlet</th><th>Mode</th><th>Total</th><th>Status</th><th>Detail</th></tr></thead><tbody>
           {filteredInboxOrders.map(order=><tr key={order.id}>
             <td><strong>{order.order_no}</strong><div>{order.customer_name}</div><small>{order.created_at?new Date(order.created_at).toLocaleString("id-ID"):""}</small></td>
-            <td>{order.outlet_name}</td><td>{order.fulfillment_type}</td><td>{money(Number(order.total||0))}</td><td><span className="status-badge">{order.status} · {order.payment_status}</span></td>
+            <td>{order.outlet_name}</td><td>{order.fulfillment_type}</td><td>{money(Number(order.total||0))}{order.payment_option === "DP" ? <small style={{display:"block"}}>Tagihan awal {money(Number(order.payment_amount_due||0))} · Sisa {money(Number(order.payment_balance_due||0))}</small> : null}</td><td><span className="status-badge">{order.status} · {order.payment_status}</span></td>
             <td><button type="button" className="otc-secondary" onClick={()=>setExpandedOrderId(expandedOrderId===order.id?"":order.id)}>{expandedOrderId===order.id?"Tutup":"Lihat"}</button></td>
           </tr>)}
           {filteredInboxOrders.filter(order=>order.id===expandedOrderId).map(order=><tr key={order.id+"-detail"}><td colSpan={6}><div style={{padding:12,display:"grid",gap:6}}>
-            <strong>Detail {order.order_no}</strong><div>WhatsApp: {order.customer_whatsapp||"—"}</div><div>Metode pembayaran: {order.payment_method||"—"}</div><div>Jadwal: {order.scheduled_at?new Date(order.scheduled_at).toLocaleString("id-ID"):"—"}</div><div>Alamat delivery: {order.delivery_address||"—"}</div><div>Catatan pelanggan: {order.delivery_note||"—"}</div>
+            <strong>Detail {order.order_no}</strong><div>WhatsApp: {order.customer_whatsapp||"—"}</div><div>Metode pembayaran: {order.payment_method||"—"}</div><div>Skema pembayaran: {order.payment_option === "DP" ? "DP" : "Pembayaran penuh"}</div><div>Tagihan awal: {money(Number(order.payment_amount_due ?? order.total))}</div>{Number(order.payment_balance_due||0)>0?<div>Sisa tagihan DP: {money(Number(order.payment_balance_due))}</div>:null}<div>Jadwal: {order.scheduled_at?new Date(order.scheduled_at).toLocaleString("id-ID"):"—"}</div><div>Alamat delivery: {order.delivery_address||"—"}</div><div>Catatan pelanggan: {order.delivery_note||"—"}</div>
             <div style={{marginTop:12,display:"grid",gap:8}}>
               <label style={{display:"grid",gap:5}}>Catatan tindakan (opsional, maks. 500 karakter)
                 <textarea value={lifecycleNote} maxLength={500} onChange={(e)=>setLifecycleNote(e.target.value)} rows={2} placeholder="Catatan untuk riwayat status…" style={{width:"100%",padding:10,borderRadius:9,border:"1px solid #d6dce2",background:"var(--otc-input-bg, #fff)",color:"inherit"}}/>

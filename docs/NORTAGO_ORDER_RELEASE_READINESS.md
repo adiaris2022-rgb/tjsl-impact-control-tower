@@ -217,3 +217,77 @@ Job-level status was fetched for all seven exact-head runs: **7/7 workflow runs 
 
 See [NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md](./NORTAGO_ORDER_LIFECYCLE_OWNER_BOUNDARY_DECISION.md). The current owner guard is useful defense-in-depth but trusts a shared function-owner identity. A dedicated non-login lifecycle owner, with no memberships and minimal column/RLS grants, is the proposed production boundary. It is **not implemented or applied** until the actual Supabase `has_business_role`, `auth.uid()`, role attributes, RLS, and migration-executor permissions are inspected in an owner-approved staging session.
 
+
+
+## Product & Service catalog — ported into release stack, 24 Nov 2026
+
+The Product & Service work previously isolated on PR #29 was not an ancestor of the consolidated PR #34 release branch. It is now being ported as a follow-on to the lifecycle-hardened PR #37 stack (PR #38 candidate):
+
+- Additive `otc_products.product_type` contract: `PRODUCT` or `SERVICE`, default `PRODUCT`.
+- Owner catalog route creates items through the authenticated, business-membership-checked atomic `nortago_create_catalog_item_for_outlet` RPC; outlet price and availability remain outlet-specific.
+- Customer menu filters inactive products and labels PRODUCT/SERVICE; checkout labels product/service lines and rejects Pre-Order times that are not in the future.
+- Disposable SQL tests cover create RPC ACL/auth/business membership/active outlet/invalid type/price/image/name, outlet mapping, and SERVICE checkout-to-receipt using the outlet price. Checkout idempotency test also sends forged client price/unit_price fields and verifies server-side outlet pricing remains authoritative.
+- No product/service changes are applied to Supabase staging or production.
+
+## Concrete commercial gates from current source inspection
+
+1. **Delivery fee is not calculated.** The checkout idempotency migration writes `delivery_fee = 0` and `total = subtotal` for all fulfillment types. The customer menu says delivery fee is not calculated; checkout/receipt still display the returned total. Delivery cannot be represented as a final all-in price until the owner chooses a pricing/collection policy or the customer-facing flow explicitly treats delivery fee as separately confirmed.
+2. **Order payment remains pending.** Checkout offers QRIS/Cash/Other, states the payment gateway is not connected, and creates `payment_status = PENDING`. The Owner page's lifecycle action calls only `nortago_update_order_status` and explicitly says payment status is not changed; paid revenue metrics count only `payment_status = PAID`. No order-payment verification control was found in the reviewed Owner page. A manual verification workflow or a separately approved payment integration is required before paid-order reporting/fulfillment can be relied upon. LinkBayar remains disabled.
+3. **Outlet-level staff isolation is not implemented in the reviewed UI.** Owner/catalog access is checked at business membership; outlet selection is within the business. Staging UAT must decide whether staff must be restricted to assigned outlets before commercial acceptance.
+4. **SERVICE uses the shared order lifecycle.** The catalog distinguishes PRODUCT/SERVICE, but service-specific scheduling/fulfillment rules are not separate. Validate that the shared Take Away/Pre-Order/Delivery workflow matches the service offers being sold.
+
+These are explicit acceptance decisions, not permission to invent fee, payment, or role policy. Keep the relevant flows disabled or clearly disclosed until the owner-approved policy is implemented and tested.
+
+
+## Outlet/product tenant-isolation finding and guard — 24 Nov 2026
+
+Source review of `20260928_otc_commerce_core_v1.sql` found that the original `otc_outlet_products_staff_manage` policy checked membership against the outlet business but did not require the mapped product to belong to that same business. The outlet/product tables have separate foreign keys, not a composite business-consistency constraint. A business member with direct table DML could therefore attempt a cross-business mapping if they knew another product UUID; the catalog RPC itself was safe because it derives the product business from the selected outlet, but the table policy did not enforce the invariant for all writes.
+
+PR #38 adds a feature-branch migration that:
+- Aborts if any existing cross-business outlet/product mapping is found; it does not repair or delete data.
+- Replaces the staff mapping policy with an outlet/product business-equality check.
+- Adds SECURITY INVOKER triggers for mapping INSERT/UPDATE and for outlet/product `business_id` reassignment, preventing existing mappings from becoming cross-business after a reassignment.
+- Revokes direct EXECUTE on trigger functions; they are invoked only by their triggers.
+- Adds disposable regression tests for valid mappings, cross-business insert/update rejection, and outlet/product business reassignment rejection.
+
+This closes the source-level tenant mapping gap in the candidate release branch. Actual staging data must still pass the migration preflight and real authenticated-session UAT before approval.
+
+
+5. **Service DP/full-payment terms are implemented in the PR #38 candidate; settlement is not.** Each SERVICE/outlet mapping can enable FULL only, DP only, or both. DP is configured as 1–99% or a fixed IDR amount per service unit; the checkout RPC recomputes the amount from the authoritative outlet price, stores the initial amount due and remaining balance, and the private digital receipt displays both. PRODUCT lines remain due in full in a mixed cart. The payment-settings RPC and a SECURITY INVOKER trigger restrict changes to OWNER/PROGRAM_MANAGER/PARTNER; direct STAFF writes are rejected. This is disposable-CI/source evidence only until exact-head CI and staging UAT pass. Actual money received, payment confirmation, balance collection, refunds, and partial settlement events are not recorded. All orders still start PENDING; do not mark a DP order PAID or count the full order total as paid revenue until an audited settlement workflow exists.
+
+## Seller-configurable DP/full-payment implementation - 24 Nov 2026
+
+- Owner catalog stores FULL/DP availability and DP type/value per outlet-service mapping. DP supports PERCENT (1-99%) or FIXED IDR per service unit.
+- Checkout sends only the selected FULL/DP option. Database RPC recomputes the initial payment due from the authoritative outlet price and seller's saved terms; PRODUCT lines remain due in full, SERVICE lines can use DP.
+- Idempotency hash includes payment option. The prior 10-argument RPC overload is removed; only the explicit 11-argument signature is granted to anon/authenticated.
+- The receipt RPC and Digital Receipt display the full order total, initial amount due, and remaining balance.
+- Disposable PostgreSQL smoke tests cover FULL, percentage DP, fixed DP, mixed PRODUCT/SERVICE carts, unauthorized options, receipt contents, and idempotent retry. CI must confirm migration apply/replay and the dedicated DP smoke test on the current exact PR head.
+
+**Accounting gate:** order.payment_status remains a single PENDING/PAID/FAILED/REFUNDED value. No child payment/receipt ledger or separate partial-settlement flow currently records actual DP collected and later balance receipts. Accordingly Owner Dashboard excludes DP orders from fully-settled revenue and shows initial DP due and remaining balance separately. Do not set a DP order to PAID or count its full total as collected until a separate audited payment-receipt/settlement workflow is built and tested. LinkBayar remains disabled for customer order settlement.
+
+## Staging target mismatch discovered by read-only audit - 24 Nov 2026
+
+- Connected Supabase organization exposes an active project named NORTAGO-ORDER-STAGING (`aakhinaryzidzpsjeewp`), but read-only catalog inspection found no `public.otc_orders`, `otc_outlets`, `otc_products`, `otc_outlet_products`, `public.business_users`, or `public.has_business_role(uuid,text[])`; migration list was empty.
+- The core OTC migration comment refers to a different Supabase project ref (`tdpupelhvzxwhbqnnlxk`). The connected `aakhinaryzidzpsjeewp` project is therefore not proven to be the populated database behind this release candidate. Do not apply NORTAGO migrations to it until the correct staging target is identified and owner-approved.
+- Supabase security advisor flags `public.rls_auto_enable()` as a SECURITY DEFINER event-trigger function executable by PUBLIC/anon/authenticated; the event trigger `ensure_rls` is enabled. Revoke client/PUBLIC EXECUTE in a reviewed migration on the confirmed target, then re-run security advisors. No live/staging ACL change was made during this audit.
+- This staging read-only inspection is distinct from disposable PostgreSQL CI and does not establish real application RLS/Auth/tenant behavior.
+
+## Latest exact-head validation — 24 Nov 2026
+
+- PR #38 head: `7dd1e366a6a67b92454c586ad12503ca8658fb05`; base PR #37 head: `be598ef1ea6437f4854785b07c65b95f57226df3`.
+- [NORTAGO Order CI Run #367](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45336888761): PASS, both production build and PostgreSQL validation jobs completed successfully on the exact PR head.
+- [Vercel preview status](https://vercel.com/nortago/nortago-order-staging/CGfwdTWzxSAWFii5SLNwdm9pgvkk): Success; preview provider status is not browser UAT.
+- The exact-head CI run covers Product/SERVICE catalog, cross-business outlet/product guard, seller-configurable service DP/full-payment migration and replay, Owner-only payment configuration RPC/trigger, DP percentage/fixed calculations, mixed cart, digital receipt amounts, changed-payment-option idempotency conflict, checkout-to-receipt, subscription, lifecycle security, pagination, and read-only staging audit SQL.
+- Supabase staging remains unverified. No live/staging migration, production deployment, payment/webhook activation, or secrets/environment changes were performed. The candidate stores payment obligations but does not record actual money received, balance collection, refunds, or settlement events; checkout remains PENDING until a separately approved settlement workflow exists.
+
+
+## Latest exact-head validation — 24 Nov 2026, 13:39 WIB
+
+- PR #38 remains Open / Draft / Unmerged. Exact head `924af2923e154ceca023370c5bf18943bd6f4f9f`; exact base `be598ef1ea6437f4854785b07c65b95f57226df3` (PR #37 dedicated lifecycle-owner branch).
+- [CI Run #369](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45342651041) PASS on that exact head. PostgreSQL migration/security checks and production build/pagination tests both completed successfully.
+- Vercel combined status is success for the exact head, but the bot's preview alias still contains commit prefix `90d2f9`, not `924af`. Preview and inspector URLs are inaccessible to the verification browser; exact-head browser UAT remains unverified.
+- Checkout and private receipt now explicitly disclose that Delivery fees are not calculated or included in the displayed total and must be confirmed with the seller before payment/processing. This is disclosure only; fee calculation, collection, and courier dispatch remain unimplemented.
+- Read-only Supabase inspection of connected project NORTAGO-ORDER-STAGING (`aakhinaryzidzpsjeewp`, ACTIVE_HEALTHY, PostgreSQL 17.12) found an empty `public` schema and no app migrations. `auth.uid()` exists, but OTC tables, `business_users`, `has_business_role`, lifecycle RPC, status audit, and app migration ledger are absent. Effective OTC grants/RLS/triggers therefore cannot be verified on this project.
+- The OTC core migration comment references another project ref (`tdpupelhvzxwhbqnnlxk`), which the connected account could not inspect (permission denied). Do not apply migrations to the empty connected project; identify the populated staging target first.
+- Supabase Security Advisor flags `public.rls_auto_enable()` as SECURITY DEFINER and executable by anon/authenticated; the `ensure_rls` event trigger is enabled. No ACL change was made; review this platform-level finding on the confirmed target.
+- No staging/live migration, merge, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed.

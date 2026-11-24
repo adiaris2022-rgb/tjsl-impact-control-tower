@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 type Mode = "TAKE_AWAY" | "PRE_ORDER" | "DELIVERY";
-type Product = { id: string; name: string; price: number; cat?: string; desc?: string; image_url?: string | null };
+type Product = { id: string; name: string; price: number; product_type: "PRODUCT" | "SERVICE"; allow_full_payment: boolean; allow_dp: boolean; dp_type: "PERCENT" | "FIXED"; dp_value: number; cat?: string; desc?: string; image_url?: string | null };
 type Outlet = { id: string; business_id: string; name: string };
 type CartItem = { key: string; product: Product; qty: number; variant: string; addons: { name: string; price: number }[] };
 
@@ -64,9 +64,10 @@ export default function CustomerOrder() {
         const supabase = await getSupabase();
         const { data, error: queryError } = await supabase
           .from("otc_outlet_products")
-          .select("price,is_available,product:otc_products(id,name,description,category,image_url,base_price)")
+          .select("price,is_available,allow_full_payment,allow_dp,dp_type,dp_value,product:otc_products(id,name,description,category,image_url,base_price,product_type)")
           .eq("outlet_id", outletId)
-          .eq("is_available", true);
+          .eq("is_available", true)
+          .eq("product.is_active", true);
         if (queryError) throw queryError;
         const mapped = (data || [])
           .filter((row: any) => row.product && row.product.id)
@@ -77,6 +78,11 @@ export default function CustomerOrder() {
             cat: row.product.category || undefined,
             desc: row.product.description || undefined,
             image_url: row.product.image_url || null,
+            product_type: (row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT") as Product["product_type"],
+            allow_full_payment: row.product.product_type === "SERVICE" ? row.allow_full_payment !== false : true,
+            allow_dp: row.product.product_type === "SERVICE" && Boolean(row.allow_dp),
+            dp_type: (row.dp_type === "FIXED" ? "FIXED" : "PERCENT") as Product["dp_type"],
+            dp_value: Number(row.dp_value ?? 50),
           }));
         if (alive) setProducts(mapped);
       } catch (cause: unknown) {
@@ -138,18 +144,18 @@ export default function CustomerOrder() {
       {error ? <div className="info-box wide">{error}</div> : null}
       <section className="otc-shop">
         <div className="menu-panel">
-          <div className="section-head"><div><span className="eyebrow">MENU</span><h2>Produk & Harga</h2></div><span className="pill">{menuLoading ? "Memuat…" : "Outlet Live"}</span></div>
-          {menuLoading ? <p className="muted">Memuat produk outlet…</p> : products.length === 0 ? <p className="muted">Belum ada produk tersedia di outlet ini.</p> : products.map((product) => (
+          <div className="section-head"><div><span className="eyebrow">MENU</span><h2>Produk & Jasa</h2></div><span className="pill">{menuLoading ? "Memuat…" : "Outlet Live"}</span></div>
+          {menuLoading ? <p className="muted">Memuat produk outlet…</p> : products.length === 0 ? <p className="muted">Belum ada produk atau jasa tersedia di outlet ini.</p> : products.map((product) => (
             <article className="product-card" key={product.id}>
               <div className="product-photo">{product.image_url ? <img src={product.image_url} alt={product.name} /> : "PHOTO"}</div>
-              <div className="product-info"><small>{product.cat || "Product"}</small><h3>{product.name}</h3><p>{product.desc || "Produk NORTAGO Order"}</p><b>Rp {product.price.toLocaleString("id-ID")}</b></div>
+              <div className="product-info"><small>{product.product_type === "SERVICE" ? "JASA" : "PRODUK"}{product.cat ? " · " + product.cat : ""}</small><h3>{product.name}</h3><p>{product.desc || "Produk NORTAGO Order"}</p><b>Rp {product.price.toLocaleString("id-ID")}</b></div>
               <button type="button" className="otc-secondary" onClick={() => add(product)} disabled={menuLoading}>+ Tambah</button>
             </article>
           ))}
         </div>
         <aside className="cart-panel">
           <span className="eyebrow">CART</span><h2>Pesanan Anda</h2>
-          {cart.length === 0 ? <p className="muted">Belum ada produk.</p> : cart.map((item) => (
+          {cart.length === 0 ? <p className="muted">Belum ada item.</p> : cart.map((item) => (
             <div className="cart-line" key={item.key}>
               <span>{item.product.name} × {item.qty}</span>
               <div style={{ textAlign: "right" }}><b>Rp {(item.product.price * item.qty).toLocaleString("id-ID")}</b><div className="qty"><button type="button" onClick={() => change(item.key, -1)}>−</button><span>{item.qty}</span><button type="button" onClick={() => change(item.key, 1)}>+</button></div></div>

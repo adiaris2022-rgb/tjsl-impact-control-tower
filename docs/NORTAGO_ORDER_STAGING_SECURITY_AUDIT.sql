@@ -309,3 +309,169 @@ join pg_namespace n on n.oid = p.pronamespace
 where p.proowner = (select oid from pg_roles where rolname = 'nortago_order_lifecycle_owner')
 order by n.nspname, p.oid::regprocedure::text;
 
+-- 15) Inspect outlet/product business consistency before applying the tenant guard.
+-- All statements in this section are read-only. Any non-zero mismatch count
+-- is a migration blocker requiring owner review; never auto-repair rows.
+select
+  count(*) as total_outlet_product_mappings,
+  count(*) filter (where o.business_id is distinct from p.business_id) as cross_business_mapping_count
+from public.otc_outlet_products op
+join public.otc_outlets o on o.id = op.outlet_id
+join public.otc_products p on p.id = op.product_id;
+
+select
+  op.outlet_id,
+  op.product_id,
+  o.business_id as outlet_business_id,
+  p.business_id as product_business_id
+from public.otc_outlet_products op
+join public.otc_outlets o on o.id = op.outlet_id
+join public.otc_products p on p.id = op.product_id
+where o.business_id is distinct from p.business_id
+order by op.outlet_id, op.product_id
+limit 100;
+
+-- Inspect RLS and effective client table privileges for the mapping and parent tables.
+select
+  c.oid::regclass as relation_name,
+  pg_get_userbyid(c.relowner) as table_owner,
+  c.relrowsecurity as rls_enabled,
+  c.relforcerowsecurity as rls_forced,
+  has_table_privilege('anon', c.oid, 'select') as anon_can_select,
+  has_table_privilege('anon', c.oid, 'insert') as anon_can_insert,
+  has_table_privilege('anon', c.oid, 'update') as anon_can_update,
+  has_table_privilege('authenticated', c.oid, 'select') as authenticated_can_select,
+  has_table_privilege('authenticated', c.oid, 'insert') as authenticated_can_insert,
+  has_table_privilege('authenticated', c.oid, 'update') as authenticated_can_update
+from pg_class c
+where c.oid in (
+  pg_catalog.to_regclass('public.otc_outlet_products'),
+  pg_catalog.to_regclass('public.otc_outlets'),
+  pg_catalog.to_regclass('public.otc_products')
+)
+order by c.oid::regclass::text;
+
+select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+from pg_policies
+where schemaname = 'public'
+  and tablename in ('otc_outlet_products','otc_outlets','otc_products')
+order by tablename, policyname;
+
+-- Confirm all three server-side guards are enabled and their trigger functions
+-- remain SECURITY INVOKER and non-callable directly by anon/authenticated.
+select
+  t.tgrelid::regclass as relation_name,
+  t.tgname as trigger_name,
+  t.tgenabled as trigger_enabled,
+  p.oid::regprocedure as trigger_function,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  p.proacl as function_acl,
+  has_function_privilege('anon', p.oid, 'execute') as anon_can_execute,
+  has_function_privilege('authenticated', p.oid, 'execute') as authenticated_can_execute
+from pg_trigger t
+join pg_proc p on p.oid = t.tgfoid
+where not t.tgisinternal
+  and t.tgname in (
+    'otc_outlet_products_business_match_guard',
+    'otc_products_business_reassignment_guard',
+    'otc_outlets_business_reassignment_guard',
+    'otc_outlet_products_service_payment_terms_owner_guard'
+  )
+order by t.tgname;
+
+
+-- 15. Effective authenticated grants needed by the outlet/product tenant guard.
+-- SELECT ... FOR SHARE also requires UPDATE privilege on the locked parent tables.
+select
+  'authenticated' as role_name,
+  'otc_outlet_products' as table_name,
+  has_table_privilege('authenticated','public.otc_outlet_products','select') as can_select,
+  has_table_privilege('authenticated','public.otc_outlet_products','insert') as can_insert,
+  has_table_privilege('authenticated','public.otc_outlet_products','update') as can_update,
+  has_table_privilege('authenticated','public.otc_outlets','select') as can_select_outlets,
+  has_table_privilege('authenticated','public.otc_outlets','update') as can_lock_outlets_for_share,
+  has_table_privilege('authenticated','public.otc_products','select') as can_select_products,
+  has_table_privilege('authenticated','public.otc_products','update') as can_lock_products_for_share,
+  has_column_privilege('authenticated','public.otc_outlet_products','outlet_id','select') as can_read_outlet_id,
+  has_column_privilege('authenticated','public.otc_outlet_products','product_id','select') as can_read_product_id,
+  has_column_privilege('authenticated','public.otc_outlets','business_id','select') as can_read_outlet_business,
+  has_column_privilege('authenticated','public.otc_products','business_id','select') as can_read_product_business;
+
+-- 16. Catalog tenant-guard RLS policy and trigger state/function definitions.
+select
+  schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+from pg_policies
+where schemaname='public'
+  and tablename in ('otc_outlet_products','otc_outlets','otc_products')
+order by tablename, policyname;
+
+select
+  c.relname as table_name,
+  t.tgname as trigger_name,
+  t.tgenabled as trigger_enabled,
+  pg_get_userbyid(p.proowner) as trigger_function_owner,
+  p.prosecdef as trigger_function_security_definer,
+  p.proconfig as trigger_function_configuration,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  pg_get_functiondef(p.oid) as trigger_function_definition
+from pg_trigger t
+join pg_class c on c.oid=t.tgrelid
+join pg_proc p on p.oid=t.tgfoid
+where not t.tgisinternal
+  and t.tgname in (
+    'otc_outlet_products_business_match_guard',
+    'otc_products_business_reassignment_guard',
+    'otc_outlets_business_reassignment_guard',
+    'otc_outlet_products_service_payment_terms_owner_guard'
+  )
+order by c.relname,t.tgname;
+
+-- 17. Existing cross-business mappings must be zero before the tenant guard migration.
+select
+  count(*) as cross_business_mapping_count
+from public.otc_outlet_products op
+join public.otc_outlets o on o.id=op.outlet_id
+join public.otc_products p on p.id=op.product_id
+where o.business_id is distinct from p.business_id;
+
+
+-- 18. Seller-configurable service payment terms: owner RPC, trigger, and stored outlet configuration.
+select
+  p.oid::regprocedure as function_name,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute
+from pg_proc p
+where p.oid in (
+  to_regprocedure('public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)'),
+  to_regprocedure('public.nortago_guard_service_payment_terms_owner()')
+)
+order by p.oid::regprocedure::text;
+
+select
+  t.tgname as trigger_name,
+  t.tgenabled as trigger_enabled,
+  p.prosecdef as trigger_function_security_definer,
+  p.proconfig as trigger_function_configuration,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  pg_get_functiondef(p.oid) as trigger_function_definition
+from pg_trigger t
+join pg_proc p on p.oid=t.tgfoid
+where t.tgrelid='public.otc_outlet_products'::regclass
+  and t.tgname='otc_outlet_products_service_payment_terms_owner_guard'
+  and not t.tgisinternal;
+
+select
+  count(*) as service_outlet_mappings,
+  count(*) filter (where allow_full_payment) as full_payment_enabled,
+  count(*) filter (where allow_dp) as dp_enabled,
+  count(*) filter (where not allow_full_payment and not allow_dp) as invalid_payment_option_rows
+from public.otc_outlet_products op
+join public.otc_products p on p.id=op.product_id
+where p.product_type='SERVICE';
