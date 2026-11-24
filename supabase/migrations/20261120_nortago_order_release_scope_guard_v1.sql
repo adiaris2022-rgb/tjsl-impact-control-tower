@@ -1,7 +1,6 @@
 -- NORTAGO Order-only release guard.
--- Prevent Dine-In and Walk-In order records from being created/modified in Order.
+-- Prevent Dine-In and Walk-In orders from being created or lifecycle-updated in Order.
 -- Reservation RPCs are separately revoked by the Order-only scope lock migration.
-
 create or replace function public.nortago_order_only_scope_guard()
 returns trigger
 language plpgsql
@@ -18,11 +17,10 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function public.nortago_order_only_scope_guard() from public, anon, authenticated;
 
 drop trigger if exists otc_orders_order_only_scope_guard on public.otc_orders;
 create trigger otc_orders_order_only_scope_guard
-before insert or update of order_source, fulfillment_type
+before insert or update of order_source, fulfillment_type, status
 on public.otc_orders
 for each row execute function public.nortago_order_only_scope_guard();
