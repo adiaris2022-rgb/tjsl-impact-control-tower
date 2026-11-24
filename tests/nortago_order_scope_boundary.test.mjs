@@ -22,3 +22,10 @@ for (const route of reservationRoutes) {
     );
   });
 }
+
+test("README describes the NORTAGO ORDER-only commercial scope", () => {
+  const readme = readFileSync("README.md", "utf8");
+  assert.match(readme, /NORTAGO ORDER release scope/);
+  assert.match(readme, /Dine-In, Reservation, Walk-In, queue, tables\/seating\/capacity, sessions/);
+  assert.doesNotMatch(readme, /Dine-In reservation/i);
+});
