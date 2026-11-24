@@ -81,7 +81,7 @@ export default function CustomerOrder() {
             product_type: (row.product.product_type === "SERVICE" ? "SERVICE" : "PRODUCT") as Product["product_type"],
             allow_full_payment: row.product.product_type === "SERVICE" ? row.allow_full_payment !== false : true,
             allow_dp: row.product.product_type === "SERVICE" && Boolean(row.allow_dp),
-            dp_type: row.dp_type === "FIXED" ? "FIXED" : "PERCENT",
+            dp_type: (row.dp_type === "FIXED" ? "FIXED" : "PERCENT") as Product["dp_type"],
             dp_value: Number(row.dp_value ?? 50),
           }));
         if (alive) setProducts(mapped);
