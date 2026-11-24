@@ -60,3 +60,36 @@ LinkBayar remains disabled. No staging/live migration, production deploy, paymen
 A dedicated-owner migration candidate is now proposed on feature branch `fix/nortago-order-dedicated-lifecycle-owner-20261124` (PR #37). It adds a database preflight that aborts unless the actual `auth.uid()`, SECURITY DEFINER `has_business_role(uuid,text[])` with a `pg_catalog`-first search path, required tables, and RLS are present. It creates a NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS role with no memberships, transfers only the lifecycle RPC, and grants only the required order/outlet/audit columns plus helper EXECUTE.
 
 The RPC body is narrowed from `SELECT *` to the five columns it actually consumes (`id`, `business_id`, `outlet_id`, `status`, `fulfillment_type`), so the proposed owner does not need access to customer PII, payment fields, checkout keys, or order items. The CI candidate also checks exact column privileges, role attributes/memberships, RLS policy presence, and the existing direct-write rejection/approved-RPC regression. This is still feature-branch/disposable-CI evidence only. It has not been applied to Supabase staging or production. If the actual staging helper is not SECURITY DEFINER with a safe search path, the migration deliberately aborts; redesign must follow the observed helper and membership relation rather than weakening grants.
+
+
+## Managed Supabase migration-executor compatibility — 24 Nov 2026
+
+A read-only catalog audit was run against the connected Supabase project `NORTAGO-ORDER-STAGING` (`aakhinaryzidzpsjeewp`). This project is ACTIVE_HEALTHY on PostgreSQL 17.12, but it is empty for the application: no public OTC tables, no `business_users`, no `has_business_role`, no lifecycle RPC, no status audit table, and no application migration ledger. It is not proven to be the populated staging target; the OTC core migration comment references `tdpupelhvzxwhbqnnlxk`, which this connection cannot inspect.
+
+The actual managed-role catalog on the connected project shows:
+
+- Current role `postgres`: `rolsuper=false`, `rolcreaterole=true`, `rolbypassrls=true`, `rolcanlogin=true`. It is not a database superuser.
+- `public` schema owner is `pg_database_owner`; `postgres` has USAGE and CREATE with grant option.
+- `auth` schema owner is `supabase_admin`; `postgres` has USAGE but no CREATE or grant option.
+- `auth.uid()` owner is `supabase_auth_admin`; EXECUTE is available to `postgres` through PUBLIC, but is not grantable by `postgres`.
+- `postgres` is not a member of `supabase_admin`; its catalog memberships do not confer ownership of the auth schema/function.
+
+This makes the previous superuser-only lifecycle-owner migration path incompatible with the connected managed-role shape. Directly granting auth schema USAGE or auth.uid EXECUTE to the dedicated lifecycle owner is also not available to this executor. No attempt was made to change these platform ACLs.
+
+### PR #39 feature-branch adjustment
+
+PR #39 updates the candidate migration without broadening client or platform grants:
+
+1. Require a trusted migration executor with `CREATEROLE` (or superuser), public-schema CREATE grant option, access to `auth.uid()`, and ownership/membership sufficient to transfer the existing lifecycle RPC. Fail closed if any observed prerequisite is missing.
+2. Keep auth schema access with the trusted migration executor. Add `public.nortago_order_auth_actor()`, a SECURITY DEFINER bridge owned by that executor, with `search_path=pg_catalog`; it returns only `auth.uid()`. Revoke EXECUTE from PUBLIC/anon/authenticated and grant it only to `nortago_order_lifecycle_owner`. The dedicated owner receives neither USAGE on `auth` nor a direct auth.uid grant.
+3. Temporarily grant the migration executor membership in the dedicated owner with `INHERIT FALSE`, `SET TRUE`, and `ADMIN FALSE`; transfer/replace the lifecycle RPC under that role; then revoke the membership and temporary public-schema CREATE. The dedicated role must finish with no memberships and no schema CREATE.
+4. Keep the dedicated lifecycle owner NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS, with only its reviewed column-level order/outlet/audit grants and RLS policies. The bridge is a separate, narrowly scoped trust boundary and is not a status writer.
+
+CI now prepares a NOLOGIN, non-superuser CREATEROLE executor, applies and replays the migration under that executor, and checks the helper ACL/owner, role cleanup, minimal grants/RLS, direct status-write rejection, and approved RPC transition/audit. This remains disposable PostgreSQL evidence only.
+
+### Owner decision and remaining preconditions
+
+The preferred path is now a managed-role-compatible migration using the restricted auth-actor bridge, **not** granting the dedicated lifecycle owner access to the auth schema and **not** broadening authenticated/service_role privileges. Before applying it to the populated staging project, confirm that the real executor owns the OTC tables and lifecycle RPC, can grant CREATE on public temporarily, can execute auth.uid, and can grant EXECUTE on the actual SECURITY DEFINER `has_business_role(uuid,text[])` helper (or that the lifecycle owner already has that EXECUTE). Inspect the real helper body/owner/ACL and its membership-table RLS first. If those conditions do not hold, stop and require the database owner to provide an approved migration principal or redesign the bridge from the observed schema.
+
+The connected project remains empty, so actual effective grants on `otc_orders.status`, actual OTC RLS policies/triggers, and authenticated-session behavior remain **unverified**. Do not apply migrations to `aakhinaryzidzpsjeewp` merely because it is named staging. The separate `ensure_rls` event trigger invokes `public.rls_auto_enable()`; the function is SECURITY DEFINER with default PUBLIC EXECUTE on this project. This platform-level finding is documented for review on the confirmed target; no ACL change was made.
+
