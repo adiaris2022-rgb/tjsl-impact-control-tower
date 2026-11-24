@@ -21,7 +21,8 @@ begin
          or has_table_privilege(v_role,v_table,'delete')
          or has_table_privilege(v_role,v_table,'truncate')
          or has_table_privilege(v_role,v_table,'references')
-         or has_table_privilege(v_role,v_table,'trigger') then
+         or has_table_privilege(v_role,v_table,'trigger')
+         or has_table_privilege(v_role,v_table,'maintain') then
         raise exception 'PUBLIC_CATALOG_UNEXPECTED_TABLE_LEVEL_MUTATION_OR_DDL_PRIVILEGE: %, %',v_role,v_table;
       end if;
     end loop;
@@ -40,7 +41,8 @@ begin
 
     if not has_table_privilege('service_role',v_table,'truncate')
        or not has_table_privilege('service_role',v_table,'references')
-       or not has_table_privilege('service_role',v_table,'trigger') then
+       or not has_table_privilege('service_role',v_table,'trigger')
+       or not has_table_privilege('service_role',v_table,'maintain') then
       raise exception 'SERVICE_ROLE_DEFAULT_PRIVILEGES_CHANGED: %',v_table;
     end if;
   end loop;
@@ -57,7 +59,8 @@ begin
     raise exception 'AUTHENTICATED_OUTLET_PRODUCT_UPDATE_COLUMNS_MISSING';
   end if;
 
-  if has_any_column_privilege('anon','public.otc_products','update')
+  if has_any_column_privilege('anon','public.otc_outlets','update')
+     or has_any_column_privilege('anon','public.otc_products','update')
      or has_any_column_privilege('anon','public.otc_outlet_products','update')
      or has_any_column_privilege('authenticated','public.otc_outlets','update')
      or has_column_privilege('authenticated','public.otc_products','business_id','update')
@@ -70,6 +73,25 @@ begin
      or has_column_privilege('authenticated','public.otc_outlet_products','dp_value','update') then
     raise exception 'AUTHENTICATED_OR_ANON_UNEXPECTED_CATALOG_COLUMN_UPDATE_PRIVILEGE';
   end if;
+
+  -- No stale column-level INSERT or REFERENCES grants may survive for clients.
+  for v_col in
+    select c.oid::regclass as relation, a.attname
+    from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace
+    join pg_attribute a on a.attrelid=c.oid
+    where n.nspname='public'
+      and c.relname = any(array['otc_outlets','otc_products','otc_outlet_products'])
+      and a.attnum > 0 and not a.attisdropped
+  loop
+    if has_column_privilege('anon',v_col.relation,v_col.attname,'insert')
+       or has_column_privilege('authenticated',v_col.relation,v_col.attname,'insert')
+       or has_column_privilege('anon',v_col.relation,v_col.attname,'references')
+       or has_column_privilege('authenticated',v_col.relation,v_col.attname,'references') then
+      raise exception 'PUBLIC_CATALOG_STALE_CLIENT_COLUMN_INSERT_OR_REFERENCES_PRIVILEGE: %, %',
+        v_col.relation,v_col.attname;
+    end if;
+  end loop;
 
   for v_col in
     select attname
