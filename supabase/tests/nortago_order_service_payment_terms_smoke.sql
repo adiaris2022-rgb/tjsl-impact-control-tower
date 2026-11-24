@@ -17,6 +17,7 @@ declare
   v_service_percent uuid := gen_random_uuid();
   v_service_fixed uuid := gen_random_uuid();
   v_service_full_only uuid := gen_random_uuid();
+  v_service_staff_insert uuid := gen_random_uuid();
   v_result jsonb;
   v_retry jsonb;
   v_receipt jsonb;
@@ -62,6 +63,7 @@ begin
     (v_service_percent,v_business,'Percent DP Service',100000,true,'SERVICE'),
     (v_service_fixed,v_business,'Fixed DP Service',80000,true,'SERVICE'),
     (v_service_full_only,v_business,'Full Only Service',50000,true,'SERVICE'),
+    (v_service_staff_insert,v_business,'Staff Insert Service',30000,true,'SERVICE'),
     (v_other_service,v_other_business,'Unauthorized Service',40000,true,'SERVICE');
   insert into public.otc_outlet_products(outlet_id,product_id,price,is_available,allow_full_payment,allow_dp,dp_type,dp_value) values
     (v_outlet,v_product,20000,true,true,false,'PERCENT',50),
@@ -86,6 +88,13 @@ begin
 
   -- Direct table writes must not let STAFF bypass the owner-only RPC.
   perform set_config('request.jwt.claim.sub',v_staff::text,true);
+  begin
+    insert into public.otc_outlet_products(outlet_id,product_id,price,is_available,allow_full_payment,allow_dp,dp_type,dp_value)
+    values(v_outlet,v_service_staff_insert,30000,true,true,true,'PERCENT',25);
+    raise exception 'STAFF_DIRECT_DP_MAPPING_INSERT_WAS_ACCEPTED';
+  exception when others then
+    if sqlerrm <> 'SERVICE_PAYMENT_TERMS_FORBIDDEN' then raise; end if;
+  end;
   begin
     update public.otc_outlet_products set allow_dp=true
     where outlet_id=v_outlet and product_id=v_service_full_only;
