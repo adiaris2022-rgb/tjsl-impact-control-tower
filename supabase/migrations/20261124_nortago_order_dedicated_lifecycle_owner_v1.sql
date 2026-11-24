@@ -127,20 +127,19 @@ begin
   where rolname = 'nortago_order_lifecycle_owner';
 
   if v_role_oid is null then
-    execute 'create role nortago_order_lifecycle_owner nologin noinherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls';
-    select oid into v_role_oid from pg_roles where rolname = 'nortago_order_lifecycle_owner';
-  else
-    select * into v_role from pg_roles where oid = v_role_oid;
-    if v_role.rolcanlogin or v_role.rolinherit or v_role.rolsuper
-       or v_role.rolcreatedb or v_role.rolcreaterole
-       or v_role.rolreplication or v_role.rolbypassrls then
-      raise exception 'NORTAGO_LIFECYCLE_OWNER_EXISTING_ROLE_ATTRIBUTES_UNSAFE';
-    end if;
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_ROLE_MUST_BE_PREPROVISIONED_BY_DATABASE_OWNER';
   end if;
 
-  -- A failed prior application may have left only this trusted migrator as
-  -- a temporary SET-only member. Clean that exact safe residue; never adopt
-  -- membership held by another role or membership granted to the owner role.
+  select * into v_role from pg_roles where oid = v_role_oid;
+  if v_role.rolcanlogin or v_role.rolinherit or v_role.rolsuper
+     or v_role.rolcreatedb or v_role.rolcreaterole
+     or v_role.rolreplication or v_role.rolbypassrls then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_EXISTING_ROLE_ATTRIBUTES_UNSAFE';
+  end if;
+
+  -- The database owner must explicitly provision this short-lived ADMIN OPTION
+  -- membership. CREATEROLE alone does not authorize the executor to grant itself
+  -- membership in a pre-existing role. Keep the owner role otherwise unassigned.
   if exists (
     select 1 from pg_auth_members
     where member = v_role_oid
@@ -153,20 +152,15 @@ begin
   ) then
     raise exception 'NORTAGO_LIFECYCLE_OWNER_HAS_UNEXPECTED_MEMBERS';
   end if;
-  -- If an earlier interrupted attempt left this trusted migrator as the sole
-  -- member, revoke that residue regardless of its membership options. No other
-  -- member or membership held by the owner role is adopted.
-  if exists (
-    select 1 from pg_auth_members
-    where roleid = v_role_oid and member = v_current_role.oid
-  ) then
-    execute format('revoke nortago_order_lifecycle_owner from %I', current_user);
-  end if;
-  if exists (
-    select 1 from pg_auth_members
-    where member = v_role_oid or roleid = v_role_oid
-  ) or pg_has_role(current_user, v_role_oid, 'MEMBER') then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_ROLE_MEMBERSHIP_MUST_BE_EMPTY';
+  if not exists (
+    select 1 from pg_auth_members m
+    where m.roleid = v_role_oid
+      and m.member = v_current_role.oid
+      and m.admin_option
+      and m.set_option
+      and not m.inherit_option
+  ) or not pg_has_role(current_user, v_role_oid, 'SET') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_REQUIRES_OWNER_PREGRANTED_ADMIN_SET_MEMBERSHIP';
   end if;
 
   if exists (select 1 from pg_class where relowner = v_role_oid)
@@ -344,17 +338,22 @@ grant create on schema public to nortago_order_lifecycle_owner;
 do $$
 declare
   v_current_owner oid;
+  v_lifecycle_role oid;
 begin
-  execute format(
-    'grant nortago_order_lifecycle_owner to %I with inherit false, set true, admin false',
-    current_user
-  );
+  select oid into v_lifecycle_role
+  from pg_roles
+  where rolname='nortago_order_lifecycle_owner';
+
+  if v_lifecycle_role is null
+     or not pg_has_role(current_user, v_lifecycle_role, 'SET') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_SET_MEMBERSHIP_REQUIRED';
+  end if;
 
   select proowner into v_current_owner
   from pg_proc
   where oid = to_regprocedure('public.nortago_update_order_status(uuid,text,text)');
 
-  if v_current_owner <> (select oid from pg_roles where rolname='nortago_order_lifecycle_owner') then
+  if v_current_owner <> v_lifecycle_role then
     execute 'alter function public.nortago_update_order_status(uuid,text,text) owner to nortago_order_lifecycle_owner';
   end if;
 end
