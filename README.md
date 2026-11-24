@@ -8,11 +8,13 @@ Operational control tower for TJSL program monitoring, Mitra Binaan activity dat
 
 Current deployment is configured for staging/pilot use. The system is not being represented as fully production-ready until authentication, role-based UAT, storage/privacy controls, backup/restore, monitoring, and operational governance are tested.
 
-## OTC status
+## NORTAGO ORDER release scope
 
-**NORTAGO OTC commerce core is now included on the same main branch.**
+**NORTAGO ORDER is the active commercial release scope.**
 
-Customer flow includes menu/product display, cart, checkout, Take Away, Pre-Order, Dine-In reservation, digital receipt, and the Owner Control Tower foundation. Delivery is part of the intended commerce flow and remains third-party fulfillment in V1.
+Customer flow covers Product & Service catalog, cart, checkout, Take Away, Pre-Order, Delivery, and digital receipt. The Owner Sales Dashboard includes order inbox, server-validated lifecycle actions, audit history, summaries, and per-outlet subscription status. Delivery remains third-party fulfillment in V1; delivery fees are disclosed separately until a seller-defined calculation is implemented.
+
+Dine-In, Reservation, Walk-In, queue, tables/seating/capacity, sessions, and the TJSL Control Tower are outside this Order release. BOS remains deferred until NORTAGO ORDER is live and stable.
 
 ## Core control chain
 
@@ -50,6 +52,6 @@ Powered by NORTAGO.
 OTC pilot deployment checkpoint: 2026-09-28 — deployed on the existing TJSL Railway service to preserve the free-plan footprint.
 
 
-## OTC pilot route
+## NORTAGO ORDER route
 
-The OTC customer commerce prototype is available at `/otc` on the same TJSL Railway service. It is an isolated customer-facing route and does not replace the TJSL root control tower.
+The NORTAGO ORDER customer experience is available at `/otc` on the same TJSL Railway service. It is an isolated customer-facing ordering route and does not replace the TJSL root application. Reservation/Dine-In pages are unavailable in the Order release; deferred schema objects remain inaccessible to API roles.
