@@ -174,3 +174,6 @@ No staging/live migration or payment activation is authorized by this runbook.
 - [ ] Confirm anon/authenticated cannot directly EXECUTE trigger functions.
 
 CI regression uses disposable PostgreSQL only. Staging catalog/data inspection remains read-only until separately approved.
+
+
+- [ ] For SERVICE items, verify whether the seller requires DP or full payment. Current schema/UI supports a single price and PENDING payment only; no DP/full-payment selection or balance tracking exists. Do not launch deposit-based services until the seller's DP amount/rule and balance collection flow are implemented and tested.
