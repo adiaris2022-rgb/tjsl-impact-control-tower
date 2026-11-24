@@ -58,4 +58,4 @@ select
 from pg_auth_members
 where member=(select oid from pg_roles where rolname='nortago_order_lifecycle_owner')
    or roleid=(select oid from pg_roles where rolname='nortago_order_lifecycle_owner')
-order by member_role::text, granted_role::text;
+order by 1,2;
