@@ -57,6 +57,46 @@ begin
     raise exception 'NORTAGO_LIFECYCLE_OWNER_RLS_NOT_ENABLED';
   end if;
 
+  -- Confirm the actual status/payment contract before replacing the lifecycle RPC.
+  if not exists (
+    select 1 from pg_attribute
+    where attrelid='public.otc_orders'::regclass
+      and attname='status' and not attisdropped and attnotnull
+      and format_type(atttypid,atttypmod)='text'
+  ) or not exists (
+    select 1 from pg_attribute
+    where attrelid='public.otc_orders'::regclass
+      and attname='payment_status' and not attisdropped and attnotnull
+      and format_type(atttypid,atttypmod)='text'
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_STATUS_COLUMNS_DO_NOT_MATCH_REVIEWED_SCHEMA';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint c
+    where c.conrelid='public.otc_orders'::regclass and c.contype='c'
+      and (
+        select bool_and(position(quote_literal(s.status_value) in pg_get_constraintdef(c.oid)) > 0)
+        from unnest(array[
+          'NEW','PAID','SCHEDULED','PROCESSING','FULFILLMENT_CHECK','FULFILLMENT_ISSUE',
+          'READY','WAITING_PICKUP','PICKUP_VERIFIED','HANDED_OVER_TO_DELIVERY','SUCCESS','PO_SUCCESS'
+        ]) as s(status_value)
+      )
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_ORDER_STATUS_CONSTRAINT_DOES_NOT_MATCH_REVIEWED_SCHEMA';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint c
+    where c.conrelid='public.otc_orders'::regclass and c.contype='c'
+      and (
+        select bool_and(position(quote_literal(s.status_value) in pg_get_constraintdef(c.oid)) > 0)
+        from unnest(array['PENDING','PAID','FAILED','REFUNDED']) as s(status_value)
+      )
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_PAYMENT_STATUS_CONSTRAINT_DOES_NOT_MATCH_REVIEWED_SCHEMA';
+  end if;
+
   select * into v_current_role from pg_roles where rolname = current_user;
   if not found or not v_current_role.rolsuper then
     raise exception 'NORTAGO_LIFECYCLE_OWNER_TRANSFER_REQUIRES_DATABASE_SUPERUSER';
