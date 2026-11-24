@@ -153,14 +153,9 @@ begin
   ) then
     raise exception 'NORTAGO_LIFECYCLE_OWNER_HAS_UNEXPECTED_MEMBERS';
   end if;
-  if exists (
-    select 1 from pg_auth_members
-    where roleid = v_role_oid
-      and member = v_current_role.oid
-      and (admin_option or inherit_option or not set_option)
-  ) then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_STALE_MIGRATOR_MEMBERSHIP_UNSAFE';
-  end if;
+  -- If an earlier interrupted attempt left this trusted migrator as the sole
+  -- member, revoke that residue regardless of its membership options. No other
+  -- member or membership held by the owner role is adopted.
   if exists (
     select 1 from pg_auth_members
     where roleid = v_role_oid and member = v_current_role.oid
@@ -170,7 +165,7 @@ begin
   if exists (
     select 1 from pg_auth_members
     where member = v_role_oid or roleid = v_role_oid
-  ) then
+  ) or pg_has_role(current_user, v_role_oid, 'MEMBER') then
     raise exception 'NORTAGO_LIFECYCLE_OWNER_ROLE_MEMBERSHIP_MUST_BE_EMPTY';
   end if;
 
