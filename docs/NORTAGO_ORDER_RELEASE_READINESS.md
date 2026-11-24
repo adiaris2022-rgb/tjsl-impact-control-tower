@@ -31,6 +31,18 @@ PR #16 Run #141 and PR #17 Run #143 were rechecked on their exact current head S
 | [#44](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/44) | `ea8f4c242371bed636075cf9445aa4b71d8a2ea0` | `64e3cd482c0afc1dba5bbe2a6305f8bee0861525` | [#409 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45386368614) |
 | [#45](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/45) | `e6cccf88c5544ea59eb601466b0e3c8d3a1dc6fb` | `64e3cd482c0afc1dba5bbe2a6305f8bee0861525` | [#412 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45386875762) |
 
+
+
+### Integration caveat — sibling hardening branches
+
+PR #39 and PR #40 are siblings based on PR #38. PR #41 builds on PR #39, so the PR #41 → #42 → #43 → #45/#47 candidate chain does **not** contain PR #40's `rls_auto_enable()` EXECUTE revocation. A fresh read-only query on connected project `aakhinaryzidzpsjeewp` still reports effective EXECUTE for anon, authenticated, and service_role on that SECURITY DEFINER event-trigger helper; its `ensure_rls` event trigger remains enabled. PR #40 [Run #400](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45370451460) proves the migration on disposable PostgreSQL only. Integrate PR #40 or an equivalent reviewed migration into the final stack before claiming that finding is remediated; do not apply it to the empty connected project.
+
+PR #44 and PR #45 are also siblings based on PR #43. PR #45/#47 does not include PR #44's two-outlets-within-one-business subscription regression. Both the PR #44 test and PR #45/#47 legacy-route boundary must be present in the final candidate.
+
+### Legacy standalone app boundary
+
+The nested `otc/` directory is a separate Next.js package, not the root commercial application. Its legacy pages contained hard-coded sample products/metrics and a demo checkout/receipt that displayed a fabricated `PAID` state. PR #47 hard-disables the nested app at its root layout by rendering only a static notice and not rendering route children; the active root `app/otc` layout continues to render its children. Source files are retained for audit/history. This prevents the nested demo from being mistaken for a real Order transaction channel if someone opens or deploys that package accidentally.
+
 PR #44 and PR #45 are sibling branches from PR #43; PR #45 does not contain PR #44's same-business/two-outlet subscription regression. Both changes must be represented in the final reviewed release stack. PR #42 exact-head Vercel status was success; PR #43–#45 exact-head Vercel status was blocked by provider build-rate-limit, so no exact-head browser UAT is claimed for those branches.
 
 ### Current Supabase evidence and hard stop
