@@ -116,8 +116,7 @@ begin
       select 1 from pg_proc p
       where p.oid = to_regprocedure('public.nortago_order_auth_actor()')
         and (p.proowner = v_current_role.oid
-          or v_current_role.rolsuper
-          or pg_has_role(current_user, p.proowner, 'MEMBER'))
+          or v_current_role.rolsuper)
     ) then
       raise exception 'NORTAGO_LIFECYCLE_OWNER_AUTH_ACTOR_HELPER_OWNER_MISMATCH';
     end if;
@@ -139,6 +138,35 @@ begin
     end if;
   end if;
 
+  -- A failed prior application may have left only this trusted migrator as
+  -- a temporary SET-only member. Clean that exact safe residue; never adopt
+  -- membership held by another role or membership granted to the owner role.
+  if exists (
+    select 1 from pg_auth_members
+    where member = v_role_oid
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MUST_NOT_BE_MEMBER_OF_OTHER_ROLES';
+  end if;
+  if exists (
+    select 1 from pg_auth_members
+    where roleid = v_role_oid and member <> v_current_role.oid
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_HAS_UNEXPECTED_MEMBERS';
+  end if;
+  if exists (
+    select 1 from pg_auth_members
+    where roleid = v_role_oid
+      and member = v_current_role.oid
+      and (admin_option or inherit_option or not set_option)
+  ) then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_STALE_MIGRATOR_MEMBERSHIP_UNSAFE';
+  end if;
+  if exists (
+    select 1 from pg_auth_members
+    where roleid = v_role_oid and member = v_current_role.oid
+  ) then
+    execute format('revoke nortago_order_lifecycle_owner from %I', current_user);
+  end if;
   if exists (
     select 1 from pg_auth_members
     where member = v_role_oid or roleid = v_role_oid
@@ -161,10 +189,23 @@ begin
   select proowner into v_current_owner from pg_proc where oid = v_rpc_oid;
   if v_current_owner <> v_role_oid
      and v_current_owner <> v_current_role.oid
-     and not v_current_role.rolsuper
-     and not pg_has_role(current_user, v_current_owner, 'MEMBER') then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_CANNOT_TRANSFER_RPC';
+     and not v_current_role.rolsuper then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_MUST_OWN_RPC';
   end if;
+
+  for v_relation in
+    select c.relname, c.relowner
+    from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public'
+      and c.relname = any(array[
+        'otc_orders','otc_order_items','otc_outlets','nortago_order_status_audit'
+      ])
+  loop
+    if v_relation.relowner <> v_current_role.oid and not v_current_role.rolsuper then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_MIGRATOR_MUST_OWN_TABLE: %', v_relation.relname;
+    end if;
+  end loop;
 
   if not has_schema_privilege('nortago_order_lifecycle_owner', 'public', 'usage') then
     if has_schema_privilege(current_user, 'public', 'usage with grant option') then
