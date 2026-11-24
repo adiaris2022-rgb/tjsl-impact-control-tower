@@ -56,7 +56,7 @@ function lifecycleActions(order: Order): LifecycleAction[] {
 export default function Owner() {
   const [businessIds, setBusinessIds] = useState<string[]>([]);
   const [businessId, setBusinessId] = useState("");
-  const [rows, setRows] = useState<{ outlet: string; transactions: number; nominal: number; attention: number }[]>([]);
+  const [rows, setRows] = useState<{ outlet: string; transactions: number; nominal: number; partialDue: number; balanceDue: number; attention: number }[]>([]);
   const [inboxOrders, setInboxOrders] = useState<(Order & { outlet_name: string })[]>([]);
   const [metrics, setMetrics] = useState({ count: 0, total: 0, outlets: 0 });
   const [inboxSearch, setInboxSearch] = useState("");
