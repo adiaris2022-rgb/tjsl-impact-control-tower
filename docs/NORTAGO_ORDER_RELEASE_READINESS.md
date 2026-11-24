@@ -383,3 +383,76 @@ The candidate integration branch based on PR #47 carries both previously sibling
 - The PR #44 subscription smoke test with two outlets in the same business, independent subscription IDs, and a plan change staged for only one outlet. All four invoice payment records remain PENDING; no settlement or webhook is called.
 
 The connected Supabase project currently still has effective EXECUTE on `public.rls_auto_enable()` for anon, authenticated, and service_role. This candidate migration has only been exercised in disposable PostgreSQL CI; it has not been applied to the connected project or the inaccessible populated OTC target.
+
+## Automation refresh — 24 Nov 2026, 20:31 WIB
+
+This refresh is based on current GitHub PR metadata, commit-associated Actions runs, exact combined commit statuses, and read-only Supabase catalog queries. Disposable CI, Vercel deployment status, and real staging/browser UAT are distinct evidence classes.
+
+### Corrected exact refs: PR #1 and #12–#17
+
+- PR #1 current GitHub metadata is head `a75820a8ca6d14c3f92fd3dfcfb9821f28429843`, base branch `main` at `545f4953368d0e85d7573c609bf4abf96b041c80`. The prior 19:36 table's `1d93745e161ef20d5bb66617858fbdb514c55108` base SHA was incorrect and is superseded by this metadata-backed value.
+- PR #12: head `a323dcdedb5fd1048d9d2b2e3560c6ced889789c`, base `a75820a8ca6d14c3f92fd3dfcfb9821f28429843`.
+- PR #13: head `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6`, base `a323dcdedb5fd1048d9d2b2e3560c6ced889789c`; exact compare is **diverged, 7 ahead / 1 behind**, merge base `31e517eed0c280ed25e57c144405bbd2fcb0178b`.
+- PR #14: head `f3a86754461b06b10250b073a38fae906bfd2777`, base `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6`.
+- PR #15: head `e16260f8147e3b55255be6bf5163a32774abe280`, base `f3a86754461b06b10250b073a38fae906bfd2777`.
+- PR #16: head `db3e6a43edc4edc4d3338504d87da11163594e42`, base `e16260f8147e3b55255be6bf5163a32774abe280`.
+- PR #17: head `7516e1b22d5cd340b872db4bc516471a81ef74d4`, base `e16260f8147e3b55255be6bf5163a32774abe280`.
+
+All seven remain Open, Draft, Unmerged, and Mergeable. Exact commit-associated GitHub Actions runs were fetched again:
+- #1 Run #69, #12 Run #183, #13 Run #136, #14 Run #138, #15 Run #140, #16 Run #141, #17 Run #143 — all completed success.
+- Both jobs on each run completed success: production build and PostgreSQL migration/replay/smoke. Specifically #16/#141 and #17/#143 were rechecked at exact current heads.
+- Exact combined Vercel status: #1/#12/#13/#16/#17 success; #14/#15 failure with `api-deployments-free-per-day`. This provider limit is not a GitHub Actions failure.
+
+Do not rebase PR #13 independently: PR #14–#17 depend on its branch chain. Synchronization requires a coordinated descendant-base update and fresh CI.
+
+### Integrated release candidate — PR #48
+
+[PR #48](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/48) is Open, Draft, Unmerged, and Mergeable:
+- Head `0ae343868098d47e887c1220a2daaa1fea3e2153`.
+- Base `13fb80d3b86fee06cbed3055fe761258f70f07e3`.
+- Exact-head [Run #416](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45398032708) completed success. Production build/pagination: 13/13 steps. PostgreSQL 17 migration/security: 86/86 steps.
+- The DB job applied/replayed the reviewed Order migration stack, reproduced pre-hardening direct status bypass, verified RPC-only order writes and dedicated-owner status guard, checked checkout/idempotency/tenant isolation, subscription privileges, service payment terms, catalog tenant guards, deferred Reservation access, and the RLS event-helper ACL regression.
+- The strengthened subscription test uses two outlets in one business plus another business; each outlet has an independent subscription, only one outlet has a pending plan change, and all four payment rows remain PENDING.
+- The RLS event-helper test verifies anon/authenticated/service_role EXECUTE is ineffective in the fixture while the `ensure_rls` event trigger remains enabled and still enables RLS on a newly created public table.
+- Exact-head Vercel status is failure due to the provider free-plan deployment limit. No exact-head Preview/browser UAT is claimed.
+
+PR #48 is the selected integrated candidate for review, not a production release approval. It carries the PR #40 event-helper migration and PR #44 same-business outlet regression that were absent from their sibling-based predecessors. The PR #47 legacy standalone demo shutdown is also in its base chain.
+
+### Lifecycle security — source and CI conclusion
+
+The reviewed OTC core migration defines `otc_orders.status` as text with allowed values `NEW`, `PAID`, `SCHEDULED`, `PROCESSING`, `FULFILLMENT_CHECK`, `FULFILLMENT_ISSUE`, `READY`, `WAITING_PICKUP`, `PICKUP_VERIFIED`, `HANDED_OVER_TO_DELIVERY`, `SUCCESS`, and `PO_SUCCESS`. `payment_status` is a separate column with `PENDING`, `PAID`, `FAILED`, and `REFUNDED`.
+
+The original `otc_orders_staff_manage FOR ALL` policy checks business membership through `has_business_role`; it does not validate lifecycle transitions. The PR #18 RPC performs actor authentication, business membership, outlet/business consistency, row locking, fulfillment-specific transition validation, status update, and one audit insert, without changing payment state. The PR #26 baseline disposable test proves the original broad membership policy plus simulated DML grants allowed direct status mutation without an audit row.
+
+The integrated candidate includes:
+- PR #26 table/column DML revocation for anon/authenticated and scoped SELECT policies.
+- PR #33 SECURITY INVOKER `BEFORE UPDATE OF status` guard rejecting direct writes unless `current_user` is the lifecycle RPC owner.
+- PR #37/#39 dedicated `nortago_order_lifecycle_owner` design, with NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS and minimum column grants/RLS.
+- PR #39 managed-migrator preflight: database owner must pre-provision a temporary ADMIN/SET/NOINHERIT membership for ownership transfer, then the same grantor must revoke it before authenticated UAT. CREATEROLE alone is not sufficient.
+- PR #35 same-owner SECURITY DEFINER explicit-writer inventory. This is static and does not prove the absence of dynamic SQL or indirect writes.
+
+Disposable PostgreSQL 17 regression proves direct status writes remain rejected even when inherited UPDATE(status) and a narrow UPDATE policy are deliberately simulated; approved RPC transitions succeed and create exactly one audit event. This is not real Supabase authenticated-session evidence.
+
+### Actual connected Supabase project — read-only evidence
+
+Only two projects are visible to the connected Supabase account: `NORTAGO-ORDER-STAGING` (`aakhinaryzidzpsjeewp`, ACTIVE_HEALTHY, PostgreSQL 17.12) and inactive `nortago-cv-profesional`. The connected Order-named project has **zero public application tables and zero application migrations**. `otc_orders`, `otc_order_items`, `otc_outlets`, `business_users`, `has_business_role`, lifecycle RPCs, dedicated lifecycle owner, OTC policies, and OTC triggers are absent. The OTC core migration comment references `tdpupelhvzxwhbqnnlxk`; a read-only project lookup for that ref is denied. Do not apply migrations to the empty connected project or represent it as populated OTC staging.
+
+Read-only PostgreSQL 17.12 catalog queries on the connected project confirm:
+- `current_user=session_user=postgres`; postgres is not superuser, has CREATEROLE and BYPASSRLS.
+- `supabase_admin` is superuser; `service_role` has BYPASSRLS; anon/authenticated do not.
+- `public.rls_auto_enable()` exists, is SECURITY DEFINER, owner `postgres`, fixed `search_path=pg_catalog`, and has NULL function ACL. Effective EXECUTE is true for anon, authenticated, and service_role.
+- Event trigger `ensure_rls` is enabled (`evtenabled='O'`) for `ddl_command_end` and invokes `rls_auto_enable()`.
+- Supabase Security Advisor currently reports `anon_security_definer_function_executable` and `authenticated_security_definer_function_executable` for this function.
+- Public-schema additive default ACLs differ by creator role: postgres-created tables grant anon/authenticated/service_role TRUNCATE, REFERENCES, TRIGGER, MAINTAIN (not ordinary CRUD); supabase_admin-created tables grant full table DML plus those DDL/maintenance privileges, sequences grant rwU, and functions grant EXECUTE. These are defaults, not effective grants on OTC tables that do not exist.
+
+PR #48 includes the conditional `rls_auto_enable()` ACL migration. It is fail-closed on the exact SECURITY DEFINER/event-trigger contract, revokes PUBLIC/anon/authenticated/service_role EXECUTE, preserves the enabled event trigger, and does not change global default ACLs. Its disposable fixture proves the behavior. **It has not been applied to the connected project or the inaccessible populated target; Security Advisor warnings therefore remain current.**
+
+### Release gates
+
+1. Identify and obtain owner-approved read-only access to the populated OTC staging project.
+2. Run the read-only staging security audit Queries 1–20 against that exact target: effective table/column grants, RLS predicates, trigger definitions/enabled state, lifecycle RPC owner/ACL/configuration, same-owner SECURITY DEFINER inventory, role memberships/BYPASSRLS, actual `has_business_role` body/owner/ACL, `business_users` RLS, dedicated-owner memberships, default ACLs, and event-trigger helper.
+3. Confirm table/function ownership and the database-owner pregrant/cleanup path before considering the lifecycle migration. Do not start authenticated UAT until the temporary ADMIN membership has been revoked by the same grantor and catalog confirms zero memberships for the dedicated owner.
+4. Run real authenticated-session direct status UPDATE rejection and approved RPC transition/audit tests.
+5. Obtain an exact-head Vercel Preview for PR #48 after the provider deployment limit clears, then perform browser UAT for checkout, receipt, Owner Inbox, pagination, subscription UI, and tenant boundaries.
+6. Close commercial decisions: delivery fee calculation (currently zero and disclosed separately), payment verification and DP receipt/settlement ledger, Staff business-wide versus outlet-specific authorization, and audit retention/cascade policy.
+7. Only after those gates, prepare production release sign-off. No merge, production deployment, staging/live migration, payment/webhook activation, secrets/environment change, or destructive action is authorized by this refresh. LinkBayar remains disabled.
