@@ -140,6 +140,22 @@ with check (
   )
 );
 
+-- Recheck after installing guards to catch any writer that raced the initial
+-- preflight. No rows are deleted or repaired automatically.
+do $
+begin
+  if exists (
+    select 1
+    from public.otc_outlet_products op
+    join public.otc_outlets o on o.id=op.outlet_id
+    join public.otc_products p on p.id=op.product_id
+    where o.business_id is distinct from p.business_id
+  ) then
+    raise exception 'NORTAGO_OUTLET_PRODUCT_CROSS_BUSINESS_MAPPING_FOUND_AFTER_GUARD_INSTALL';
+  end if;
+end
+$;
+
 comment on function public.nortago_guard_outlet_product_business_match()
 is 'Rejects outlet/product mappings unless both records belong to the same business.';
 comment on function public.nortago_guard_product_business_reassignment()
