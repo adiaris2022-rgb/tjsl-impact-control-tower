@@ -101,6 +101,7 @@ function Receipt() {
           ))}
         </div>
         <div className="total-line"><span>Total pesanan</span><strong>Rp {money(order.total)}</strong></div>
+        {order.fulfillment_type === "DELIVERY" ? <div className="info-box">Biaya antar belum dihitung dan tidak termasuk total pesanan ini. Konfirmasikan ongkir dengan penjual sebelum pembayaran atau pesanan diproses.</div> : null}
         <div className="total-line"><span>Tagihan awal</span><strong>Rp {money(order.payment_amount_due ?? order.total)}</strong></div>
         {(order.payment_balance_due ?? 0) > 0 ? <div className="total-line"><span>Sisa tagihan</span><strong>Rp {money(order.payment_balance_due)}</strong></div> : null}
         {order.pickup_code ? <div className="info-box">Pickup Pass: <b>{order.pickup_code}</b></div> : null}
