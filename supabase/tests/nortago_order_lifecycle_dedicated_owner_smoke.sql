@@ -84,7 +84,7 @@ begin
     end if;
   end loop;
 
-  foreach v_col in array array['select','insert','update','delete','truncate','references','trigger'] loop
+  foreach v_priv in array array['select','insert','update','delete','truncate','references','trigger'] loop
     if has_table_privilege('nortago_order_lifecycle_owner','public.otc_outlets',v_priv) then
       raise exception 'NORTAGO_LIFECYCLE_OWNER_OUTLETS_TABLE_PRIVILEGE_TOO_BROAD: %',v_priv;
     end if;
