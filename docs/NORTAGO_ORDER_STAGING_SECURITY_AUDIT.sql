@@ -309,3 +309,73 @@ join pg_namespace n on n.oid = p.pronamespace
 where p.proowner = (select oid from pg_roles where rolname = 'nortago_order_lifecycle_owner')
 order by n.nspname, p.oid::regprocedure::text;
 
+-- 15) Inspect outlet/product business consistency before applying the tenant guard.
+-- All statements in this section are read-only. Any non-zero mismatch count
+-- is a migration blocker requiring owner review; never auto-repair rows.
+select
+  count(*) as total_outlet_product_mappings,
+  count(*) filter (where o.business_id is distinct from p.business_id) as cross_business_mapping_count
+from public.otc_outlet_products op
+join public.otc_outlets o on o.id = op.outlet_id
+join public.otc_products p on p.id = op.product_id;
+
+select
+  op.outlet_id,
+  op.product_id,
+  o.business_id as outlet_business_id,
+  p.business_id as product_business_id
+from public.otc_outlet_products op
+join public.otc_outlets o on o.id = op.outlet_id
+join public.otc_products p on p.id = op.product_id
+where o.business_id is distinct from p.business_id
+order by op.outlet_id, op.product_id
+limit 100;
+
+-- Inspect RLS and effective client table privileges for the mapping and parent tables.
+select
+  c.oid::regclass as relation_name,
+  pg_get_userbyid(c.relowner) as table_owner,
+  c.relrowsecurity as rls_enabled,
+  c.relforcerowsecurity as rls_forced,
+  has_table_privilege('anon', c.oid, 'select') as anon_can_select,
+  has_table_privilege('anon', c.oid, 'insert') as anon_can_insert,
+  has_table_privilege('anon', c.oid, 'update') as anon_can_update,
+  has_table_privilege('authenticated', c.oid, 'select') as authenticated_can_select,
+  has_table_privilege('authenticated', c.oid, 'insert') as authenticated_can_insert,
+  has_table_privilege('authenticated', c.oid, 'update') as authenticated_can_update
+from pg_class c
+where c.oid in (
+  pg_catalog.to_regclass('public.otc_outlet_products'),
+  pg_catalog.to_regclass('public.otc_outlets'),
+  pg_catalog.to_regclass('public.otc_products')
+)
+order by c.oid::regclass::text;
+
+select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+from pg_policies
+where schemaname = 'public'
+  and tablename in ('otc_outlet_products','otc_outlets','otc_products')
+order by tablename, policyname;
+
+-- Confirm all three server-side guards are enabled and their trigger functions
+-- remain SECURITY INVOKER and non-callable directly by anon/authenticated.
+select
+  t.tgrelid::regclass as relation_name,
+  t.tgname as trigger_name,
+  t.tgenabled as trigger_enabled,
+  p.oid::regprocedure as trigger_function,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  p.proacl as function_acl,
+  has_function_privilege('anon', p.oid, 'execute') as anon_can_execute,
+  has_function_privilege('authenticated', p.oid, 'execute') as authenticated_can_execute
+from pg_trigger t
+join pg_proc p on p.oid = t.tgfoid
+where not t.tgisinternal
+  and t.tgname in (
+    'otc_outlet_products_business_match_guard',
+    'otc_products_business_reassignment_guard',
+    'otc_outlets_business_reassignment_guard'
+  )
+order by t.tgname;
