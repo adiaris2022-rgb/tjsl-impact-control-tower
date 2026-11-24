@@ -237,3 +237,17 @@ The Product & Service work previously isolated on PR #29 was not an ancestor of 
 4. **SERVICE uses the shared order lifecycle.** The catalog distinguishes PRODUCT/SERVICE, but service-specific scheduling/fulfillment rules are not separate. Validate that the shared Take Away/Pre-Order/Delivery workflow matches the service offers being sold.
 
 These are explicit acceptance decisions, not permission to invent fee, payment, or role policy. Keep the relevant flows disabled or clearly disclosed until the owner-approved policy is implemented and tested.
+
+
+## Outlet/product tenant-isolation finding and guard — 24 Nov 2026
+
+Source review of `20260928_otc_commerce_core_v1.sql` found that the original `otc_outlet_products_staff_manage` policy checked membership against the outlet business but did not require the mapped product to belong to that same business. The outlet/product tables have separate foreign keys, not a composite business-consistency constraint. A business member with direct table DML could therefore attempt a cross-business mapping if they knew another product UUID; the catalog RPC itself was safe because it derives the product business from the selected outlet, but the table policy did not enforce the invariant for all writes.
+
+PR #38 adds a feature-branch migration that:
+- Aborts if any existing cross-business outlet/product mapping is found; it does not repair or delete data.
+- Replaces the staff mapping policy with an outlet/product business-equality check.
+- Adds SECURITY INVOKER triggers for mapping INSERT/UPDATE and for outlet/product `business_id` reassignment, preventing existing mappings from becoming cross-business after a reassignment.
+- Revokes direct EXECUTE on trigger functions; they are invoked only by their triggers.
+- Adds disposable regression tests for valid mappings, cross-business insert/update rejection, and outlet/product business reassignment rejection.
+
+This closes the source-level tenant mapping gap in the candidate release branch. Actual staging data must still pass the migration preflight and real authenticated-session UAT before approval.
