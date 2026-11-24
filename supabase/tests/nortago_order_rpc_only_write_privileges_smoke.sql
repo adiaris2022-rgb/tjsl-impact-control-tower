@@ -27,6 +27,9 @@ begin
   if has_table_privilege('authenticated','public.otc_orders','insert')
     or has_table_privilege('authenticated','public.otc_orders','update')
     or has_table_privilege('authenticated','public.otc_orders','delete')
+    or has_table_privilege('authenticated','public.otc_orders','truncate')
+    or has_table_privilege('authenticated','public.otc_orders','references')
+    or has_table_privilege('authenticated','public.otc_orders','trigger')
     or has_any_column_privilege('authenticated','public.otc_orders','insert')
     or has_any_column_privilege('authenticated','public.otc_orders','update') then
     raise exception 'Authenticated clients must not directly mutate order headers';
@@ -34,6 +37,9 @@ begin
   if has_table_privilege('anon','public.otc_orders','insert')
     or has_table_privilege('anon','public.otc_orders','update')
     or has_table_privilege('anon','public.otc_orders','delete')
+    or has_table_privilege('anon','public.otc_orders','truncate')
+    or has_table_privilege('anon','public.otc_orders','references')
+    or has_table_privilege('anon','public.otc_orders','trigger')
     or has_any_column_privilege('anon','public.otc_orders','insert')
     or has_any_column_privilege('anon','public.otc_orders','update') then
     raise exception 'Anonymous clients must not directly mutate order headers';
@@ -42,6 +48,9 @@ begin
   if has_table_privilege('authenticated','public.otc_order_items','insert')
     or has_table_privilege('authenticated','public.otc_order_items','update')
     or has_table_privilege('authenticated','public.otc_order_items','delete')
+    or has_table_privilege('authenticated','public.otc_order_items','truncate')
+    or has_table_privilege('authenticated','public.otc_order_items','references')
+    or has_table_privilege('authenticated','public.otc_order_items','trigger')
     or has_any_column_privilege('authenticated','public.otc_order_items','insert')
     or has_any_column_privilege('authenticated','public.otc_order_items','update') then
     raise exception 'Authenticated clients must not directly mutate order items';
@@ -49,6 +58,9 @@ begin
   if has_table_privilege('anon','public.otc_order_items','insert')
     or has_table_privilege('anon','public.otc_order_items','update')
     or has_table_privilege('anon','public.otc_order_items','delete')
+    or has_table_privilege('anon','public.otc_order_items','truncate')
+    or has_table_privilege('anon','public.otc_order_items','references')
+    or has_table_privilege('anon','public.otc_order_items','trigger')
     or has_any_column_privilege('anon','public.otc_order_items','insert')
     or has_any_column_privilege('anon','public.otc_order_items','update') then
     raise exception 'Anonymous clients must not directly mutate order items';
