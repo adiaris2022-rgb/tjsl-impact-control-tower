@@ -301,6 +301,15 @@ Read-only inspection of the connected project NORTAGO-ORDER-STAGING (aakhinaryzi
 - Existing public.rls_auto_enable() is owned by postgres, returns event_trigger, is SECURITY DEFINER with search_path=pg_catalog, and has proacl=NULL; effective privilege checks show anon and authenticated can EXECUTE it. Event trigger ensure_rls is enabled for ddl_command_end. Its body enables RLS on newly created public tables; this does not itself grant row access.
 - Supabase Security Advisor independently flags the client EXECUTE exposure. No ACL, default-privilege, or event-trigger change was made on this project.
 
-PR #39 adds a conditional feature-branch migration that revokes PUBLIC/anon/authenticated EXECUTE on this exact helper only when it exists, is SECURITY DEFINER, returns event_trigger, and is attached to an enabled event trigger. It leaves the event trigger and its function body intact. Disposable CI proves the event trigger still enables RLS after client EXECUTE is revoked. The migration has not been applied to staging or production.
+PR #40 adds a conditional feature-branch migration that revokes PUBLIC/anon/authenticated EXECUTE on this exact helper only when it exists, is SECURITY DEFINER, returns event_trigger, and is attached to an enabled event trigger. It leaves the event trigger and its function body intact. Disposable CI proves the event trigger still enables RLS after client EXECUTE is revoked. The migration has not been applied to staging or production.
 
 The connected project remains empty and is not proven to be the populated NORTAGO database; the OTC core migration still references inaccessible project ref tdpupelhvzxwhbqnnlxk. Do not apply migrations until the correct staging target is identified and separately approved.
+
+
+## PR #40 exact-head validation — 24 Nov 2026
+
+- PR #40 remains Open / Draft / Unmerged. Exact head `35966b2500c3d0b412ca0b78faf13a7e1e8c9cd1`; exact base `e783feefea1825d9a1697b8a0084d996f7b44dd2` (PR #38 candidate head).
+- [CI Run #383](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45363040877) completed **PASS** on the exact head. Both jobs succeeded: production build plus three pagination unit suites, and PostgreSQL migration/security validation.
+- PostgreSQL validation specifically completed the disposable event-trigger fixture, conditional ACL migration apply and replay, client EXECUTE rejection, proof that the event trigger still enables RLS on a newly created public table, and the expanded read-only audit SQL.
+- Vercel status for this head is failure due to provider build-rate-limit. No Preview deployment or browser UAT is claimed for PR #40.
+- This is disposable-CI evidence only. The migration has not been applied to any Supabase project.
