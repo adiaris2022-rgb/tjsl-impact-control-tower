@@ -69,7 +69,7 @@ begin
     raise exception 'SERVICE_PAYMENT_TERMS_DP_VALUE_INVALID';
   end if;
 
-  select o.business_id, op.price
+  select o.business_id, coalesce(op.price,p.base_price)
     into v_business_id, v_price
   from public.otc_outlets o
   join public.otc_outlet_products op on op.outlet_id=o.id
