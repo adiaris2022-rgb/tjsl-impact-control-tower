@@ -53,3 +53,10 @@ If any precondition fails, retain the client DML revokes, do not broaden grants 
 While the owner-policy decision is pending, continue independent Order-only gates: exact-SHA CI, checkout-to-receipt, idempotency, tenant/business isolation, per-outlet monthly/yearly subscription, owner pagination, customer/owner preview UAT, delivery fee/courier responsibility, payment-before-fulfillment policy, rollback/recovery, and commercial sign-off.
 
 LinkBayar remains disabled. No staging/live migration, production deploy, payment/webhook activation, secrets/environment changes, merge, or destructive action is authorized by this document.
+
+
+## Feature-branch implementation candidate — PR #37
+
+A dedicated-owner migration candidate is now proposed on feature branch `fix/nortago-order-dedicated-lifecycle-owner-20261124` (PR #37). It adds a database preflight that aborts unless the actual `auth.uid()`, SECURITY DEFINER `has_business_role(uuid,text[])` with a `pg_catalog`-first search path, required tables, and RLS are present. It creates a NOLOGIN/NOINHERIT/NOSUPERUSER/NOBYPASSRLS role with no memberships, transfers only the lifecycle RPC, and grants only the required order/outlet/audit columns plus helper EXECUTE.
+
+The RPC body is narrowed from `SELECT *` to the five columns it actually consumes (`id`, `business_id`, `outlet_id`, `status`, `fulfillment_type`), so the proposed owner does not need access to customer PII, payment fields, checkout keys, or order items. The CI candidate also checks exact column privileges, role attributes/memberships, RLS policy presence, and the existing direct-write rejection/approved-RPC regression. This is still feature-branch/disposable-CI evidence only. It has not been applied to Supabase staging or production. If the actual staging helper is not SECURITY DEFINER with a safe search path, the migration deliberately aborts; redesign must follow the observed helper and membership relation rather than weakening grants.
