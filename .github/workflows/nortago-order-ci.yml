@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: nortago_test
@@ -92,13 +92,13 @@ jobs:
           revoke all on function public.has_business_role(uuid, text[]) from public;
           grant execute on function public.has_business_role(uuid, text[]) to authenticated;
           SQL
-      - name: Simulate connected Supabase postgres creator default table ACL (PostgreSQL 16 subset)
+      - name: Simulate connected Supabase PostgreSQL 17 postgres creator default table ACL
         env:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 <<'SQL'
           alter default privileges for role postgres in schema public
-            grant truncate, references, trigger on tables to anon, authenticated, service_role;
+            grant truncate, references, trigger, maintain on tables to anon, authenticated, service_role;
           SQL
       - name: Apply existing OTC commerce schema
         env:
