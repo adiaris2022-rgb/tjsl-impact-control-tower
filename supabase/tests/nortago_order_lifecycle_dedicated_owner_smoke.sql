@@ -8,6 +8,7 @@ declare
   v_rpc_oid oid;
   v_count integer;
   v_col record;
+  v_priv text;
   v_allowed_select text[] := array['id','business_id','outlet_id','status','fulfillment_type'];
   v_allowed_update text[] := array['status','updated_at'];
   v_allowed_outlet_select text[] := array['id','business_id'];
@@ -63,9 +64,9 @@ begin
   end if;
 
   -- No table-level privileges on the order header; only the listed columns.
-  foreach v_col in array array['select','insert','update','delete','truncate','references','trigger'] loop
-    if has_table_privilege('nortago_order_lifecycle_owner','public.otc_orders',v_col) then
-      raise exception 'NORTAGO_LIFECYCLE_OWNER_ORDERS_TABLE_PRIVILEGE_TOO_BROAD: %',v_col;
+  foreach v_priv in array array['select','insert','update','delete','truncate','references','trigger'] loop
+    if has_table_privilege('nortago_order_lifecycle_owner','public.otc_orders',v_priv) then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_ORDERS_TABLE_PRIVILEGE_TOO_BROAD: %',v_priv;
     end if;
   end loop;
 
@@ -84,14 +85,14 @@ begin
   end loop;
 
   foreach v_col in array array['select','insert','update','delete','truncate','references','trigger'] loop
-    if has_table_privilege('nortago_order_lifecycle_owner','public.otc_outlets',v_col) then
-      raise exception 'NORTAGO_LIFECYCLE_OWNER_OUTLETS_TABLE_PRIVILEGE_TOO_BROAD: %',v_col;
+    if has_table_privilege('nortago_order_lifecycle_owner','public.otc_outlets',v_priv) then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_OUTLETS_TABLE_PRIVILEGE_TOO_BROAD: %',v_priv;
     end if;
-    if has_table_privilege('nortago_order_lifecycle_owner','public.nortago_order_status_audit',v_col) then
-      raise exception 'NORTAGO_LIFECYCLE_OWNER_AUDIT_TABLE_PRIVILEGE_TOO_BROAD: %',v_col;
+    if has_table_privilege('nortago_order_lifecycle_owner','public.nortago_order_status_audit',v_priv) then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_AUDIT_TABLE_PRIVILEGE_TOO_BROAD: %',v_priv;
     end if;
-    if has_table_privilege('nortago_order_lifecycle_owner','public.otc_order_items',v_col) then
-      raise exception 'NORTAGO_LIFECYCLE_OWNER_ITEMS_TABLE_PRIVILEGE_PRESENT: %',v_col;
+    if has_table_privilege('nortago_order_lifecycle_owner','public.otc_order_items',v_priv) then
+      raise exception 'NORTAGO_LIFECYCLE_OWNER_ITEMS_TABLE_PRIVILEGE_PRESENT: %',v_priv;
     end if;
   end loop;
 
