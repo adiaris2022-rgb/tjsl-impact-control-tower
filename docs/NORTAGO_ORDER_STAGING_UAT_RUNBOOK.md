@@ -134,3 +134,13 @@ Before accepting the lifecycle guard for staging:
 - [ ] If any precondition is unknown or fails, stop. Do not grant broader client privileges or apply an owner migration to compensate.
 
 No owner-boundary migration is applied by this runbook. Staging migration requires separate explicit owner approval.
+
+
+## Dedicated lifecycle owner candidate (feature branch only)
+
+- [ ] Review PR #37 migration and confirm the preflight matches the actual staging helper and role model before any migration approval.
+- [ ] Verify the lifecycle owner has no login, inheritance, superuser, BYPASSRLS, role memberships, table ownership, schema CREATE, or unrelated function ownership.
+- [ ] Verify exact column access: order identity/business/outlet/status/fulfillment SELECT; status/updated_at UPDATE; outlet id/business SELECT; audit INSERT columns only; no order-item access and no customer/payment/receipt-token/checkout-key column access.
+- [ ] Run direct authenticated status-write rejection and approved RPC transition using real staging authenticated sessions only after separate migration approval.
+
+PR #37 is not staging approval. No staging/live migration is authorized by this checklist.
