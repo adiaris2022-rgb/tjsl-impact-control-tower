@@ -87,7 +87,7 @@ begin
     (v_business_a,v_actor,'OWNER'),
     (v_business_b,v_actor,'OWNER');
 end
-$;
+$$;
 
 -- Seed valid mappings through the privileged server-side path before anon menu reads.
 insert into public.otc_outlet_products(outlet_id,product_id,price,is_available) values
