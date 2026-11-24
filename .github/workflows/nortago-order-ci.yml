@@ -180,10 +180,22 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261120_nortago_customer_checkout_idempotency_v1.sql
+      - name: Apply seller-configurable service payment terms
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_service_payment_terms_v1.sql
+      - name: Replay seller-configurable service payment terms (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_service_payment_terms_v1.sql
       - name: Run Product and Service catalog checkout-to-receipt smoke checks
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_services_catalog_smoke.sql
+      - name: Run seller-configurable service DP/full payment smoke checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_service_payment_terms_smoke.sql
       - name: Apply order lifecycle RPC and audit schema
         env:
           PGPASSWORD: postgres
