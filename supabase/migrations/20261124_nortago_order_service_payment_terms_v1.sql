@@ -36,6 +36,88 @@ alter table public.otc_orders
   add constraint otc_orders_payment_option_check check (payment_option in ('FULL','DP')),
   add constraint otc_orders_payment_amounts_check check (payment_amount_due >= 0 and payment_balance_due >= 0 and payment_amount_due + payment_balance_due = total);
 
+create or replace function public.nortago_update_service_payment_terms(
+  p_outlet_id uuid,
+  p_product_id uuid,
+  p_allow_full_payment boolean,
+  p_allow_dp boolean,
+  p_dp_type text,
+  p_dp_value numeric
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $
+declare
+  v_actor uuid;
+  v_business_id uuid;
+  v_price numeric(14,2);
+begin
+  v_actor := auth.uid();
+  if v_actor is null then
+    raise exception 'SERVICE_PAYMENT_TERMS_AUTH_REQUIRED';
+  end if;
+  if p_allow_full_payment is null or p_allow_dp is null
+     or not (p_allow_full_payment or p_allow_dp) then
+    raise exception 'SERVICE_PAYMENT_TERMS_AT_LEAST_ONE_OPTION_REQUIRED';
+  end if;
+  if p_dp_type is null or p_dp_type not in ('PERCENT','FIXED') then
+    raise exception 'SERVICE_PAYMENT_TERMS_DP_TYPE_INVALID';
+  end if;
+  if p_dp_value is null or p_dp_value::text in ('NaN','Infinity','-Infinity') then
+    raise exception 'SERVICE_PAYMENT_TERMS_DP_VALUE_INVALID';
+  end if;
+
+  select o.business_id, op.price
+    into v_business_id, v_price
+  from public.otc_outlets o
+  join public.otc_outlet_products op on op.outlet_id=o.id
+  join public.otc_products p on p.id=op.product_id
+  where o.id=p_outlet_id
+    and p.id=p_product_id
+    and p.product_type='SERVICE'
+  for update of op;
+  if not found then
+    raise exception 'SERVICE_PAYMENT_TERMS_ITEM_NOT_FOUND';
+  end if;
+
+  if not public.has_business_role(v_business_id, array['OWNER','PROGRAM_MANAGER','PARTNER']::text[]) then
+    raise exception 'SERVICE_PAYMENT_TERMS_FORBIDDEN';
+  end if;
+
+  if p_allow_dp then
+    if p_dp_type='PERCENT' and (p_dp_value < 1 or p_dp_value > 99) then
+      raise exception 'SERVICE_PAYMENT_TERMS_PERCENT_OUT_OF_RANGE';
+    end if;
+    if p_dp_type='FIXED' and (p_dp_value <= 0 or p_dp_value > v_price) then
+      raise exception 'SERVICE_PAYMENT_TERMS_FIXED_AMOUNT_OUT_OF_RANGE';
+    end if;
+  end if;
+
+  update public.otc_outlet_products
+  set allow_full_payment=p_allow_full_payment,
+      allow_dp=p_allow_dp,
+      dp_type=p_dp_type,
+      dp_value=p_dp_value
+  where outlet_id=p_outlet_id and product_id=p_product_id;
+
+  return jsonb_build_object(
+    'outlet_id',p_outlet_id,
+    'product_id',p_product_id,
+    'allow_full_payment',p_allow_full_payment,
+    'allow_dp',p_allow_dp,
+    'dp_type',p_dp_type,
+    'dp_value',p_dp_value
+  );
+end;
+$;
+
+revoke all on function public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric) from public, anon, authenticated;
+grant execute on function public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric) to authenticated;
+comment on function public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)
+is 'Owner/partner-only, outlet-scoped service payment configuration; validates terms and updates only the selected service mapping.';
+
 create or replace function public.nortago_create_customer_order_idempotent(
   p_outlet_id uuid,
   p_idempotency_key uuid,
