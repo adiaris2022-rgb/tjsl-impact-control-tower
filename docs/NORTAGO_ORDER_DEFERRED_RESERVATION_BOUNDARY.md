@@ -4,7 +4,7 @@
 
 Reservation/Dine-In is deferred. The repository keeps the historical reservation migration files and database objects for forward/migration-history compatibility; they are not an Order capability.
 
-The current customer route `app/otc/reservation/page.tsx` is a static unavailable page. It states that Reservation, Dine-In, Walk-In, queue, and table management are outside the Order release and directs customers back to the order menu.
+Both customer route implementations, `app/otc/reservation/page.tsx` and the legacy `otc/app/reservation/page.tsx`, are static unavailable pages. The legacy route previously displayed a client-side reservation form and a misleading `CONFIRMED` success state without creating a server order; that interactive form has now been removed. Both routes state that Reservation, Dine-In, Walk-In, queue, and table management are outside the Order release and direct customers back to the order menu.
 
 ## Security finding
 
@@ -34,7 +34,7 @@ Disposable PostgreSQL 17 CI applies and replays the migration, then verifies:
 - actual anon/authenticated/service_role SELECT and TRUNCATE attempts fail with insufficient privilege;
 - RLS remains enabled.
 
-The reservation route remains a static unavailable page. The database schema is retained but inaccessible to API roles.
+The reservation routes in both the main app and legacy OTC sub-app remain static unavailable pages. A Node regression test checks both source files contain no form, client-side confirmation state, or reservation RPC call. The database schema is retained but inaccessible to API roles.
 
 ## Staging limitation
 
