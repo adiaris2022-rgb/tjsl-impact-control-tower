@@ -251,3 +251,6 @@ PR #38 adds a feature-branch migration that:
 - Adds disposable regression tests for valid mappings, cross-business insert/update rejection, and outlet/product business reassignment rejection.
 
 This closes the source-level tenant mapping gap in the candidate release branch. Actual staging data must still pass the migration preflight and real authenticated-session UAT before approval.
+
+
+5. **Service DP/full-payment terms are not implemented.** The current SERVICE catalog stores only a single base/outlet price and PRODUCT/SERVICE type. The order schema and checkout expose one payment method and one pending payment status; there is no seller-controlled DP/full-payment toggle, deposit amount, or remaining-balance ledger. This remains a commercial acceptance gate for service offers that require deposits. Do not infer a percentage or fixed DP amount; implement only after the owner-approved rule is available.
