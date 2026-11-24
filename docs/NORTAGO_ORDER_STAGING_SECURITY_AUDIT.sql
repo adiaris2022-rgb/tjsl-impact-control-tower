@@ -123,11 +123,14 @@ with recursive role_closure(member_oid, granted_oid, depth) as (
 )
 select distinct
   member_oid::regrole as client_role,
-  granted_oid::regrole as inherited_role,
-  depth
+  granted_oid::regrole as related_role,
+  depth,
+  pg_has_role(member_oid::regrole, granted_oid::regrole, 'MEMBER') as is_member,
+  pg_has_role(member_oid::regrole, granted_oid::regrole, 'USAGE') as privileges_inherited_without_set_role,
+  pg_has_role(member_oid::regrole, granted_oid::regrole, 'SET') as can_set_role
 from role_closure
 where member_oid::regrole::text in ('anon', 'authenticated', 'service_role')
-order by client_role, depth, inherited_role;
+order by client_role, depth, related_role;
 
 -- 8) Actual status/payment_status column definitions and CHECK constraints.
 select
