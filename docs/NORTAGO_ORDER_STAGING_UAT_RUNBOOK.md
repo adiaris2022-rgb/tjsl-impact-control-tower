@@ -144,3 +144,22 @@ No owner-boundary migration is applied by this runbook. Staging migration requir
 - [ ] Run direct authenticated status-write rejection and approved RPC transition using real staging authenticated sessions only after separate migration approval.
 
 PR #37 is not staging approval. No staging/live migration is authorized by this checklist.
+
+
+## Product & Service catalog UAT (PR #38 candidate)
+
+- [ ] Owner can create a PRODUCT and a SERVICE for an active outlet through the atomic catalog RPC.
+- [ ] Non-member business and inactive outlet catalog creation are rejected; anon/PUBLIC cannot execute the create RPC.
+- [ ] Outlet-specific price and availability are reflected in the customer menu; inactive business products are not shown.
+- [ ] Customer menu and checkout clearly label PRODUCT vs SERVICE.
+- [ ] SERVICE uses the standard checkout and receipt path with the outlet price snapshot; retry/idempotency remains intact.
+- [ ] Pre-Order rejects past/current local pickup time.
+- [ ] Verify Owner/catalog role access with actual Owner, Program Manager, Partner and Staff sessions; current checks are business-level, not outlet-assignment isolation.
+
+## Delivery and payment acceptance gates — source-backed
+
+- [ ] Confirm Delivery fee policy. Current checkout migration stores delivery_fee=0 and total=subtotal; no fee calculation exists. Do not present the total as all-in unless the owner explicitly chooses free delivery or a separately confirmed fee flow is implemented.
+- [ ] Confirm order payment policy. Checkout currently records QRIS/Cash/Other, gateway-not-connected notice, and PENDING payment. Lifecycle status updates do not change payment_status. Verify the manual payment verification path or keep paid-only reporting/fulfillment gated; do not activate LinkBayar in this run.
+- [ ] Confirm whether staff require outlet-specific access restrictions. Current source checks business membership only.
+
+No staging/live migration or payment activation is authorized by this runbook.
