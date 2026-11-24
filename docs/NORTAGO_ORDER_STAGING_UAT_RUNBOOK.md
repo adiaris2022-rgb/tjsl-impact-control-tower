@@ -245,3 +245,16 @@ CI regression uses disposable PostgreSQL only. Staging catalog/data inspection r
 - [ ] Digital Receipt must clearly show total order, initial amount due, remaining balance, payment option, and PENDING status.
 
 **Important accounting limitation:** the DP implementation stores the payment option, initial amount due, remaining balance, and a single payment status. It does not record actual amounts received, balance collection, payment receipts, refunds, or partial settlement events. All newly created orders remain PENDING. The Owner Dashboard's paid-only metrics exclude PENDING orders and its per-outlet summary displays DP pending amount and remaining DP balance. Those figures are order obligations, not proof of money received; this implementation does not yet provide a verified DP settlement/collection ledger. Do not mark a DP order fully PAID or include its full order total in paid revenue until a separate, audited payment-receipt/settlement workflow is implemented.
+
+
+## Default ACL and DDL event-trigger preflight (read-only)
+
+- [ ] Run security audit Query 19. Record effective global/built-in and public-schema default privileges by object creator role for TABLE, SEQUENCE, and FUNCTION objects. A default ACL for one creator role does not prove the ACL used by another migration executor.
+- [ ] Review default TABLE privileges granting anon/authenticated INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, or TRIGGER; review FUNCTION EXECUTE separately. Do not change global default privileges without an owner-approved impact analysis.
+- [ ] Run Query 20. Inspect enabled DDL event triggers, SECURITY DEFINER owner, fixed search_path, ACL, and effective anon/authenticated EXECUTE.
+- [ ] If `public.rls_auto_enable()` exists as an enabled SECURITY DEFINER event-trigger function, the candidate migration conditionally revokes EXECUTE from PUBLIC, anon, authenticated, and service_role while preserving the enabled event trigger. The helper is not an application RPC; PostgreSQL invokes it through the event trigger. Verify effective EXECUTE is false for all four grantees and that a newly created public table still receives RLS in disposable CI.
+- [ ] Do not create, drop, disable, or replace a platform event trigger during staging UAT. The CI fixture is disposable-only.
+
+## Integrated subscription isolation regression
+
+The selected candidate must include the PR #44 test that creates two outlets in the same business plus a second business, proves separate subscription IDs, stages a yearly change for only one outlet, and leaves all four invoice payment records PENDING. This is automated disposable PostgreSQL evidence only; no payment settlement or webhook delivery occurs.
