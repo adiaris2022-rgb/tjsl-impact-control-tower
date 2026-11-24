@@ -101,3 +101,14 @@ The first PR #39 exact-head run (#382) exposed a real PostgreSQL privilege rule:
 
 
 The second PR #39 exact-head CI run (#386) reached the post-migration security verification and exposed that the migration executor cannot remove the membership row granted by `postgres`: PostgreSQL tracks role-membership grantors, and a role can revoke only the membership grant it made. The migration now leaves the owner-issued temporary ADMIN OPTION intact and the CI fixture has an explicit owner-side cleanup step (run by the same grantor) before the final no-membership assertion. This is required operationally in the real managed project; do not begin authenticated UAT until the database owner has revoked the temporary membership and the catalog audit confirms zero members.
+
+
+### Owner-side cleanup procedure for the temporary ADMIN OPTION grant
+
+After the lifecycle-owner migration completes, do not begin authenticated UAT until the temporary migration-executor membership has been removed by the same database-owner grantor that issued it. First inspect the exact grantor/member/options with Query 14 in `NORTAGO_ORDER_STAGING_SECURITY_AUDIT.sql`. Then, in an owner-approved SQL session authenticated as that grantor (or a database superuser), execute the matching statement using the actual member role returned by the audit:
+
+```sql
+REVOKE nortago_order_lifecycle_owner FROM <actual_migration_executor_role>;
+```
+
+Re-run Query 14 and verify there are zero rows where either `member_role` or `granted_role` is `nortago_order_lifecycle_owner`. Do not substitute `postgres`, `supabase_admin`, or another role by assumption. The CI fixture performs this cleanup as the same grantor that issued the pregrant; it is not an automatic production/staging action.

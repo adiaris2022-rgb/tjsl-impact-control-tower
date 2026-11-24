@@ -289,13 +289,16 @@ where r.rolname = 'nortago_order_lifecycle_owner';
 select
   member_role.rolname as member_role,
   granted_role.rolname as granted_role,
-  m.admin_option
+  pg_get_userbyid(m.grantor) as membership_grantor,
+  m.admin_option,
+  m.inherit_option,
+  m.set_option
 from pg_auth_members m
 join pg_roles member_role on member_role.oid = m.member
 join pg_roles granted_role on granted_role.oid = m.roleid
 where member_role.rolname = 'nortago_order_lifecycle_owner'
    or granted_role.rolname = 'nortago_order_lifecycle_owner'
-order by member_role.rolname, granted_role.rolname;
+order by member_role.rolname, granted_role.rolname, membership_grantor;
 
 select
   n.nspname as schema_name,
