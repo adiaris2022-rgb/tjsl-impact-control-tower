@@ -379,3 +379,58 @@ where not t.tgisinternal
     'otc_outlets_business_reassignment_guard'
   )
 order by t.tgname;
+
+
+-- 15. Effective authenticated grants needed by the outlet/product tenant guard.
+-- SELECT ... FOR SHARE also requires UPDATE privilege on the locked parent tables.
+select
+  'authenticated' as role_name,
+  'otc_outlet_products' as table_name,
+  has_table_privilege('authenticated','public.otc_outlet_products','select') as can_select,
+  has_table_privilege('authenticated','public.otc_outlet_products','insert') as can_insert,
+  has_table_privilege('authenticated','public.otc_outlet_products','update') as can_update,
+  has_table_privilege('authenticated','public.otc_outlets','select') as can_select_outlets,
+  has_table_privilege('authenticated','public.otc_outlets','update') as can_lock_outlets_for_share,
+  has_table_privilege('authenticated','public.otc_products','select') as can_select_products,
+  has_table_privilege('authenticated','public.otc_products','update') as can_lock_products_for_share,
+  has_column_privilege('authenticated','public.otc_outlet_products','outlet_id','select') as can_read_outlet_id,
+  has_column_privilege('authenticated','public.otc_outlet_products','product_id','select') as can_read_product_id,
+  has_column_privilege('authenticated','public.otc_outlets','business_id','select') as can_read_outlet_business,
+  has_column_privilege('authenticated','public.otc_products','business_id','select') as can_read_product_business;
+
+-- 16. Catalog tenant-guard RLS policy and trigger state/function definitions.
+select
+  schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+from pg_policies
+where schemaname='public'
+  and tablename in ('otc_outlet_products','otc_outlets','otc_products')
+order by tablename, policyname;
+
+select
+  c.relname as table_name,
+  t.tgname as trigger_name,
+  t.tgenabled as trigger_enabled,
+  pg_get_userbyid(p.proowner) as trigger_function_owner,
+  p.prosecdef as trigger_function_security_definer,
+  p.proconfig as trigger_function_configuration,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  pg_get_functiondef(p.oid) as trigger_function_definition
+from pg_trigger t
+join pg_class c on c.oid=t.tgrelid
+join pg_proc p on p.oid=t.tgfoid
+where not t.tgisinternal
+  and t.tgname in (
+    'otc_outlet_products_business_match_guard',
+    'otc_products_business_reassignment_guard',
+    'otc_outlets_business_reassignment_guard'
+  )
+order by c.relname,t.tgname;
+
+-- 17. Existing cross-business mappings must be zero before the tenant guard migration.
+select
+  count(*) as cross_business_mapping_count
+from public.otc_outlet_products op
+join public.otc_outlets o on o.id=op.outlet_id
+join public.otc_products p on p.id=op.product_id
+where o.business_id is distinct from p.business_id;
