@@ -59,13 +59,6 @@ begin
     raise exception 'Repeated invoice preparation must reuse the same open invoice/payment';
   end if;
 
-  v_yearly_switch := public.nortago_prepare_subscription_invoice(v_business_a,v_outlet_a,'NORTAGO_OUTLET_YEARLY');
-  if v_yearly_switch->>'amount_idr' <> '500000'
-    or v_yearly_switch->>'plan_code' <> 'NORTAGO_OUTLET_YEARLY'
-    or v_yearly_switch->>'subscription_id' is distinct from v_monthly->>'subscription_id' then
-    raise exception 'Yearly plan switch must stage on the existing outlet subscription';
-  end if;
-
   -- A second outlet in the same business must get an independent subscription.
   -- Switching outlet A to yearly must not mutate outlet C's monthly subscription.
   v_monthly_c := public.nortago_prepare_subscription_invoice(v_business_a,v_outlet_c,'NORTAGO_OUTLET_MONTHLY');
@@ -74,6 +67,13 @@ begin
     or v_monthly_c->>'outlet_id' <> v_outlet_c::text
     or v_monthly_c->>'subscription_id' is not distinct from v_monthly->>'subscription_id' then
     raise exception 'Outlet C in the same business must have a separate monthly subscription: %',v_monthly_c;
+  end if;
+
+  v_yearly_switch := public.nortago_prepare_subscription_invoice(v_business_a,v_outlet_a,'NORTAGO_OUTLET_YEARLY');
+  if v_yearly_switch->>'amount_idr' <> '500000'
+    or v_yearly_switch->>'plan_code' <> 'NORTAGO_OUTLET_YEARLY'
+    or v_yearly_switch->>'subscription_id' is distinct from v_monthly->>'subscription_id' then
+    raise exception 'Yearly plan switch must stage on the existing outlet subscription';
   end if;
 
   v_yearly_b := public.nortago_prepare_subscription_invoice(v_business_b,v_outlet_b,'NORTAGO_OUTLET_YEARLY');
