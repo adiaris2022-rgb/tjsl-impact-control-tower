@@ -3,7 +3,11 @@
 begin;
 do $$
 declare
+  v_actor uuid := '00000000-0000-0000-0000-000000000001';
   v_business uuid := gen_random_uuid();
+  v_other_business uuid := gen_random_uuid();
+  v_other_outlet uuid := gen_random_uuid();
+  v_other_service uuid := gen_random_uuid();
   v_outlet uuid := gen_random_uuid();
   v_product uuid := gen_random_uuid();
   v_service_percent uuid := gen_random_uuid();
@@ -17,6 +21,10 @@ declare
   v_token uuid;
   v_items jsonb;
 begin
+  if has_function_privilege('anon','public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)','execute')
+     or not has_function_privilege('authenticated','public.nortago_update_service_payment_terms(uuid,uuid,boolean,boolean,text,numeric)','execute') then
+    raise exception 'SERVICE_PAYMENT_TERMS_RPC_ACL_INVALID';
+  end if;
   if not has_function_privilege('anon','public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text)','execute')
      or not has_function_privilege('authenticated','public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text,text)','execute') then
     raise exception 'CHECKOUT_PAYMENT_TERMS_RPC_CLIENT_GRANT_MISSING';
@@ -26,17 +34,52 @@ begin
   end if;
 
   insert into public.businesses(id) values(v_business);
-  insert into public.otc_outlets(id,business_id,name,is_active) values(v_outlet,v_business,'Payment Terms Outlet',true);
+  insert into public.otc_outlets(id,business_id,name,is_active) values
+    (v_outlet,v_business,'Payment Terms Outlet',true),
+    (v_other_outlet,v_other_business,'Other Payment Terms Outlet',true);
+  insert into public.business_users(business_id,user_id,role) values(v_business,v_actor,'OWNER');
   insert into public.otc_products(id,business_id,name,base_price,is_active,product_type) values
     (v_product,v_business,'Payment Product',20000,true,'PRODUCT'),
     (v_service_percent,v_business,'Percent DP Service',100000,true,'SERVICE'),
     (v_service_fixed,v_business,'Fixed DP Service',80000,true,'SERVICE'),
-    (v_service_full_only,v_business,'Full Only Service',50000,true,'SERVICE');
+    (v_service_full_only,v_business,'Full Only Service',50000,true,'SERVICE'),
+    (v_other_service,v_other_business,'Unauthorized Service',40000,true,'SERVICE');
   insert into public.otc_outlet_products(outlet_id,product_id,price,is_available,allow_full_payment,allow_dp,dp_type,dp_value) values
     (v_outlet,v_product,20000,true,true,false,'PERCENT',50),
     (v_outlet,v_service_percent,100000,true,true,true,'PERCENT',30),
     (v_outlet,v_service_fixed,80000,true,true,true,'FIXED',25000),
-    (v_outlet,v_service_full_only,50000,true,true,false,'PERCENT',50);
+    (v_outlet,v_service_full_only,50000,true,true,false,'PERCENT',50),
+    (v_other_outlet,v_other_service,40000,true,true,false,'PERCENT',50);
+
+  -- Only an OWNER/PARTNER-level business member may change per-outlet service terms.
+  perform public.nortago_update_service_payment_terms(
+    v_outlet,v_service_full_only,true,true,'PERCENT',40
+  );
+  if not exists (
+    select 1 from public.otc_outlet_products
+    where outlet_id=v_outlet and product_id=v_service_full_only
+      and allow_full_payment and allow_dp and dp_type='PERCENT' and dp_value=40
+  ) then
+    raise exception 'OWNER_PAYMENT_TERMS_RPC_DID_NOT_UPDATE_OUTLET_MAPPING';
+  end if;
+
+  begin
+    perform public.nortago_update_service_payment_terms(
+      v_other_outlet,v_other_service,true,true,'PERCENT',40
+    );
+    raise exception 'NON_MEMBER_PAYMENT_TERMS_UPDATE_WAS_ACCEPTED';
+  exception when others then
+    if sqlerrm <> 'SERVICE_PAYMENT_TERMS_FORBIDDEN' then raise; end if;
+  end;
+
+  begin
+    perform public.nortago_update_service_payment_terms(
+      v_outlet,v_service_full_only,false,false,'PERCENT',40
+    );
+    raise exception 'DISABLING_BOTH_PAYMENT_OPTIONS_WAS_ACCEPTED';
+  exception when others then
+    if sqlerrm <> 'SERVICE_PAYMENT_TERMS_AT_LEAST_ONE_OPTION_REQUIRED' then raise; end if;
+  end;
 
   -- FULL remains the default and is authoritative on the server.
   v_items := jsonb_build_array(jsonb_build_object('product_id',v_service_percent,'quantity',2));
