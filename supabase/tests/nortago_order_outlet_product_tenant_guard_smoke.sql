@@ -20,6 +20,47 @@ begin
     raise exception 'TENANT_GUARD_TRIGGER_FUNCTIONS_MUST_NOT_BE_CLIENT_CALLABLE';
   end if;
 
+  if exists (
+    select 1 from pg_proc
+    where oid in (
+      'public.nortago_guard_outlet_product_business_match()'::regprocedure,
+      'public.nortago_guard_product_business_reassignment()'::regprocedure,
+      'public.nortago_guard_outlet_business_reassignment()'::regprocedure
+    ) and prosecdef
+  ) then
+    raise exception 'TENANT_GUARD_TRIGGER_FUNCTIONS_MUST_REMAIN_SECURITY_INVOKER';
+  end if;
+
+  if not exists (
+    select 1 from pg_trigger
+    where tgrelid='public.otc_outlet_products'::regclass
+      and tgname='otc_outlet_products_business_match_guard'
+      and not tgisinternal and tgenabled in ('O','A')
+  ) or not exists (
+    select 1 from pg_trigger
+    where tgrelid='public.otc_products'::regclass
+      and tgname='otc_products_business_reassignment_guard'
+      and not tgisinternal and tgenabled in ('O','A')
+  ) or not exists (
+    select 1 from pg_trigger
+    where tgrelid='public.otc_outlets'::regclass
+      and tgname='otc_outlets_business_reassignment_guard'
+      and not tgisinternal and tgenabled in ('O','A')
+  ) then
+    raise exception 'TENANT_GUARD_TRIGGER_MISSING_OR_DISABLED';
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='otc_outlet_products'
+      and policyname='otc_outlet_products_staff_manage'
+      and cmd='ALL'
+      and qual like '%p.business_id = o.business_id%'
+      and with_check like '%p.business_id = o.business_id%'
+  ) then
+    raise exception 'OUTLET_PRODUCT_STAFF_POLICY_MUST_ENFORCE_BUSINESS_MATCH';
+  end if;
+
   insert into public.businesses(id) values(v_business_a),(v_business_b);
   insert into public.otc_outlets(id,business_id,name,is_active) values
     (v_outlet_a,v_business_a,'Tenant Guard Outlet A',true),
