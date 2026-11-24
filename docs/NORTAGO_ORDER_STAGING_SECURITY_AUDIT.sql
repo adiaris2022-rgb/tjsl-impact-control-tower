@@ -568,3 +568,106 @@ where c.oid in (
 )
   and a.attnum>0 and not a.attisdropped
 order by relation_name,column_name;
+
+
+-- 19) Effective default privileges for future public tables, sequences, and functions.
+-- Combines the creator role's global override (or PostgreSQL built-in default)
+-- with additive public-schema defaults. Do not change global defaults without owner review.
+with creators as (
+  select oid, rolname
+  from pg_roles
+  where rolname !~ '^pg_'
+),
+object_types(objtype, object_type) as (
+  values ('r'::"char", 'TABLE'), ('S'::"char", 'SEQUENCE'), ('f'::"char", 'FUNCTION')
+),
+effective_defaults as (
+  select
+    c.oid as creator_oid,
+    c.rolname as creator_role,
+    o.objtype,
+    o.object_type,
+    case
+      when global_acl.defaclacl is not null then global_acl.defaclacl
+      else acldefault(o.objtype, c.oid)
+    end as base_acl,
+    schema_acl.defaclacl as public_schema_acl
+  from creators c
+  cross join object_types o
+  left join pg_default_acl global_acl
+    on global_acl.defaclrole=c.oid
+   and global_acl.defaclnamespace=0
+   and global_acl.defaclobjtype=o.objtype
+  left join pg_default_acl schema_acl
+    on schema_acl.defaclrole=c.oid
+   and schema_acl.defaclnamespace=to_regnamespace('public')
+   and schema_acl.defaclobjtype=o.objtype
+)
+select
+  creator_role,
+  object_type,
+  'global_or_builtin' as acl_source,
+  case when acl.grantee=0 then 'PUBLIC' else acl.grantee::regrole::text end as grantee,
+  acl.privilege_type,
+  acl.is_grantable
+from effective_defaults d
+cross join lateral aclexplode(d.base_acl) acl
+where acl.grantee in (
+  0,
+  coalesce((select oid from pg_roles where rolname='anon'),0),
+  coalesce((select oid from pg_roles where rolname='authenticated'),0),
+  coalesce((select oid from pg_roles where rolname='service_role'),0)
+)
+union all
+select
+  creator_role,
+  object_type,
+  'public_schema_additive' as acl_source,
+  case when acl.grantee=0 then 'PUBLIC' else acl.grantee::regrole::text end as grantee,
+  acl.privilege_type,
+  acl.is_grantable
+from effective_defaults d
+cross join lateral aclexplode(d.public_schema_acl) acl
+where acl.grantee in (
+  0,
+  coalesce((select oid from pg_roles where rolname='anon'),0),
+  coalesce((select oid from pg_roles where rolname='authenticated'),0),
+  coalesce((select oid from pg_roles where rolname='service_role'),0)
+)
+order by creator_role, object_type, acl_source, grantee, privilege_type;
+
+-- 20) DDL event-trigger functions and their effective client EXECUTE privileges.
+select
+  e.evtname,
+  e.evtenabled,
+  e.evtevent,
+  p.oid::regprocedure as event_function,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  p.proacl as function_acl,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  has_function_privilege('service_role',p.oid,'execute') as service_role_can_execute,
+  pg_get_functiondef(p.oid) as function_definition
+from pg_event_trigger e
+join pg_proc p on p.oid=e.evtfoid
+order by e.evtname;
+
+-- Also show exposed SECURITY DEFINER event-trigger-returning functions even if no
+-- event trigger currently references them.
+select
+  p.oid::regprocedure as function_signature,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  p.proconfig as function_configuration,
+  p.proacl as function_acl,
+  has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
+  has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  exists (select 1 from pg_event_trigger e where e.evtfoid=p.oid and e.evtenabled in ('O','A')) as attached_to_enabled_event_trigger
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.prorettype='pg_catalog.event_trigger'::regtype
+  and p.prosecdef
+order by p.oid::regprocedure::text;
