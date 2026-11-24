@@ -1,5 +1,55 @@
 # NORTAGO ORDER — Release Readiness & UAT
 
+## Latest verified release-first refresh — 24 Nov 2026, 19:36 WIB
+
+This section supersedes older dated reference tables below. Historical sections are retained as an audit trail. All refs and workflow runs below were refreshed from GitHub branch comparisons and commit-associated Actions runs. CI is disposable PostgreSQL/unit/build evidence, not Supabase staging or browser UAT.
+
+### PR #1 and #12–#17 exact refs
+
+| PR | Head branch / SHA | Base branch / current SHA | Compare state | Exact-head CI | Vercel |
+|---|---|---|---|---|---|
+| [#1](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/1) | `feature/nortago-order-audit-fix` / `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | `main` / `1d93745e161ef20d5bb66617858fbdb514c55108` | ahead 107, behind 0 | [#69 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44665343539) | success |
+| [#12](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/12) | `release/nortago-order-only-20261120` / `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | `feature/nortago-order-audit-fix` / `a75820a8ca6d14c3f92fd3dfcfb9821f28429843` | ahead 8, behind 0 | [#183 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44810763148) | success |
+| [#13](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/13) | `fix/nortago-order-plan-snapshot-20261120` / `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | `release/nortago-order-only-20261120` / `a323dcdedb5fd1048d9d2b2e3560c6ced889789c` | **diverged: ahead 7, behind 1; merge base `31e517eed0c280ed25e57c144405bbd2fcb0178b`** | [#136 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44721352568) | success |
+| [#14](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/14) | `fix/nortago-order-checkout-idempotency-20261120` / `f3a86754461b06b10250b073a38fae906bfd2777` | `fix/nortago-order-plan-snapshot-20261120` / `c0a5e75cf9a8964848ad00aa4b5d57d1753140a6` | ahead 7, behind 0 | [#138 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725160805) | build-rate-limit failure |
+| [#15](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/15) | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | `fix/nortago-order-checkout-idempotency-20261120` / `f3a86754461b06b10250b073a38fae906bfd2777` | ahead 12, behind 0 | [#140 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44725624942) | build-rate-limit failure |
+| [#16](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/16) | `chore/nortago-order-scope-smoke-dedupe` / `db3e6a43edc4edc4d3338504d87da11163594e42` | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | ahead 1, behind 0 | [#141 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44740771154) | success |
+| [#17](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/17) | `feature/nortago-order-owner-inbox` / `7516e1b22d5cd340b872db4bc516471a81ef74d4` | `fix/nortago-order-release-scope-20261120` / `e16260f8147e3b55255be6bf5163a32774abe280` | ahead 2, behind 0 | [#143 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/44741038747) | success |
+
+PR #16 Run #141 and PR #17 Run #143 were rechecked on their exact current head SHAs; both PostgreSQL migration/smoke and production-build jobs completed successfully. PR #13 is the one branch-chain synchronization blocker: do not rebase or rewrite it independently because PR #14–#17 depend on the chain. PRs #1 and #12–#17 remain open/draft/unmerged. Vercel build-rate-limit failures on #14/#15 are not GitHub Actions failures.
+
+### Current Order hardening stack and exact-head CI
+
+| PR | Head SHA | Base SHA | Exact-head CI |
+|---|---|---|---|
+| [#38](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/38) | `e783feefea1825d9a1697b8a0084d996f7b44dd2` | `be598ef1ea6437f4854785b07c65b95f57226df3` | [#373 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45346902621) |
+| [#39](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/39) | `4eed2d64f53c0f6cadc23fdea321f2c566219a62` | `e783feefea1825d9a1697b8a0084d996f7b44dd2` | [#389 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45366833681) |
+| [#40](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/40) | `f90132522fe974fc6be0b79076716b62dca86f49` | `e783feefea1825d9a1697b8a0084d996f7b44dd2` | [#400 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45370451460) |
+| [#41](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/41) | `967a7d2619a73ca00525de99848b0b9aef5394b8` | `4eed2d64f53c0f6cadc23fdea321f2c566219a62` | [#406 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45372966584) |
+| [#42](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/42) | `87f74e505af799d8b1c224e6d60238c5b928a1d5` | `967a7d2619a73ca00525de99848b0b9aef5394b8` | [#407 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45385544208) |
+| [#43](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/43) | `64e3cd482c0afc1dba5bbe2a6305f8bee0861525` | `87f74e505af799d8b1c224e6d60238c5b928a1d5` | [#408 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45385867486) |
+| [#44](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/44) | `ea8f4c242371bed636075cf9445aa4b71d8a2ea0` | `64e3cd482c0afc1dba5bbe2a6305f8bee0861525` | [#409 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45386368614) |
+| [#45](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/pull/45) | `e6cccf88c5544ea59eb601466b0e3c8d3a1dc6fb` | `64e3cd482c0afc1dba5bbe2a6305f8bee0861525` | [#412 PASS](https://github.com/adiaris2022-rgb/tjsl-impact-control-tower/actions/runs/45386875762) |
+
+PR #44 and PR #45 are sibling branches from PR #43; PR #45 does not contain PR #44's same-business/two-outlet subscription regression. Both changes must be represented in the final reviewed release stack. PR #42 exact-head Vercel status was success; PR #43–#45 exact-head Vercel status was blocked by provider build-rate-limit, so no exact-head browser UAT is claimed for those branches.
+
+### Current Supabase evidence and hard stop
+
+Read-only inspection of the connected project `aakhinaryzidzpsjeewp` found PostgreSQL 17.12 but no OTC application tables and no application migration ledger. In particular, `otc_orders`, `otc_order_items`, `otc_outlets`, `business_users`, `has_business_role`, lifecycle RPCs, OTC RLS policies, and OTC triggers are absent there. The OTC core migration names a different project ref, `tdpupelhvzxwhbqnnlxk`, which is not accessible to the connected account. Therefore no effective grants/RLS/triggers on a populated `otc_orders.status` table have been verified. Do not treat disposable PostgreSQL 17 CI as staging evidence, and do not migrate the empty connected project.
+
+### Commercial gates still open
+
+- Exact-head Preview/browser UAT for the selected integrated release candidate.
+- Read-only access to the populated Supabase staging project, followed by actual grants, RLS, trigger, helper-auth, owner-role, and migration-ledger inspection.
+- Real authenticated-session test: direct `otc_orders.status` update rejected while approved `nortago_update_order_status` transitions succeed and write one audit event.
+- Delivery fee is currently zero/not calculated; disclose separately or implement an owner-approved fee policy before selling Delivery as all-in.
+- Checkout/DP records due amount and remaining balance but not a complete receipt/settlement ledger; payment remains PENDING until a verified collection workflow exists.
+- STAFF permissions are business-membership scoped, not outlet-assignment scoped; audit retention still follows the current cascade behavior pending owner policy.
+- LinkBayar webhook and payment activation remain disabled.
+
+No PR merge, production deployment, Supabase staging/live migration, payment/webhook activation, secrets/environment change, or destructive action is authorized by this refresh.
+
+
 ## Product scope (release 1)
 
 NORTAGO ORDER is a shareable link for product catalog, checkout, and order intake. Customer order modes are **Pre-Order (scheduled pickup in current checkout model), Takeaway, and Delivery**.
