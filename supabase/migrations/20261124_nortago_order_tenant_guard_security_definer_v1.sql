@@ -56,7 +56,7 @@ create or replace function public.nortago_guard_outlet_product_business_match()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public, pg_temp
+set search_path = pg_catalog, pg_temp
 as $$
 declare
   v_outlet_business_id uuid;
@@ -89,7 +89,7 @@ create or replace function public.nortago_guard_product_business_reassignment()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public, pg_temp
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if new.business_id is distinct from old.business_id
@@ -110,7 +110,7 @@ create or replace function public.nortago_guard_outlet_business_reassignment()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public, pg_temp
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if new.business_id is distinct from old.business_id
