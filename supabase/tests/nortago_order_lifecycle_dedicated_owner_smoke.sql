@@ -6,6 +6,10 @@ do $$
 declare
   v_role_oid oid;
   v_rpc_oid oid;
+  v_auth_actor_oid oid;
+  v_auth_actor_owner name;
+  v_auth_actor_config text[];
+  v_auth_actor_security_definer boolean;
   v_count integer;
   v_col record;
   v_priv text;
@@ -58,9 +62,41 @@ begin
     raise exception 'NORTAGO_LIFECYCLE_OWNER_MUST_OWN_EXACTLY_ONE_SECURITY_DEFINER_FUNCTION: %',v_count;
   end if;
 
-  if not has_function_privilege('nortago_order_lifecycle_owner','auth.uid()','execute')
-     or not has_function_privilege('nortago_order_lifecycle_owner','public.has_business_role(uuid,text[])','execute') then
-    raise exception 'NORTAGO_LIFECYCLE_OWNER_HELPER_EXECUTE_MISSING';
+  select p.oid, pg_get_userbyid(p.proowner), p.proconfig, p.prosecdef
+    into v_auth_actor_oid, v_auth_actor_owner, v_auth_actor_config, v_auth_actor_security_definer
+  from pg_proc p
+  where p.oid=to_regprocedure('public.nortago_order_auth_actor()');
+
+  if v_auth_actor_oid is null
+     or v_auth_actor_owner in ('anon','authenticated')
+     or not v_auth_actor_security_definer
+     or not ('search_path=pg_catalog' = any(coalesce(v_auth_actor_config, array[]::text[]))) then
+    raise exception 'NORTAGO_LIFECYCLE_AUTH_ACTOR_BRIDGE_UNSAFE';
+  end if;
+
+  if not has_function_privilege('nortago_order_lifecycle_owner','public.nortago_order_auth_actor()','execute')
+     or not has_function_privilege('nortago_order_lifecycle_owner','public.has_business_role(uuid,text[])','execute')
+     or has_function_privilege('anon','public.nortago_order_auth_actor()','execute')
+     or has_function_privilege('authenticated','public.nortago_order_auth_actor()','execute')
+     or has_schema_privilege('nortago_order_lifecycle_owner','auth','usage') then
+    raise exception 'NORTAGO_LIFECYCLE_OWNER_HELPER_EXECUTE_OR_AUTH_SCHEMA_BOUNDARY_INVALID';
+  end if;
+
+  if not exists (
+    select 1 from pg_roles
+    where rolname='nortago_order_migration_executor_ci'
+      and rolcreaterole and not rolsuper and not rolcanlogin
+  ) then
+    raise exception 'NORTAGO_MANAGED_MIGRATION_EXECUTOR_FIXTURE_MISSING';
+  end if;
+  if exists (
+    select 1 from pg_auth_members m
+    join pg_roles executor on executor.oid=m.member
+    join pg_roles owner_role on owner_role.oid=m.roleid
+    where executor.rolname='nortago_order_migration_executor_ci'
+      and owner_role.rolname='nortago_order_lifecycle_owner'
+  ) then
+    raise exception 'NORTAGO_MIGRATION_EXECUTOR_MEMBERSHIP_NOT_REVOKED';
   end if;
 
   -- No table-level privileges on the order header; only the listed columns.
