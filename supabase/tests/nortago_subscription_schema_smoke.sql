@@ -61,7 +61,7 @@ begin
   end if;
 
 
-  if to_regprocedure('public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)') is null then
+  if to_regprocedure('public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text,text)') is null then
     raise exception 'Missing atomic server-priced customer checkout RPC';
   end if;
 
@@ -88,14 +88,14 @@ begin
 
   if not exists (
     select 1 from pg_proc
-    where oid = 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
+    where oid = 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text,text)'::regprocedure
       and prosecdef = true
   ) then
     raise exception 'Customer checkout RPC must be SECURITY DEFINER';
   end if;
 
-  if not has_function_privilege('anon', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE')
-    or not has_function_privilege('authenticated', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE') then
+  if not has_function_privilege('anon', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text,text)', 'EXECUTE')
+    or not has_function_privilege('authenticated', 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text,text)', 'EXECUTE') then
     raise exception 'Idempotent customer checkout RPC is not executable';
   end if;
   if has_function_privilege('anon', 'public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)', 'EXECUTE')
@@ -131,7 +131,7 @@ begin
 
   if not exists (
     select 1 from pg_proc
-    where oid = 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text)'::regprocedure
+    where oid = 'public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamp with time zone,text,text,text)'::regprocedure
       and coalesce(array_to_string(proconfig, ','), '') like '%search_path=pg_catalog, public, pg_temp%'
   ) then
     raise exception 'Customer checkout RPC search_path is not hardened';
