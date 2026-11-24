@@ -291,3 +291,18 @@ This closes the source-level tenant mapping gap in the candidate release branch.
 - The OTC core migration comment references another project ref (`tdpupelhvzxwhbqnnlxk`), which the connected account could not inspect (permission denied). Do not apply migrations to the empty connected project; identify the populated staging target first.
 - Supabase Security Advisor flags `public.rls_auto_enable()` as SECURITY DEFINER and executable by anon/authenticated; the `ensure_rls` event trigger is enabled. No ACL change was made; review this platform-level finding on the confirmed target.
 - No staging/live migration, merge, production deployment, payment/webhook activation, secret/environment change, or destructive action was performed.
+
+## Public catalog effective-grant gap and correction — 24 Nov 2026
+
+The browser receives `NEXT_PUBLIC_SUPABASE_ANON_KEY`; Customer Menu reads outlets/products/outlet mappings with anon, while Owner Catalog directly updates a narrow set of product and outlet-mapping fields. The original OTC core migration created RLS policies but did not grant the required SQL privileges. The connected empty Supabase project shows that postgres-created public tables inherit TRUNCATE/REFERENCES/TRIGGER (and PG17 MAINTAIN) for anon/authenticated/service_role, but no SELECT/INSERT/UPDATE/DELETE; supabase_admin-created tables inherit a broader ACL. The CI tenant-guard fixture previously granted SELECT/UPDATE manually, masking the migration gap.
+
+PR #41 adds a simulated postgres default-ACL baseline, trigger-only SECURITY DEFINER tenant guards owned by the OTC table owner (fixed search_path, client/service EXECUTE revoked), and explicit per-table least-privilege grants: public SELECT for anon/authenticated, authenticated column UPDATE only for product details/active and outlet price/availability. It revokes all client grants including TRUNCATE/REFERENCES/TRIGGER/PG17 MAINTAIN and leaves service_role/global defaults unchanged. This is not effective-grant evidence for the absent staging OTC tables; no Supabase migration was applied.
+
+
+## Public catalog grant hardening — follow-up review, 24 Nov 2026
+
+- The catalog migration now clears both table-level and pre-existing column-level privileges from PUBLIC, anon, and authenticated on the three reviewed catalog tables before restoring the Owner Catalog allowlist. This closes the gap where PostgreSQL table-level REVOKE alone could leave stale column grants.
+- Disposable CI seeds legacy column UPDATE/INSERT/REFERENCES grants before the migration, then verifies that no unauthorized client column privileges survive.
+- The tenant consistency trigger functions now use the narrower fixed search_path `pg_catalog, pg_temp`; all application table references remain schema-qualified.
+- The database CI service uses PostgreSQL 17 and models the observed postgres-creator MAINTAIN default ACL. The post-migration checks verify MAINTAIN is absent for anon/authenticated and the direct service_role default grant remains.
+- This remains feature-branch/disposable-CI evidence. The connected Supabase project has no OTC tables or migration history; the populated target referenced by the core migration remains inaccessible. No staging migration or browser UAT was performed.

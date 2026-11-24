@@ -385,8 +385,9 @@ where not t.tgisinternal
 order by t.tgname;
 
 
--- 15. Effective authenticated grants needed by the outlet/product tenant guard.
--- SELECT ... FOR SHARE also requires UPDATE privilege on the locked parent tables.
+-- 15. Effective authenticated public-catalog grants after the least-privilege migration.
+-- The row-locking tenant guard runs SECURITY DEFINER as the reviewed table owner;
+-- clients need SELECT plus only the column UPDATE privileges used by Owner Catalog.
 select
   'authenticated' as role_name,
   'otc_outlet_products' as table_name,
@@ -394,9 +395,13 @@ select
   has_table_privilege('authenticated','public.otc_outlet_products','insert') as can_insert,
   has_table_privilege('authenticated','public.otc_outlet_products','update') as can_update,
   has_table_privilege('authenticated','public.otc_outlets','select') as can_select_outlets,
-  has_table_privilege('authenticated','public.otc_outlets','update') as can_lock_outlets_for_share,
+  has_table_privilege('authenticated','public.otc_outlets','update') as can_update_outlets,
   has_table_privilege('authenticated','public.otc_products','select') as can_select_products,
-  has_table_privilege('authenticated','public.otc_products','update') as can_lock_products_for_share,
+  has_table_privilege('authenticated','public.otc_products','update') as can_update_products_table_level,
+  has_column_privilege('authenticated','public.otc_products','name','update') as can_update_product_name,
+  has_column_privilege('authenticated','public.otc_products','is_active','update') as can_update_product_active,
+  has_column_privilege('authenticated','public.otc_outlet_products','price','update') as can_update_outlet_price,
+  has_column_privilege('authenticated','public.otc_outlet_products','is_available','update') as can_update_outlet_availability,
   has_column_privilege('authenticated','public.otc_outlet_products','outlet_id','select') as can_read_outlet_id,
   has_column_privilege('authenticated','public.otc_outlet_products','product_id','select') as can_read_product_id,
   has_column_privilege('authenticated','public.otc_outlets','business_id','select') as can_read_outlet_business,
@@ -415,10 +420,13 @@ select
   t.tgname as trigger_name,
   t.tgenabled as trigger_enabled,
   pg_get_userbyid(p.proowner) as trigger_function_owner,
+  pg_get_userbyid(c.relowner) as trigger_table_owner,
+  (p.proowner=c.relowner) as function_owner_matches_table_owner,
   p.prosecdef as trigger_function_security_definer,
   p.proconfig as trigger_function_configuration,
   has_function_privilege('anon',p.oid,'execute') as anon_can_execute,
   has_function_privilege('authenticated',p.oid,'execute') as authenticated_can_execute,
+  has_function_privilege('service_role',p.oid,'execute') as service_role_can_execute,
   pg_get_functiondef(p.oid) as trigger_function_definition
 from pg_trigger t
 join pg_class c on c.oid=t.tgrelid
@@ -518,3 +526,45 @@ select
 from pg_proc p
 where p.oid=to_regprocedure('public.nortago_order_auth_actor()');
 
+
+
+-- 21) Effective public catalog privileges after migration. Policies do not
+-- substitute for SQL grants; inspect both table and column privileges.
+select
+  c.oid::regclass as relation_name,
+  pg_get_userbyid(c.relowner) as table_owner,
+  c.relrowsecurity as rls_enabled,
+  has_table_privilege('anon',c.oid,'select') as anon_select,
+  has_table_privilege('anon',c.oid,'insert') as anon_insert,
+  has_table_privilege('anon',c.oid,'update') as anon_update,
+  has_table_privilege('anon',c.oid,'delete') as anon_delete,
+  has_table_privilege('anon',c.oid,'truncate') as anon_truncate,
+  has_table_privilege('authenticated',c.oid,'select') as authenticated_select,
+  has_table_privilege('authenticated',c.oid,'insert') as authenticated_insert,
+  has_table_privilege('authenticated',c.oid,'update') as authenticated_table_update,
+  has_table_privilege('authenticated',c.oid,'delete') as authenticated_delete,
+  has_table_privilege('authenticated',c.oid,'truncate') as authenticated_truncate,
+  has_any_column_privilege('authenticated',c.oid,'update') as authenticated_any_column_update,
+  has_table_privilege('service_role',c.oid,'truncate') as service_role_truncate,
+  has_table_privilege('service_role',c.oid,'references') as service_role_references,
+  has_table_privilege('service_role',c.oid,'trigger') as service_role_trigger
+from pg_class c
+where c.oid in (
+  to_regclass('public.otc_outlets'),
+  to_regclass('public.otc_products'),
+  to_regclass('public.otc_outlet_products')
+)
+order by relation_name;
+
+select
+  c.oid::regclass as relation_name,
+  a.attname as column_name,
+  has_column_privilege('authenticated',c.oid,a.attname,'update') as authenticated_can_update
+from pg_class c
+join pg_attribute a on a.attrelid=c.oid
+where c.oid in (
+  to_regclass('public.otc_products'),
+  to_regclass('public.otc_outlet_products')
+)
+  and a.attnum>0 and not a.attisdropped
+order by relation_name,column_name;

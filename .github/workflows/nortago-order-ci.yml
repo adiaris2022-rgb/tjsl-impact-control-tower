@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: nortago_test
@@ -92,10 +92,22 @@ jobs:
           revoke all on function public.has_business_role(uuid, text[]) from public;
           grant execute on function public.has_business_role(uuid, text[]) to authenticated;
           SQL
+      - name: Simulate connected Supabase PostgreSQL 17 postgres creator default table ACL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 <<'SQL'
+          alter default privileges for role postgres in schema public
+            grant truncate, references, trigger, maintain on tables to anon, authenticated, service_role;
+          SQL
       - name: Apply existing OTC commerce schema
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20260928_otc_commerce_core_v1.sql
+      - name: Prove simulated postgres default ACL reached new OTC tables
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_public_catalog_default_acl_baseline_smoke.sql
       - name: Apply outlet-product tenant consistency guard
         env:
           PGPASSWORD: postgres
@@ -104,10 +116,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_outlet_product_tenant_guard_v1.sql
-      - name: Run outlet-product tenant isolation regression checks
+      - name: Apply SECURITY DEFINER outlet-product tenant guard row-lock boundary
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_outlet_product_tenant_guard_smoke.sql
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_tenant_guard_security_definer_v1.sql
+      - name: Replay SECURITY DEFINER outlet-product tenant guard row-lock boundary
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_tenant_guard_security_definer_v1.sql
       - name: Apply Product and Service catalog schema
         env:
           PGPASSWORD: postgres
@@ -197,6 +213,22 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_service_payment_terms_smoke.sql
+      - name: Apply least-privilege public catalog table grants
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_public_catalog_privileges_v1.sql
+      - name: Replay least-privilege public catalog table grants (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_public_catalog_privileges_v1.sql
+      - name: Verify effective public catalog grants and RLS
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_public_catalog_privileges_smoke.sql
+      - name: Run outlet-product tenant isolation regression checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_outlet_product_tenant_guard_smoke.sql
       - name: Apply order lifecycle RPC and audit schema
         env:
           PGPASSWORD: postgres
