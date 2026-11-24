@@ -72,7 +72,7 @@ begin
     (v_business_a,v_actor,'OWNER'),
     (v_business_b,v_actor,'OWNER');
 end
-$;
+$$;
 
 -- The fixture simulates Supabase's authenticated table grants. RLS and the
 -- server-side triggers, not missing SQL privileges, must reject cross-business writes.
