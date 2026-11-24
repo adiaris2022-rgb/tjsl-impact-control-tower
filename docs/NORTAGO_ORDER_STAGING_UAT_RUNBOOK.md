@@ -1,5 +1,12 @@
 # NORTAGO ORDER — Staging UAT Runbook
 
+## Legacy nested app and sibling-PR integration gate
+
+The nested `otc/` package is a separate legacy Next.js demo, not the active root NORTAGO ORDER app. PR #47 changes its root layout to render only a static disabled notice and not render any route children; the active root `app/otc/layout.tsx` remains unchanged. Do not use the nested package for checkout, receipt, Owner Dashboard, or payment UAT.
+
+Before final candidate sign-off, verify that both sibling changes are represented: PR #40's `rls_auto_enable()` event-helper EXECUTE revocation (PR #41 does not inherit PR #40), and PR #44's same-business/two-outlet subscription regression (PR #45 does not inherit PR #44). Their individual CI passes are not evidence that their changes are present in the selected candidate SHA.
+
+
 ## Latest release-first preflight — 24 Nov 2026, 19:36 WIB
 
 This is an evidence refresh, not permission to migrate or deploy. The latest selected code candidate is PR #45 head `e6cccf88c5544ea59eb601466b0e3c8d3a1dc6fb`; its parent PR #43 head is `64e3cd482c0afc1dba5bbe2a6305f8bee0861525`. PR #44 (`ea8f4c242371bed636075cf9445aa4b71d8a2ea0`) is a sibling of PR #45 and contains the two-outlets-within-one-business subscription test; PR #45 does not include it. Do not sign off the integrated candidate until both are represented and CI passes on the resulting exact SHA.
