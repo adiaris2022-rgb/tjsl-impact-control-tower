@@ -34,11 +34,11 @@ begin
   end if;
 end
 $$;
+-- Prove the non-superuser CREATEROLE executor can grant itself SET-only membership,
+-- create a role, and drop that probe role. The migration must clean the membership.
+set session authorization nortago_order_migration_executor_ci;
 grant nortago_order_lifecycle_owner to nortago_order_migration_executor_ci
   with inherit false, set true, admin false;
-
--- Prove the non-superuser CREATEROLE executor can create and drop a role.
-set session authorization nortago_order_migration_executor_ci;
 create role nortago_order_migration_create_probe
   nologin noinherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
 drop role nortago_order_migration_create_probe;
