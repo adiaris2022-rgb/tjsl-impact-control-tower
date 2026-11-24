@@ -254,3 +254,20 @@ This closes the source-level tenant mapping gap in the candidate release branch.
 
 
 5. **Service DP/full-payment terms are not implemented.** The current SERVICE catalog stores only a single base/outlet price and PRODUCT/SERVICE type. The order schema and checkout expose one payment method and one pending payment status; there is no seller-controlled DP/full-payment toggle, deposit amount, or remaining-balance ledger. This remains a commercial acceptance gate for service offers that require deposits. Do not infer a percentage or fixed DP amount; implement only after the owner-approved rule is available.
+
+## Seller-configurable DP/full-payment implementation - 24 Nov 2026
+
+- Owner catalog stores FULL/DP availability and DP type/value per outlet-service mapping. DP supports PERCENT (1-99%) or FIXED IDR per service unit.
+- Checkout sends only the selected FULL/DP option. Database RPC recomputes the initial payment due from the authoritative outlet price and seller's saved terms; PRODUCT lines remain due in full, SERVICE lines can use DP.
+- Idempotency hash includes payment option. The prior 10-argument RPC overload is removed; only the explicit 11-argument signature is granted to anon/authenticated.
+- The receipt RPC and Digital Receipt display the full order total, initial amount due, and remaining balance.
+- Disposable PostgreSQL smoke tests cover FULL, percentage DP, fixed DP, mixed PRODUCT/SERVICE carts, unauthorized options, receipt contents, and idempotent retry. CI must confirm migration apply/replay and the dedicated DP smoke test on the current exact PR head.
+
+**Accounting gate:** order.payment_status remains a single PENDING/PAID/FAILED/REFUNDED value. No child payment/receipt ledger or separate partial-settlement flow currently records actual DP collected and later balance receipts. Accordingly Owner Dashboard excludes DP orders from fully-settled revenue and shows initial DP due and remaining balance separately. Do not set a DP order to PAID or count its full total as collected until a separate audited payment-receipt/settlement workflow is built and tested. LinkBayar remains disabled for customer order settlement.
+
+## Staging target mismatch discovered by read-only audit - 24 Nov 2026
+
+- Connected Supabase organization exposes an active project named NORTAGO-ORDER-STAGING (`aakhinaryzidzpsjeewp`), but read-only catalog inspection found no `public.otc_orders`, `otc_outlets`, `otc_products`, `otc_outlet_products`, `public.business_users`, or `public.has_business_role(uuid,text[])`; migration list was empty.
+- The core OTC migration comment refers to a different Supabase project ref (`tdpupelhvzxwhbqnnlxk`). The connected `aakhinaryzidzpsjeewp` project is therefore not proven to be the populated database behind this release candidate. Do not apply NORTAGO migrations to it until the correct staging target is identified and owner-approved.
+- Supabase security advisor flags `public.rls_auto_enable()` as a SECURITY DEFINER event-trigger function executable by PUBLIC/anon/authenticated; the event trigger `ensure_rls` is enabled. Revoke client/PUBLIC EXECUTE in a reviewed migration on the confirmed target, then re-run security advisors. No live/staging ACL change was made during this audit.
+- This staging read-only inspection is distinct from disposable PostgreSQL CI and does not establish real application RLS/Auth/tenant behavior.
