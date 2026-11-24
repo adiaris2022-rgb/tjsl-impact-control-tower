@@ -87,7 +87,12 @@ begin
     (v_business_a,v_actor,'OWNER'),
     (v_business_b,v_actor,'OWNER');
 end
-$$;
+$;
+
+-- Seed valid mappings through the privileged server-side path before anon menu reads.
+insert into public.otc_outlet_products(outlet_id,product_id,price,is_available) values
+  ('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001',10000,true),
+  ('92000000-0000-4000-8000-000000000002','93000000-0000-4000-8000-000000000002',20000,true);
 
 set local role anon;
 do $$
@@ -99,9 +104,7 @@ begin
     raise exception 'ANON_CANNOT_READ_ACTIVE_PRODUCT';
   end if;
   if not exists (select 1 from public.otc_outlet_products where outlet_id='92000000-0000-4000-8000-000000000001' and product_id='93000000-0000-4000-8000-000000000001') then
-    -- The mapping is inserted by a privileged server path below; this early
-    -- check is intentionally delayed until after the authenticated setup.
-    null;
+    raise exception 'ANON_CANNOT_READ_AVAILABLE_OUTLET_PRODUCT';
   end if;
 end
 $$;
@@ -155,10 +158,6 @@ do $$
 declare
   v_error text;
 begin
-  insert into public.otc_outlet_products(outlet_id,product_id,price,is_available) values
-    ('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001',11000,true),
-    ('92000000-0000-4000-8000-000000000002','93000000-0000-4000-8000-000000000002',20000,true);
-
   begin
     insert into public.otc_outlet_products(outlet_id,product_id,price,is_available)
     values('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002',20000,true);
