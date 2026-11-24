@@ -169,12 +169,14 @@ export default function OwnerCatalog() {
         .select("business_id").eq("user_id", auth.user.id).eq("business_id", businessId).maybeSingle();
       if (membershipError) throw membershipError;
       if (!membership) throw new Error("Akses bisnis tidak valid.");
-      const { error: updateError } = await supabase.from("otc_outlet_products").update({
-        allow_full_payment: draft.allow_full_payment,
-        allow_dp: draft.allow_dp,
-        dp_type: draft.dp_type,
-        dp_value: draft.allow_dp ? dpValue : item.dp_value,
-      }).eq("outlet_id", outletId).eq("product_id", item.id);
+      const { error: updateError } = await supabase.rpc("nortago_update_service_payment_terms", {
+        p_outlet_id: outletId,
+        p_product_id: item.id,
+        p_allow_full_payment: draft.allow_full_payment,
+        p_allow_dp: draft.allow_dp,
+        p_dp_type: draft.dp_type,
+        p_dp_value: draft.allow_dp ? dpValue : item.dp_value,
+      });
       if (updateError) throw updateError;
       setNotice("Pilihan pembayaran jasa berhasil disimpan untuk outlet ini.");
       await loadCatalog(businessId, outletId);
