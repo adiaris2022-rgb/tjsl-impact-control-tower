@@ -163,3 +163,14 @@ PR #37 is not staging approval. No staging/live migration is authorized by this 
 - [ ] Confirm whether staff require outlet-specific access restrictions. Current source checks business membership only.
 
 No staging/live migration or payment activation is authorized by this runbook.
+
+
+## Outlet/product tenant consistency UAT (PR #38 candidate)
+
+- [ ] Confirm the migration preflight reports no existing outlet/product mappings where `otc_outlets.business_id <> otc_products.business_id`; do not auto-delete or auto-repair any rows.
+- [ ] With an authenticated member of a business, valid same-business outlet/product mappings remain writable.
+- [ ] Cross-business mapping INSERT and UPDATE are rejected by the server-side trigger and policy.
+- [ ] Reassigning a mapped product or outlet to another business is rejected until its mappings are removed through an owner-approved workflow.
+- [ ] Confirm anon/authenticated cannot directly EXECUTE trigger functions.
+
+CI regression uses disposable PostgreSQL only. Staging catalog/data inspection remains read-only until separately approved.
