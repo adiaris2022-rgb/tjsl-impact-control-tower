@@ -370,7 +370,6 @@ end;
 $$;
 
 -- The legacy 10-argument overload is removed below; no stale overload grant survives DROP FUNCTION.
-grant execute on function public.nortago_create_customer_order_idempotent(uuid,uuid,text,text,text,jsonb,text,timestamptz,text,text) to anon, authenticated;
 
 -- Disable the legacy client RPC so clients cannot bypass the idempotency key.
 revoke all on function public.nortago_create_customer_order(uuid,text,text,text,jsonb,text,timestamptz,text,text) from public, anon, authenticated;
