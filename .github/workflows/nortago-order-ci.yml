@@ -260,14 +260,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_rpc_only_write_privileges_smoke.sql
-      - name: Apply dedicated lifecycle RPC owner migration
+      - name: Prepare non-superuser managed migration executor fixture
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_dedicated_lifecycle_owner_v1.sql
-      - name: Replay dedicated lifecycle RPC owner migration (idempotency)
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_lifecycle_migrator_setup.sql
+      - name: Apply dedicated lifecycle RPC owner migration as non-superuser CREATEROLE executor
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124_nortago_order_dedicated_lifecycle_owner_v1.sql
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_lifecycle_migrator_apply.sql
+      - name: Replay dedicated lifecycle RPC owner migration as non-superuser executor (idempotency)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d nortago_test -v ON_ERROR_STOP=1 -f supabase/tests/nortago_order_lifecycle_migrator_apply.sql
       - name: Verify dedicated lifecycle owner minimal grants and RLS
         env:
           PGPASSWORD: postgres
